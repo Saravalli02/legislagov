@@ -7,7 +7,7 @@ PRIMEIRO USO
    Ele copia do site atual da Camara: brasao, bandeira, fotos dos vereadores,
    fotos do plenario e TODAS as noticias com as fotos.
 3. Clique em INICIAR_CAMARA.bat. O portal abre em http://127.0.0.1:8765
-   "Area restrita" leva ao painel. Testes: Administrador / admin123 e Ricardo / 123456 (Ricardo = Procuradoria, ve os 4 paineis)
+   "Area restrita" leva ao painel. Usuarios e senhas: com o administrador (Ricardo = Procuradoria, ve os 4 paineis).
 
 O QUE TEM NO PORTAL
   Inicio, A Camara (vereadores, Mesa, comissoes, presidentes, historia),
@@ -28,7 +28,7 @@ PAINEIS (aparece logo depois de digitar usuario e senha)
 VEREADORES E PRESIDENTE (quem define: Procuradoria ou Administrador)
   Administrativo > Gestao > "Vereadores e usuarios":
     - ligue cada vereador ao usuario dele ("Criar usuarios que faltam" cria todos,
-      senha provisoria 123456; logins: roselli, everton, maikon, emerson, pelacani,
+      senha provisoria informada na tela; logins: roselli, everton, maikon, emerson, pelacani,
       marcio, sirlei, lucas, tonho)
     - marque UM Presidente e salve. Para trocar: marque o novo e confirme.
       A troca fica no historico e as funcoes passam na hora para o novo usuario.
