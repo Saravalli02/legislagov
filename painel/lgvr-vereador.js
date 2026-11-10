@@ -41,13 +41,20 @@
     [32, 'Sirlei Protetora', 'Sirlei Maria da Costa', 'PSD', 'sirlei'], [44, 'Lucão', 'Lucas Vieira', 'MDB', 'lucas'], [60, 'Tonho Cabeludo', 'Antonio Bento Bezerra', 'Podemos', 'tonho'],
   ];
 
-  /* ================= composição da Câmara (vereadores + Presidente) ================= */
+  /* Comissões permanentes de Neves Paulista (camaranevespaulista.sp.gov.br/Composicao/Comissoes) — mandato 01/01/2025 a 31/12/2026 */
+  const COMISSOES_PADRAO = [
+    { nome: 'Justiça e Redação', eleicao: '06/01/2025', presidente: 'v16', vice: 'v26', relator: 'v44', area: 'Constitucionalidade, legalidade, competência do Município, iniciativa correta, técnica legislativa e redação.' },
+    { nome: 'Finanças e Orçamento', eleicao: '06/02/2025', presidente: 'v41', vice: 'v44', relator: 'v32', area: 'Impacto nas receitas e despesas, adequação orçamentária, créditos, renúncia de receita e responsabilidade fiscal.' },
+    { nome: 'Assuntos Gerais', eleicao: '06/02/2025', presidente: 'v26', vice: 'v41', relator: 'v60', area: 'Demais assuntos de interesse do Município: obras, serviços, saúde, educação, assistência, meio ambiente.' },
+  ];
+  /* ================= composição da Câmara (vereadores + Presidente + comissões) ================= */
   function comp() {
     let c = ler(COMP_KEY, null);
     if (!c || !Array.isArray(c.vereadores)) {
       c = { vereadores: VEREADORES_PADRAO.map(([id, nome, completo, partido, sug]) => ({ id: 'v' + id, nome, completo, partido, sugestao: sug, usuario: '' })), presidente: 'v56', historico: [{ data: new Date().toISOString(), texto: 'Presidente inicial: Edenilson Roselli (Mesa 2025–2026)', por: 'Sistema' }] };
       gravar(COMP_KEY, c);
     }
+    if (!Array.isArray(c.comissoes)) { c.comissoes = COMISSOES_PADRAO.map(x => ({ ...x })); c.historico = c.historico || []; c.historico.push({ data: new Date().toISOString(), texto: 'Comissões permanentes 2025–2026 carregadas conforme o site da Câmara', por: 'Sistema' }); gravar(COMP_KEY, c); }
     return c;
   }
   const verPorId = id => comp().vereadores.find(v => v.id === id);
@@ -130,7 +137,7 @@
   const arq = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) + '.pdf';
 
   /* ================= telas ================= */
-  const TELAS = { inicio: 'verInicio', proposituras: 'verProposituras', assinar: 'verAssinar', sessoes: 'verSessoes', materias: 'verMaterias', despacho: 'presDespacho', pauta: 'presPauta', autografos: 'presAutografos', atos: 'presAtos' };
+  const TELAS = { inicio: 'verInicio', proposituras: 'verProposituras', assinar: 'verAssinar', comissoes: 'verComissoes', sessoes: 'verSessoes', materias: 'verMaterias', despacho: 'presDespacho', pauta: 'presPauta', autografos: 'presAutografos', atos: 'presAtos' };
   const PRES = ['despacho', 'pauta', 'autografos', 'atos'];
   function criarTelas() {
     const main = document.querySelector('#app main') || document.querySelector('main'); if (!main || $('#view-lgvr-inicio')) return;
@@ -147,7 +154,7 @@
     document.documentElement.classList.toggle('lgvr-consulta', !podeEditar());
     desenhar(); scrollTo(0, 0);
   };
-  function desenhar() { const a = atual(); if (!a) return; ({ inicio: tInicio, proposituras: tProposituras, assinar: tAssinar, sessoes: tSessoes, materias: tMaterias, despacho: tDespacho, pauta: tPauta, autografos: tAutografos, atos: tAtos })[tela](a); atualizarContador(); if (window.lgv31ApplyAdmin) lgv31ApplyAdmin(); }
+  function desenhar() { const a = atual(); if (!a) return; ({ inicio: tInicio, proposituras: tProposituras, assinar: tAssinar, comissoes: x => window.lgcmTela && lgcmTela(x, '#view-lgvr-comissoes'), sessoes: tSessoes, materias: tMaterias, despacho: tDespacho, pauta: tPauta, autografos: tAutografos, atos: tAtos })[tela](a); atualizarContador(); if (window.lgv31ApplyAdmin) lgv31ApplyAdmin(); }
   const cab = (t, sub, acoes = '') => `<div class="letterhead"><div><h1>${t}</h1><div class="date">${sub}</div></div><div class="lgt-acoes">${acoes}</div></div>`;
   const btn = (txt, fn, cls = 'primario', edita = true) => `<button class="lgt-btn ${cls}" type="button" ${edita ? 'data-edita' : ''} onclick="${fn}">${txt}</button>`;
   function faixaDemo(a) {
@@ -167,6 +174,7 @@
     const a = atual(); const b = document.querySelector('.lgv31-item[data-v31="verAssinar"]'); if (!a || !b) return;
     let n = b.querySelector('.lgvr-n'); const t = pendentesAssinatura(a.v).total;
     if (!n) { n = document.createElement('b'); n.className = 'lgvr-n'; b.appendChild(n); } n.textContent = t || ''; n.hidden = !t;
+    const bc = document.querySelector('.lgv31-item[data-v31="verComissoes"]'); if (bc && window.lgcmPendencias) { let m = bc.querySelector('.lgvr-n'); const q = lgcmPendencias(a.v).length; if (!m) { m = document.createElement('b'); m.className = 'lgvr-n'; bc.appendChild(m); } m.textContent = q || ''; m.hidden = !q; }
   }
   function sessoes() {
     const ag = ler('lgv11_agenda_v1', []).filter(x => x && x.when).map(x => ({ quando: new Date(x.when), titulo: x.title || 'Sessão', local: x.local || 'Plenário' }));
@@ -187,6 +195,7 @@
       `<div class="lgvr-hero"><div class="lgvr-av">${esc(v.nome.split(' ').map(x => x[0]).slice(0, 2).join(''))}</div><div><small>${pres ? 'Presidente da Câmara Municipal' : 'Vereador(a)'} · ${esc(v.partido)}</small><h1>${esc(v.completo || v.nome)}</h1><p>Gabinete do Vereador · Legislatura 2025–2028</p></div>
         <div class="lgt-acoes">${btn(ic('materias') + ' Nova propositura', "lgvrNova()")}</div></div>
       <div class="lgvr-kpis"><button type="button" onclick="lgvrAbrir('proposituras')"><b>${minhas.length}</b><span>minhas proposituras</span></button><button type="button" onclick="lgvrAbrir('proposituras')"><b>${tram.length}</b><span>em tramitação</span></button><button type="button" class="${pend.total ? 'k-alerta' : ''}" onclick="lgvrAbrir('assinar')"><b>${pend.total}</b><span>aguardando sua assinatura</span></button><button type="button" onclick="lgvrAbrir('sessoes')"><b>${prox ? prox.quando.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'}</b><span>próxima sessão</span></button></div>
+      ${window.lgcmCardInicio ? lgcmCardInicio(v) : ''}
       ${pres ? `<div class="lgt-card lgvr-pres"><div class="lgvr-card-cab"><h3>${ic('despacho')} Presidência</h3><span class="lgvr-sub">Funções exclusivas do Presidente</span></div><div class="lgvr-pres-g">
         <button type="button" onclick="lgvrAbrir('despacho')"><b>${despachar}</b><span>proposições aguardando seu despacho</span></button>
         <button type="button" onclick="lgvrAbrir('pauta')"><b>${naPauta}</b><span>na Ordem do Dia</span></button>
@@ -267,6 +276,9 @@
       <div class="lgvr-det"><p class="lgvr-tipo-l">${esc(p.tipoNome || TIPOS[tipoDe(p)].nome)} · ${esc(p.autor || '')}</p><h3>${esc(p.ementa)}</h3>
         ${p.texto ? `<details ${minha ? '' : 'open'}><summary>Texto da propositura</summary><div class="lgvr-texto">${esc(p.texto).replace(/\n/g, '<br>')}</div></details>` : ''}
         ${(p.assinaturas || []).length ? `<h4>Assinaturas</h4><ul class="lgvr-ass">${p.assinaturas.map(s => `<li>${ic('assinar')}<span><b>${esc(s.nome)}</b><small>${new Date(s.data).toLocaleString('pt-BR')} · ${esc(s.metodo)}${s.certificado ? ' · certificado: ' + esc(s.certificado) : ''}${s.emissor ? ' · ' + esc(s.emissor) : ''}${s.conferencia && s.conferencia.nomeConfere === false ? ' · nome confirmado manualmente' : ''}</small></span></li>`).join('')}${(p.coautores || []).filter(id => !(p.assinaturas || []).some(s => s.vereadorId === id)).map(id => `<li class="pend">${ic('assinar')}<span><b>${esc(verPorId(id)?.completo || '')}</b><small>Coautor · assinatura pendente</small></span></li>`).join('')}</ul>` : ''}
+        ${window.lgcmResumo ? lgcmResumo(p) : ''}
+        ${p.veto ? `<h4>Veto ${esc(p.veto.tipo)}</h4><p class="lgt-p">${esc(p.veto.razoes)}${p.veto.resultado ? ` — <b>veto ${esc(p.veto.resultado)}</b>${p.veto.votacao ? ` (${p.veto.votacao.rejeicao} a ${p.veto.votacao.manutencao})` : ''}` : ' — aguardando apreciação da Câmara'}</p>` : ''}
+        ${p.lei ? `<h4>Norma</h4><p class="lgt-p"><b>${esc(p.lei)}</b>${p.publicacao ? ' · publicada em ' + esc(p.publicacao) : ''}${p.vigencia ? ' · vigência: ' + esc(p.vigencia.toLowerCase()) : ''}</p>` : ''}
         ${p.votacao ? `<h4>Votação</h4><p class="lgt-p">${p.votacao.favor} favoráveis · ${p.votacao.contra} contrários · ${p.votacao.abst} abstenções${p.votacao.desempate ? ' · desempate do Presidente: ' + p.votacao.desempate : ''} (${esc(p.votacao.sessao)})</p>` : ''}
         <h4>Andamento</h4><ol class="lgvr-tempo">${(p.timeline || []).slice().reverse().map(t => `<li><span>${esc(t.date)}</span><b>${esc(t.label)}</b></li>`).join('')}</ol></div>
       <div class="lgt-modal-rod lgvr-rod">${[['', 'PDF assinado'], ['-autografo', 'Autógrafo assinado'], ['-promulgacao', 'Promulgação assinada'], ['-lei', 'Lei promulgada']].filter(([suf]) => window.lgsTemPDF && lgsTemPDF(p.id + suf)).map(([suf, n]) => `<button type="button" class="lgt-btn" onclick="lgsBaixarPDF('${p.id + suf}','${esc((p.numero || 'documento').replace(/[^A-Za-z0-9]+/g, '-'))}${suf}-assinado.pdf')">${ic('externo')} ${n}</button>`).join('')}<button type="button" class="lgt-btn" onclick="lgvrDocumento('${p.id}')">${ic('editor')} Ver texto</button>${falta ? `<button type="button" class="lgt-btn primario" data-edita onclick="lgvrCoassinar('${p.id}')">Assinar como coautor</button>` : ''}</div></div>`);
@@ -331,38 +343,43 @@
     const prot = listaProt(); const fila = prot.filter(p => p.status === 'protocolado'); const andam = prot.filter(p => p.status === 'analise' || p.status === 'comissao');
     const card = (p, acoes) => `<article class="lgvr-desp"><header><b>${esc(p.numero)}</b>${tag(p)}</header><h4>${esc(p.ementa)}</h4><p>${esc(p.tipoNome || 'Projeto de Lei')} · ${esc(p.autor || '')} · ${esc(p.data || '')}</p><footer><button class="lgt-mini" type="button" onclick="lgvrVer('${p.id}')">Ler</button>${acoes}</footer></article>`;
     $('#view-lgvr-despacho').innerHTML = faixaDemo(a) + cab('Despachar proposições', 'Proposições protocoladas chegam direto ao Presidente, sem depender da Secretaria') +
-      regra('O Presidente despacha as proposições: envia à Procuradoria para parecer, distribui às comissões, inclui na Ordem do Dia ou devolve ao autor quando contrária ao Regimento. Indicações, requerimentos e moções normalmente vão direto à pauta.') +
+      regra('O Presidente despacha as proposições: envia à Procuradoria para parecer jurídico e distribui às comissões permanentes que devem opinar (Justiça e Redação sempre; Finanças e Orçamento quando houver impacto financeiro; Assuntos Gerais conforme o tema). Indicações, requerimentos e moções normalmente vão direto à pauta.') +
       `<h3 class="lgvr-h">Aguardando seu despacho (${fila.length})</h3><div class="lgvr-desps">${fila.map(p => card(p, `<button class="lgt-mini primario" type="button" data-edita onclick="lgvrDespachar('${p.id}')">Despachar</button>`)).join('') || '<p class="lgt-p">Nenhuma proposição aguardando despacho.</p>'}</div>
       <h3 class="lgvr-h">Na Procuradoria ou em comissão (${andam.length})</h3><div class="lgvr-desps">${andam.map(p => card(p, `<button class="lgt-mini" type="button" data-edita onclick="lgvrDespachar('${p.id}')">Novo despacho</button>`)).join('') || '<p class="lgt-p">Nenhuma.</p>'}</div>`;
   }
   window.lgvrDespachar = function (id) {
     const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id); if (!p) return; const simples = TIPOS[tipoDe(p)].fluxo === 'simples';
-    const op = [['analise', 'Procuradoria Jurídica — emitir parecer'], ...COMISSOES.map(c => ['c:' + c, 'Comissão de ' + c]), ['votacao', 'Incluir na Ordem do Dia'], ['devolvido', 'Devolver ao autor']];
+    const coms = comp().comissoes; const rota0 = p.comissoesRota || ['Justiça e Redação', ...(/cria|cargo|despesa|crédito|orçament|tribut|isen|fundo|reajuste|salár|subsíd/i.test(p.ementa || '') ? ['Finanças e Orçamento'] : [])];
+    const op = [['analise', 'Procuradoria Legislativa (parecer jurídico) e depois às comissões marcadas'], ['comissoes', 'Direto às comissões marcadas'], ['votacao', 'Incluir na Ordem do Dia'], ['devolvido', 'Devolver ao autor']];
     UI().abrirModal(`<form class="lgt-form" novalidate><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Despacho · ${esc(p.numero)}</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><div class="lgt-campos">
       <p class="lgt-p cheio"><b>${esc(p.ementa)}</b><br>${esc(p.autor || '')}</p>
-      <fieldset class="cheio lgvr-opts"><legend>Encaminhar para *</legend>${op.map(([k, n]) => `<label><input type="radio" name="dest" value="${esc(k)}" ${(simples ? k === 'votacao' : k === 'analise') ? 'checked' : ''}> ${esc(n)}</label>`).join('')}</fieldset>
+      <fieldset class="cheio lgvr-opts"><legend>Encaminhar para *</legend>${op.map(([k, n]) => `<label><input type="radio" name="dest" value="${esc(k)}" ${(simples ? k === 'votacao' : k === (p.status === 'analise' ? 'comissoes' : 'analise')) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}</fieldset>
+      <fieldset class="cheio lgvr-opts lgvr-coms" id="lgvr-coms"><legend>Comissões que devem dar parecer (nesta ordem)</legend>${coms.map((c, i) => `<label class="lgvr-com-op"><input type="checkbox" name="com" value="${esc(c.nome)}" ${rota0.includes(c.nome) ? 'checked' : ''} ${i === 0 ? 'data-obrig' : ''}><span><b>Comissão de ${esc(c.nome)}${i === 0 ? ' · obrigatória' : ''}</b><small>${esc(c.area || '')}</small></span></label>`).join('')}</fieldset>
       <label class="cheio"><span>Observação / motivo da devolução</span><textarea name="obs" rows="2"></textarea></label></div>
       <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Despachar</button></div></form>`);
     const f = $('#lgt-modal form');
-    f.onsubmit = e => { e.preventDefault(); const dest = f.dest.value, obs = f.obs.value.trim();
-      if (dest === 'devolvido' && !obs) { f.querySelector('.lgt-erro').textContent = 'Informe o motivo da devolução.'; return; }
+    const vis = () => { const d = f.dest.value; $('#lgvr-coms').hidden = !(d === 'analise' || d === 'comissoes'); }; f.querySelectorAll('[name=dest]').forEach(r => r.onchange = vis); vis();
+    f.onsubmit = e => { e.preventDefault(); const dest = f.dest.value, obs = f.obs.value.trim(); const err = f.querySelector('.lgt-erro');
+      if (dest === 'devolvido' && !obs) { err.textContent = 'Informe o motivo da devolução.'; return; }
+      const rota = [...f.querySelectorAll('[name=com]:checked')].map(x => x.value);
+      if ((dest === 'analise' || dest === 'comissoes') && !rota.includes(coms[0].nome)) { err.textContent = `A Comissão de ${coms[0].nome} é obrigatória: ela examina a legalidade, a iniciativa e a redação.`; return; }
       let label;
-      if (dest.startsWith('c:')) { p.status = 'comissao'; p.comissao = dest.slice(2); label = `Despacho do Presidente: encaminhado à Comissão de ${p.comissao}`; }
-      else if (dest === 'analise') { p.status = 'analise'; label = 'Despacho do Presidente: encaminhado à Procuradoria Jurídica para parecer'; }
+      if (dest === 'analise') { p.status = 'analise'; p.comissoesRota = rota; p.comissao = ''; label = `Despacho do Presidente: à Procuradoria Legislativa para parecer jurídico; depois às Comissões de ${rota.join(', ')}`; }
+      else if (dest === 'comissoes') { p.comissoesRota = rota; label = `Despacho do Presidente: distribuído às Comissões de ${rota.join(', ')}`; if (window.lgcmIniciar) lgcmIniciar(p); else { p.status = 'comissao'; p.comissao = rota[0]; } }
       else if (dest === 'votacao') { p.status = 'votacao'; p.resultado = ''; label = 'Despacho do Presidente: incluído na Ordem do Dia'; }
       else { p.status = 'devolvido'; label = 'Devolvido ao autor pelo Presidente'; }
-      p.timeline.push({ date: agoraTL(), label: label + (obs ? ' — ' + obs : '') + ` (${a.v.nome})` });
+      p.timeline.splice(dest === 'comissoes' ? p.timeline.length - 1 : p.timeline.length, 0, { date: agoraTL(), label: label + (obs ? ' — ' + obs : '') + ` (${a.v.nome})` });
       persistirProt(label, p); UI().fecharModal(); UI().aviso('Despacho registrado.'); desenhar(); };
   };
   function tPauta(a) {
     const pauta = listaProt().filter(p => p.status === 'votacao' && !p.resultado); const prox = sessoes()[0];
     $('#view-lgvr-pauta').innerHTML = faixaDemo(a) + cab('Ordem do Dia e votação', prox ? `Próxima sessão: ${esc(prox.titulo)} · ${esc(fmtSessao(prox))}` : 'Matérias prontas para votação') +
-      regra('O Presidente conduz a votação e proclama o resultado. Em regra vota só para desempatar, nas votações secretas e nas que exigem quórum qualificado (confirme no Regimento Interno da Câmara).') +
-      `<div class="lgt-tabela-wrap"><table class="lgt-tabela"><thead><tr><th>Matéria</th><th>Ementa</th><th>Autor</th><th class="acoes-col"></th></tr></thead><tbody>${pauta.map(p => `<tr><td><b>${esc(p.numero)}</b><small>${esc(p.tipoNome || 'Projeto de Lei')}</small></td><td>${esc(p.ementa)}</td><td><small>${esc(p.autor || '')}</small></td><td class="acoes-col"><button class="lgt-mini" type="button" onclick="lgvrVer('${p.id}')">Ler</button><button class="lgt-mini" type="button" data-edita onclick="lgvrVotar('${p.id}')">Registrar votação</button><button class="lgt-mini" type="button" data-edita onclick="lgvrRetirar('${p.id}')">Retirar de pauta</button></td></tr>`).join('') || '<tr><td colspan="4" class="lgt-vazio"><b>Nenhuma matéria na Ordem do Dia.</b><span>Use “Despachar proposições” para incluir.</span></td></tr>'}</tbody></table></div>`;
+      regra('O Presidente conduz a discussão e a votação e proclama o resultado. Em regra vota só para desempatar, nas votações secretas e nas que exigem quórum qualificado. O quórum varia conforme a matéria (maioria simples, absoluta ou qualificada): confirme na Lei Orgânica e no Regimento Interno.') +
+      `<div class="lgt-tabela-wrap"><table class="lgt-tabela"><thead><tr><th>Matéria</th><th>Ementa</th><th>Autor</th><th class="acoes-col"></th></tr></thead><tbody>${pauta.map(p => `<tr><td><b>${esc(p.numero)}</b><small>${p.veto && !p.veto.resultado ? `<span class="lgvr-tag t-er">Veto ${esc(p.veto.tipo)}</span>` : esc(p.tipoNome || 'Projeto de Lei')}</small></td><td>${esc(p.ementa)}</td><td><small>${esc(p.autor || '')}</small></td><td class="acoes-col"><button class="lgt-mini" type="button" onclick="lgvrVer('${p.id}')">Ler</button><button class="lgt-mini" type="button" data-edita onclick="lgvrVotar('${p.id}')">Registrar votação</button><button class="lgt-mini" type="button" data-edita onclick="lgvrRetirar('${p.id}')">Retirar de pauta</button></td></tr>`).join('') || '<tr><td colspan="4" class="lgt-vazio"><b>Nenhuma matéria na Ordem do Dia.</b><span>Use “Despachar proposições” para incluir.</span></td></tr>'}</tbody></table></div>`;
   }
   window.lgvrRetirar = function (id) { const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id); p.status = p.comissao ? 'comissao' : 'protocolado'; p.timeline.push({ date: agoraTL(), label: `Retirado da Ordem do Dia pelo Presidente (${a.v.nome})` }); persistirProt('Retirado de pauta', p); desenhar(); UI().aviso('Matéria retirada da pauta.'); };
   window.lgvrVotar = function (id) {
-    const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id); const prox = sessoes()[0]; const n = comp().vereadores.length - 1;
+    const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id); if (p && p.veto && !p.veto.resultado) return votarVeto(p, a); const prox = sessoes()[0]; const n = comp().vereadores.length - 1;
     UI().abrirModal(`<form class="lgt-form" novalidate><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Votação · ${esc(p.numero)}</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><div class="lgt-campos">
       <p class="lgt-p cheio">${esc(p.ementa)}</p>
       <label class="cheio"><span>Sessão</span><input name="sessao" value="${esc(prox ? prox.titulo + ' de ' + prox.quando.toLocaleDateString('pt-BR') : 'Sessão de ' + hojeBR())}"></label>
@@ -382,19 +399,71 @@
         if (fl === 'simples') { p.status = 'concluido'; p.timeline.push({ date: agoraTL(), label: 'Encaminhado por ofício ao destinatário' }); } }
       persistirProt('Votação registrada', p); UI().fecharModal(); UI().aviso(r.ok ? 'Aprovado.' : 'Rejeitado.'); desenhar(); };
   };
+  /* Apreciação do veto (guia, item 7): a Câmara mantém ou rejeita; rejeitado, o Presidente promulga */
+  function votarVeto(p, a) {
+    const total = comp().vereadores.length, abs = Math.floor(total / 2) + 1, prox = sessoes()[0];
+    UI().abrirModal(`<form class="lgt-form" novalidate><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Apreciação do veto · ${esc(p.numero)}</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><div class="lgt-campos">
+      <p class="lgt-p cheio">${esc(p.ementa)}<br><b>Veto ${esc(p.veto.tipo)}</b> — ${esc(p.veto.razoes)}</p>
+      <p class="lgvr-regra cheio">Para <b>rejeitar (derrubar) o veto</b> são necessários ${abs} votos (maioria absoluta dos ${total} vereadores), como na Constituição (art. 66, § 4º). Confirme o quórum na Lei Orgânica de Neves Paulista.</p>
+      <label class="cheio"><span>Sessão</span><input name="sessao" value="${esc(prox ? prox.titulo + ' de ' + prox.quando.toLocaleDateString('pt-BR') : 'Sessão de ' + hojeBR())}"></label>
+      <label><span>Pela rejeição do veto</span><input name="rej" type="number" min="0" max="${total}" value="0" inputmode="numeric"></label><label><span>Pela manutenção do veto</span><input name="man" type="number" min="0" max="${total}" value="0" inputmode="numeric"></label>
+      <label><span>Abstenções / ausentes</span><input name="abst" type="number" min="0" max="${total}" value="0" inputmode="numeric"></label>
+      <div class="lgf-saldo" id="lgvr-res"></div></div>
+      <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Proclamar resultado</button></div></form>`);
+    const f = $('#lgt-modal form');
+    const calc = () => { const r = +f.rej.value || 0, m = +f.man.value || 0, derrubado = r >= abs; $('#lgvr-res').innerHTML = r + m ? `<span>Resultado <b class="${derrubado ? '' : 'neg'}">${derrubado ? 'VETO REJEITADO' : 'VETO MANTIDO'}</b></span><span>${r} × ${m}</span>` : '<span>Informe os votos.</span>'; return { r, m, derrubado }; };
+    f.oninput = calc; calc();
+    f.onsubmit = e => { e.preventDefault(); const r = calc(); if (!(r.r + r.m)) { f.querySelector('.lgt-erro').textContent = 'Informe os votos.'; return; } if (r.r + r.m + (+f.abst.value || 0) > total) { f.querySelector('.lgt-erro').textContent = 'Total de votos maior que o número de vereadores.'; return; }
+      p.veto.resultado = r.derrubado ? 'rejeitado' : 'mantido'; p.veto.votacao = { rejeicao: r.r, manutencao: r.m, abst: +f.abst.value || 0, sessao: f.sessao.value.trim(), data: new Date().toISOString() };
+      if (r.derrubado) { p.status = 'aguardando_exec'; p.timeline.push({ date: agoraTL(), label: `Veto rejeitado pela Câmara (${r.r} a ${r.m}) — ${p.veto.votacao.sessao}; segue para promulgação` }); }
+      else if (p.veto.tipo === 'parcial' && p.lei) { p.status = 'concluido'; p.timeline.push({ date: agoraTL(), label: `Veto parcial mantido (${r.r} a ${r.m}) — vale a ${p.lei} sem as partes vetadas` }); }
+      else { p.status = 'rejeitado'; p.timeline.push({ date: agoraTL(), label: `Veto mantido pela Câmara (${r.r} a ${r.m}) — projeto arquivado` }); }
+      persistirProt('Apreciação de veto', p); UI().fecharModal(); UI().aviso(r.derrubado ? 'Veto rejeitado. Promulgue a lei em “Autógrafos e promulgação”.' : 'Veto mantido.'); desenhar(); };
+  }
+  /* Executivo (guia, itens 7 a 9): sanção com publicação e vigência, ou veto */
+  const campoVigencia = `<fieldset class="cheio lgvr-opts"><legend>Vigência</legend><label><input type="radio" name="vig" value="pub" checked> Na data da publicação</label><label><input type="radio" name="vig" value="data"> A partir de <input name="vigdata" type="date" style="height:32px;margin-left:6px"></label><label><input type="radio" name="vig" value="texto"> Outra regra prevista no texto <input name="vigtxt" placeholder="Ex.: 90 dias após a publicação" style="height:32px;margin-left:6px;min-width:220px"></label></fieldset>`;
+  const lerVigencia = f => f.vig.value === 'data' && f.vigdata.value ? 'A partir de ' + f.vigdata.value.split('-').reverse().join('/') : f.vig.value === 'texto' && f.vigtxt.value.trim() ? f.vigtxt.value.trim() : 'Na data da publicação';
+  window.lgvrSancao = function (id) {
+    const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id);
+    UI().abrirModal(`<form class="lgt-form" novalidate><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Sanção do Prefeito · ${esc(p.numero)}</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><div class="lgt-campos">
+      <p class="lgt-p cheio">Registre a lei sancionada, promulgada e publicada pelo Prefeito.</p>
+      <label><span>Número da lei *</span><input name="lei" required placeholder="Ex.: 1850/2026"></label><label><span>Data da publicação *</span><input name="pub" type="date" value="${new Date().toISOString().slice(0, 10)}"></label>
+      ${campoVigencia}</div>
+      <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Registrar sanção</button></div></form>`);
+    const f = $('#lgt-modal form');
+    f.onsubmit = e => { e.preventDefault(); if (!f.lei.value.trim() || !f.pub.value) { f.querySelector('.lgt-erro').textContent = 'Informe o número da lei e a data da publicação.'; return; }
+      const lei = 'Lei Municipal nº ' + f.lei.value.trim(), pub = f.pub.value.split('-').reverse().join('/');
+      p.status = 'concluido'; p.lei = lei; p.publicacao = pub; p.vigencia = lerVigencia(f);
+      p.timeline.push({ date: agoraTL(), label: 'Sancionado pelo Prefeito' }, { date: agoraTL(), label: `Promulgada e publicada como ${lei} em ${pub}` }, { date: agoraTL(), label: `Vigência: ${p.vigencia.toLowerCase()}` });
+      persistirProt('Sanção registrada', p); UI().fecharModal(); UI().aviso(lei + ' registrada.'); desenhar(); };
+  };
+  window.lgvrVeto = function (id) {
+    const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id);
+    UI().abrirModal(`<form class="lgt-form" novalidate><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Veto do Prefeito · ${esc(p.numero)}</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><div class="lgt-campos">
+      <fieldset class="cheio lgvr-opts"><legend>Tipo de veto *</legend><label><input type="radio" name="tipo" value="total" checked> Total</label><label><input type="radio" name="tipo" value="parcial"> Parcial (o restante foi sancionado)</label></fieldset>
+      <label class="cheio"><span>Razões do veto *</span><textarea name="razoes" rows="3" placeholder="Inconstitucionalidade ou contrariedade ao interesse público, conforme a mensagem do Prefeito."></textarea></label>
+      <label><span>Recebido em</span><input name="data" type="date" value="${new Date().toISOString().slice(0, 10)}"></label><label class="lgvr-leiparc" hidden><span>Lei da parte sancionada</span><input name="lei" placeholder="Ex.: 1851/2026"></label></div>
+      <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Registrar veto e incluir na pauta</button></div></form>`);
+    const f = $('#lgt-modal form'); f.querySelectorAll('[name=tipo]').forEach(r => r.onchange = () => { $('.lgvr-leiparc', f).hidden = f.tipo.value !== 'parcial'; });
+    f.onsubmit = e => { e.preventDefault(); if (!f.razoes.value.trim()) { f.querySelector('.lgt-erro').textContent = 'Informe as razões do veto.'; return; }
+      p.veto = { tipo: f.tipo.value, razoes: f.razoes.value.trim(), recebido: f.data.value.split('-').reverse().join('/') }; if (f.tipo.value === 'parcial' && f.lei.value.trim()) p.lei = 'Lei Municipal nº ' + f.lei.value.trim();
+      p.status = 'votacao'; p.resultado = '';
+      p.timeline.push({ date: agoraTL(), label: `Veto ${p.veto.tipo} do Prefeito recebido — ${p.veto.razoes}` }, { date: agoraTL(), label: 'Veto incluído na Ordem do Dia para apreciação da Câmara' });
+      persistirProt('Veto recebido', p); UI().fecharModal(); UI().aviso('Veto registrado e incluído na Ordem do Dia.'); desenhar(); };
+  };
   function tAutografos(a) {
     const prot = listaProt(); const aprov = prot.filter(p => p.status === 'votacao' && p.resultado === 'aprovado'); const exec = prot.filter(p => p.status === 'aguardando_exec');
     $('#view-lgvr-autografos').innerHTML = faixaDemo(a) + cab('Autógrafos e promulgação', 'Assinatura do Presidente nos projetos aprovados') +
-      regra('Projeto de lei aprovado: o Presidente assina o autógrafo e o envia ao Prefeito para sanção. Resoluções e decretos legislativos: o Presidente promulga. Se o Prefeito não sancionar no prazo (sanção tácita) ou o veto for rejeitado, o Presidente promulga a lei.') +
+      regra('Projeto de lei aprovado: o Presidente assina o autógrafo e o envia ao Prefeito, que sanciona ou veta. Sancionado, registre a lei, a publicação e a vigência. Vetado, o veto vai à Ordem do Dia; se a Câmara rejeitar o veto, ou se o Prefeito não se manifestar no prazo (sanção tácita), o Presidente promulga. Resoluções e decretos legislativos são promulgados pelo Presidente.') +
       `<h3 class="lgvr-h">Aprovados aguardando sua assinatura (${aprov.length})</h3><div class="lgvr-desps">${aprov.map(p => `<article class="lgvr-desp"><header><b>${esc(p.numero)}</b>${tag(p)}</header><h4>${esc(p.ementa)}</h4><p>${esc(p.tipoNome || 'Projeto de Lei')} · ${p.votacao ? `${p.votacao.favor} a ${p.votacao.contra}` : ''}</p><footer><button class="lgt-mini" type="button" onclick="lgvrVer('${p.id}')">Ler</button><button class="lgt-mini primario" type="button" data-edita onclick="lgvrAutografo('${p.id}')">${TIPOS[tipoDe(p)].fluxo === 'promulga' ? 'Promulgar' : 'Assinar autógrafo'}</button></footer></article>`).join('') || '<p class="lgt-p">Nada pendente.</p>'}</div>
-      <h3 class="lgvr-h">Com o Prefeito para sanção (${exec.length})</h3><div class="lgvr-desps">${exec.map(p => `<article class="lgvr-desp"><header><b>${esc(p.numero)}</b>${tag(p)}</header><h4>${esc(p.ementa)}</h4><footer><button class="lgt-mini" type="button" onclick="lgvrVer('${p.id}')">Ler</button><button class="lgt-mini" type="button" data-edita onclick="lgvrPromulgarLei('${p.id}')">Promulgar (sanção tácita / veto rejeitado)</button></footer></article>`).join('') || '<p class="lgt-p">Nenhum.</p>'}</div>`;
+      <h3 class="lgvr-h">Com o Prefeito: sanção ou veto (${exec.length})</h3><div class="lgvr-desps">${exec.map(p => `<article class="lgvr-desp"><header><b>${esc(p.numero)}</b>${tag(p)}</header><h4>${esc(p.ementa)}</h4><footer><button class="lgt-mini" type="button" onclick="lgvrVer('${p.id}')">Ler</button>${p.veto && p.veto.resultado === 'rejeitado' ? '' : `<button class="lgt-mini primario" type="button" data-edita onclick="lgvrSancao('${p.id}')">Sancionada</button><button class="lgt-mini" type="button" data-edita onclick="lgvrVeto('${p.id}')">Vetada</button>`}<button class="lgt-mini" type="button" data-edita onclick="lgvrPromulgarLei('${p.id}')">${p.veto && p.veto.resultado === 'rejeitado' ? 'Promulgar (veto rejeitado)' : 'Promulgar (sanção tácita)'}</button></footer></article>`).join('') || '<p class="lgt-p">Nenhum.</p>'}</div>`;
   }
   window.lgvrAutografo = function (id) {
     const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id); const T = TIPOS[tipoDe(p)];
     if (T.fluxo === 'promulga') {
       const ano = new Date().getFullYear(); const n = listaProt().filter(x => (x.lei || '').startsWith(T.ato + ' nº')).length + 1;
       return assinarDoc({ titulo: `Promulgação: ${T.ato} nº ${n}/${ano}`, arquivo: arq(`${T.ato} ${n} ${ano}`), docId: p.id + '-promulgacao', qualificada: true, doc: { tipo: T.ato, numero: `${String(n).padStart(2, '0')}/${ano}`, ementa: p.ementa, texto: `O PRESIDENTE DA CÂMARA MUNICIPAL DE NEVES PAULISTA, no uso de suas atribuições legais, faz saber que a Câmara Municipal aprovou e ele promulga a seguinte ${T.ato}:\n\n${p.texto || ''}` } }, a.v, ass => {
-        p.status = 'concluido'; p.lei = `${T.ato} nº ${String(n).padStart(2, '0')}/${ano}`; p.assinaturas = [...(p.assinaturas || []), ass];
+        p.status = 'concluido'; p.lei = `${T.ato} nº ${String(n).padStart(2, '0')}/${ano}`; p.vigencia = p.vigencia || 'Na data da publicação'; p.publicacao = hojeBR(); p.assinaturas = [...(p.assinaturas || []), ass];
         p.timeline.push({ date: agoraTL(), label: `Promulgado(a) pelo Presidente ${a.v.nome}: ${p.lei}` }); persistirProt('Promulgação', p); UI().aviso(p.lei + ' promulgado(a).'); desenhar(); });
     }
     const d = dados(); const num = d.seqAutografo + 1;
@@ -407,12 +476,12 @@
   window.lgvrPromulgarLei = function (id) {
     const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id);
     UI().abrirModal(`<form class="lgt-form" novalidate><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Promulgar lei · ${esc(p.numero)}</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><div class="lgt-campos">
-      <fieldset class="cheio lgvr-opts"><legend>Motivo *</legend><label><input type="radio" name="mot" value="Sanção tácita (prazo do Prefeito encerrado)" checked> Sanção tácita (prazo do Prefeito encerrado)</label><label><input type="radio" name="mot" value="Veto rejeitado pela Câmara"> Veto rejeitado pela Câmara</label></fieldset>
-      <label class="cheio"><span>Número da lei *</span><input name="lei" required placeholder="Ex.: 1850/2026"></label></div>
+      <fieldset class="cheio lgvr-opts"><legend>Motivo *</legend><label><input type="radio" name="mot" value="Sanção tácita (prazo do Prefeito encerrado)" ${p.veto && p.veto.resultado === 'rejeitado' ? '' : 'checked'}> Sanção tácita (prazo do Prefeito encerrado)</label><label><input type="radio" name="mot" value="Veto rejeitado pela Câmara" ${p.veto && p.veto.resultado === 'rejeitado' ? 'checked' : ''}> Veto rejeitado pela Câmara</label></fieldset>
+      <label class="cheio"><span>Número da lei *</span><input name="lei" required placeholder="Ex.: 1850/2026" value="${p.lei && p.veto && p.veto.tipo === 'parcial' ? esc(p.lei.replace('Lei Municipal nº ', '')) : ''}"></label>${campoVigencia}</div>
       <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Assinar e promulgar</button></div></form>`);
     const f = $('#lgt-modal form');
-    f.onsubmit = e => { e.preventDefault(); if (!f.lei.value.trim()) { f.querySelector('.lgt-erro').textContent = 'Informe o número da lei.'; return; } const mot = f.mot.value, lei = 'Lei Municipal nº ' + f.lei.value.trim(); UI().fecharModal();
-      assinarDoc({ titulo: `Promulgação: ${lei}`, arquivo: arq(lei), docId: p.id + '-lei', qualificada: true, doc: { tipo: 'Lei Municipal', numero: lei.replace('Lei Municipal nº ', ''), ementa: p.ementa, texto: `O PRESIDENTE DA CÂMARA MUNICIPAL DE NEVES PAULISTA, nos termos da Lei Orgânica do Município (${mot.toLowerCase()}), promulga a seguinte Lei:\n\n${p.texto || '(texto conforme o autógrafo)'}` } }, a.v, ass => { p.status = 'concluido'; p.lei = lei; p.assinaturas = [...(p.assinaturas || []), ass]; p.timeline.push({ date: agoraTL(), label: `${lei} promulgada pelo Presidente (${mot})` }); persistirProt('Lei promulgada', p); UI().aviso(lei + ' promulgada.'); desenhar(); }); };
+    f.onsubmit = e => { e.preventDefault(); if (!f.lei.value.trim()) { f.querySelector('.lgt-erro').textContent = 'Informe o número da lei.'; return; } const mot = f.mot.value, lei = 'Lei Municipal nº ' + f.lei.value.trim(), vig = lerVigencia(f); UI().fecharModal();
+      assinarDoc({ titulo: `Promulgação: ${lei}`, arquivo: arq(lei), docId: p.id + '-lei', qualificada: true, doc: { tipo: 'Lei Municipal', numero: lei.replace('Lei Municipal nº ', ''), ementa: p.ementa, texto: `O PRESIDENTE DA CÂMARA MUNICIPAL DE NEVES PAULISTA, nos termos da Lei Orgânica do Município (${mot.toLowerCase()}), promulga a seguinte Lei:\n\n${p.texto || '(texto conforme o autógrafo)'}` } }, a.v, ass => { p.status = 'concluido'; p.lei = lei; p.vigencia = vig; p.publicacao = hojeBR(); p.assinaturas = [...(p.assinaturas || []), ass]; p.timeline.push({ date: agoraTL(), label: `${lei} promulgada pelo Presidente (${mot}) e publicada` }, { date: agoraTL(), label: `Vigência: ${vig.toLowerCase()}` }); persistirProt('Lei promulgada', p); UI().aviso(lei + ' promulgada.'); desenhar(); }); };
   };
   function tAtos(a) {
     const atos = dados().atos;
@@ -515,6 +584,9 @@
     UI().abrirModal(`<form class="lgt-form" novalidate><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Adicionar vereador</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><div class="lgt-campos"><label class="cheio"><span>Nome completo *</span><input name="completo" required></label><label><span>Nome parlamentar *</span><input name="nome" required></label><label><span>Partido</span><input name="partido"></label></div><p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Adicionar</button></div></form>`);
     const f = $('#lgt-modal form'); f.onsubmit = e => { e.preventDefault(); if (!f.completo.value.trim() || !f.nome.value.trim()) { f.querySelector('.lgt-erro').textContent = 'Informe os nomes.'; return; } const c = comp(); c.vereadores.push({ id: uid('v'), nome: f.nome.value.trim(), completo: f.completo.value.trim(), partido: f.partido.value.trim(), usuario: '' }); c.historico.push({ data: new Date().toISOString(), texto: `Vereador incluído: ${f.nome.value.trim()}`, por: (usuario() || {}).nome || '' }); gravar(COMP_KEY, c); UI().fecharModal(); desenharComposicao(); }; };
 
+  /* ================= API para módulos irmãos (comissões) ================= */
+  window.lgvrAPI = { comp, gravar, COMP_KEY, atual, podeEditar, ehGestor, assinarDoc, arq, agoraTL, hojeBR, listaProt, persistirProt, verPorId, TIPOS, tipoDe, UI, esc, ic, cab, btn, faixaDemo, regra, tag, statusTxt, uid, redesenhar: () => desenhar(), tela: () => tela, usuario };
+
   /* ================= estilos ================= */
   const css = document.createElement('style'); css.id = 'lgvr-style'; css.textContent = `
   html.lgvr-consulta .lgvr [data-edita],html.lgvr-consulta .lgt-modal [data-edita]{display:none!important}
@@ -565,6 +637,7 @@
   .lgvr-coaut,.lgvr-opts{border:1px solid var(--lg28-stroke);border-radius:10px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px 18px;margin:0}
   .lgvr-coaut label,.lgvr-opts label{display:flex!important;flex-direction:row!important;align-items:center;gap:8px!important;font-weight:500;color:var(--lg28-ink);font-size:13.5px}
   .lgvr-opts{flex-direction:column}
+  .lgvr-coms[hidden]{display:none!important}.lgvr-com-op{align-items:flex-start!important}.lgvr-com-op input{margin-top:3px}.lgvr-com-op b{display:block;font-size:13.5px}.lgvr-com-op small{display:block;color:var(--lg28-muted);font-weight:400;font-size:12px;line-height:1.4}
   .lgvr-det{padding:14px 22px}.lgvr-det h3{margin:4px 0 12px!important;font-size:17px!important;line-height:1.35}.lgvr-det h4{margin:16px 0 8px!important;font-size:13.5px!important}
   .lgvr-tipo-l{margin:0;color:var(--lg28-muted);font-size:12.5px;font-weight:600}
   .lgvr-det details summary{cursor:pointer;font-weight:600;font-size:13.5px;margin-bottom:8px}

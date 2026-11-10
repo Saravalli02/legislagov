@@ -89,6 +89,19 @@ const COMISSOES = [
     resumo: 'Trata dos demais assuntos de interesse do Município.' },
 ];
 
+/* A Procuradoria define as comissões no painel (aba Usuários); quando houver essa definição, o site usa a mesma composição. */
+(function () {
+  try {
+    const c = JSON.parse(localStorage.getItem('lgv_camara_v1') || 'null'); if (!c || !Array.isArray(c.comissoes)) return;
+    const num = id => +String(id || '').replace(/^v/, '') || null;
+    c.comissoes.forEach(x => { const alvo = COMISSOES.find(k => k.nome === x.nome); if (!alvo) return;
+      const fem = id => { const v = VEREADORES.find(z => z.id === num(id)); return v && v.f; };
+      alvo.membros = [['Presidente', x.presidente], ['Vice-Presidente', x.vice], ['Relator', x.relator]].filter(([, id]) => num(id)).map(([cargo, id]) => [cargo === 'Relator' && fem(id) ? 'Relatora' : cargo, num(id)]);
+      if (x.eleicao) alvo.eleicao = x.eleicao; });
+  } catch (e) { }
+})();
+
+
 /* Sessões publicadas no calendário oficial de 2026 (usadas quando o painel não tiver agenda cadastrada) */
 const SESSOES = [
   ['2026-11-16T20:00', '18ª Sessão Ordinária'], ['2026-11-03T20:00', '17ª Sessão Ordinária'],
