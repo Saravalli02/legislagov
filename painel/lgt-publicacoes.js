@@ -510,7 +510,7 @@
     criarTelas(); aplicarPermissoes();
     const io = window.iniciarSessao;
     const lf = document.getElementById('login-form');
-    if (lf && !document.getElementById('lgp-dica')) lf.insertAdjacentHTML('beforeend', `<div id="lgp-dica" class="lgp-dica"><span>Depois de entrar, você escolhe o painel</span><div><i>${ic('materias')} Administrativo</i><i>${ic('transp')} Transparência</i><i>${ic('moeda')} Financeiro</i></div></div>`);
+    if (lf && !document.getElementById('lgp-dica')) lf.insertAdjacentHTML('beforeend', `<div id="lgp-dica" class="lgp-dica"><span>Depois de entrar, você escolhe o painel</span><div><i>${ic('materias')} Administrativo</i><i>${ic('vereador')} Vereador</i><i>${ic('transp')} Transparência</i><i>${ic('moeda')} Financeiro</i></div></div>`);
     // login: depois de usuário e senha, abre a escolha do painel
     const fl = window.fazerLogin;
     if (typeof fl === 'function' && !fl.__lgp) { const w = async function (...a) { try { sessionStorage.setItem('lgp_escolher', '1'); } catch (e) { } const r = await fl.apply(this, a); if (usuario() && sessionStorage.getItem('lgp_escolher')) { sessionStorage.removeItem('lgp_escolher'); setTimeout(escolherPainel, 30); } return r; }; w.__lgp = true; window.fazerLogin = w; }
