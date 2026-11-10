@@ -1,0 +1,86 @@
+CAMARA MUNICIPAL DE NEVES PAULISTA - PORTAL + PAINEL LEGISLAGOV
+===============================================================
+
+PRIMEIRO USO
+1. Extraia o ZIP inteiro numa pasta.
+2. Clique em ATUALIZAR_CONTEUDO.bat (uma vez; precisa de internet e Python 3).
+   Ele copia do site atual da Camara: brasao, bandeira, fotos dos vereadores,
+   fotos do plenario e TODAS as noticias com as fotos.
+3. Clique em INICIAR_CAMARA.bat. O portal abre em http://127.0.0.1:8765
+   "Area restrita" leva ao painel. Testes: Administrador / admin123 e Ricardo / 123456 (Ricardo = Procuradoria, ve os 4 paineis)
+
+O QUE TEM NO PORTAL
+  Inicio, A Camara (vereadores, Mesa, comissoes, presidentes, historia),
+  Legislativo (sessoes, proposituras, leis, atas), Noticias (com filtro e
+  pagina de leitura), Portal da Transparencia (14 secoes, busca, CSV/JSON),
+  Atendimento (fale conosco, ouvidoria, perguntas, acessibilidade) e pesquisa.
+
+PAINEIS (aparece logo depois de digitar usuario e senha)
+  Ao entrar, a pessoa escolhe qual painel quer acessar:
+    Painel Administrativo   -> Secretaria e Procuradoria: materias, sessoes, protocolo, gestao
+    Portal do Vereador      -> proposituras, assinatura gov.br, pauta, andamento
+                               (+ funcoes da Presidencia para o Presidente)
+    Portal da Transparencia -> publicacoes do portal, noticias do site, webmail
+    Painel Financeiro       -> empenhos, pagamentos, dotacoes, contratos, credores
+  Painel sem permissao aparece com cadeado: "Este usuario nao tem permissao".
+  Trocar depois: menu do usuario > "Trocar de painel".
+
+VEREADORES E PRESIDENTE (quem define: Procuradoria ou Administrador)
+  Administrativo > Gestao > "Vereadores e usuarios":
+    - ligue cada vereador ao usuario dele ("Criar usuarios que faltam" cria todos,
+      senha provisoria 123456; logins: roselli, everton, maikon, emerson, pelacani,
+      marcio, sirlei, lucas, tonho)
+    - marque UM Presidente e salve. Para trocar: marque o novo e confirme.
+      A troca fica no historico e as funcoes passam na hora para o novo usuario.
+  Vereador: Portal do Vereador. Presidente: Portal do Vereador + Presidencia,
+  e consulta no Administrativo e no Financeiro.
+
+PRESIDENCIA x VEREADOR
+  Todos os vereadores: criar proposituras (PL, resolucao, decreto legislativo,
+  indicacao, requerimento, mocao), assinar com gov.br (protocolo automatico,
+  sem passar pela Secretaria), coautoria, pauta e andamento das materias.
+  So o Presidente: despachar proposicoes (Procuradoria, comissoes, Ordem do Dia,
+  devolver), registrar votacao (voto de desempate), assinar autografos,
+  promulgar resolucoes/decretos/leis (sancao tacita ou veto rejeitado) e
+  atos da Presidencia (portarias).
+ASSINATURA DOS DOCUMENTOS (baixar -> assinar -> devolver)
+  1. Ao assinar, o sistema gera o PDF oficial (com codigo de verificacao).
+  2. A pessoa assina no assinador gratuito do gov.br: https://assinador.iti.br
+     (conta gov.br prata ou ouro) - ou com certificado ICP-Brasil (em nuvem/token).
+  3. Devolve o PDF assinado. O sistema confere: e o mesmo documento? tem
+     assinatura digital? de quem e o certificado? gov.br (avancada) ou
+     ICP-Brasil (qualificada)? Validacao oficial: https://validar.iti.gov.br
+  Coautores assinam o MESMO PDF ja assinado (as assinaturas se somam).
+  Atos do Presidente (autografo, promulgacao, portarias) exigem ICP-Brasil
+  pela Lei 14.063/2020 (art. 5o, par. 2o, I); o gov.br e aceito com aviso.
+  "Simular (teste)" aparece so para administrador/Procuradoria.
+
+FINANCEIRO (fluxo da Lei 4.320/64)
+  1. Dotacoes: cadastre as fichas da LOA. Credito adicional = suplementacao/reducao.
+  2. Empenho: ordinario, estimativo ou global. O sistema nao deixa empenhar acima
+     do saldo da dotacao nem do saldo do contrato. Gera a Nota de Empenho (A4).
+  3. Liquidacao: nota fiscal + atesto de recebimento.
+  4. Pagamento: fila em ordem cronologica por fonte (Lei 14.133, art. 141);
+     pagar fora da ordem pede justificativa, que vai publicada.
+  Contratos: vigencia, aditivos, saldo e aviso de vencimento (padrao 60 dias).
+  Empenhos, liquidacoes, pagamentos e contratos vao sozinhos para o Portal da
+  Transparencia (Despesas e Contratos). Dados de exemplo nao sao publicados.
+  Este modulo e controle gerencial; a contabilidade oficial e o envio ao
+  TCE-SP (AUDESP) continuam no sistema contabil ate uma futura integracao.
+
+PUBLICAR NO SITE (area Transparencia)
+  Portal da Transparencia  -> documentos (PDF, planilhas) ou links; aparecem no site
+  Noticias do site          -> noticia com foto; pode ir para o destaque da capa
+  Webmail                   -> endereco definido em Noticias do site
+
+CELULAR
+  Painel e site ajustados para celular: menu lateral vira gaveta, tabelas viram
+  cartoes, janelas ocupam a tela inteira. Tecla Esc fecha qualquer janela.
+
+ONDE EDITAR TEXTOS FIXOS
+  assets/dados.js                  telefone, links, vereadores, Mesa, comissoes,
+                                   sessoes do calendario, destaques e paginas
+  assets/transparencia-catalogo.js secoes e tipos de documento da transparencia
+
+DEMONSTRACAO: tudo fica salvo no navegador deste computador (limite ~5 MB para
+arquivos). Na versao publicada, os dados e arquivos irao para o servidor.

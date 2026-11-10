@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notícias — Câmara Municipal de Neves Paulista</title>
+<meta name="description" content="Portal oficial da Câmara Municipal de Neves Paulista — SP: sessões, vereadores, notícias, leis e Portal da Transparência.">
+<meta name="theme-color" content="#151518">
+<link rel="icon" href="assets/img/brasao.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/dados.js" defer></script>
+<script src="assets/noticias.js" defer></script>
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<div id="cabecalho"></div>
+<main id="conteudo"><div class="cab-pag"><div class="wrap"><nav class="trilha" aria-label="Você está em"><a href="index.html">Início</a><span aria-hidden="true">›</span><span>Imprensa</span></nav><h1 id="titulo-pagina">Notícias</h1><p>Tudo o que foi discutido e aprovado na Câmara</p></div></div>
+<div class="wrap conteudo">
+  <div class="filtros"><label class="campo-busca"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="sr-only">Buscar</span><input id="filtro-q" placeholder="Buscar nas notícias"></label>
+  <label class="sr-only" for="filtro-cat">Categoria</label><select class="sel" id="filtro-cat"></select><label class="sr-only" for="filtro-ano">Ano</label><select class="sel" id="filtro-ano"></select></div>
+  <p class="contador" id="contador" role="status"></p>
+  <div class="grade-not" id="lista-noticias"></div>
+  <nav class="paginacao" id="paginacao" aria-label="Páginas"></nav>
+</div></main>
+<div id="rodape"></div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Render — serviço web em Python (reaproveita o serviço pago já existente).
+# No painel do Render: Build Command = (vazio ou "echo ok") · Start Command = python server.py
+services:
+  - type: web
+    name: camara-neves-paulista
+    runtime: python
+    buildCommand: echo "sem dependencias"
+    startCommand: python server.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: DEMONSTRACAO   # 1 = não aparece no Google; trocar para 0 quando virar o site oficial
+        value: "1"

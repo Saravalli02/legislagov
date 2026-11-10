@@ -1,0 +1,57 @@
+/* Portal da Transparência — complementa site.css */
+.t-cab{padding-bottom:36px}
+.t-busca{display:flex;align-items:center;gap:10px;margin-top:22px;max-width:760px;background:#fff;border-radius:14px;padding:6px 6px 6px 16px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.t-busca .ic{color:var(--suave)}
+.t-busca input{flex:1;min-width:0;border:0;outline:0;font:500 1rem var(--sans);color:var(--tinta);height:44px;background:transparent}
+.t-meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:16px;font-size:.84rem;color:#cfcfd4}
+.t-meta span,.t-meta a{display:inline-flex;align-items:center;gap:6px}
+.t-meta .ic{width:15px;height:15px}
+.t-meta a{color:#f6dd96;text-decoration:none}
+.t-meta a:hover{text-decoration:underline}
+.t-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.t-card{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:start;padding:18px;border:1px solid var(--linha);border-radius:16px;text-decoration:none;color:var(--tinta);background:var(--branco);transition:border-color .15s,box-shadow .15s,transform .15s}
+.t-card:hover{border-color:var(--v600);box-shadow:var(--sombra);transform:translateY(-2px)}
+.t-ico{width:46px;height:46px;border-radius:12px;background:var(--v100);color:var(--v700);display:flex;align-items:center;justify-content:center}
+.t-ico .ic{width:23px;height:23px}
+.t-txt b{display:block;font-family:var(--serif);font-size:1.12rem;font-weight:650}
+.t-txt small{display:block;color:var(--suave);font-size:.84rem;line-height:1.4;margin-top:3px}
+.t-n{font:600 .72rem var(--sans);color:var(--v700);background:var(--v50);border-radius:20px;padding:3px 9px;white-space:nowrap}
+.t-n.vazio{color:var(--suave);background:var(--creme)}
+.t-faixa{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;margin-top:36px;padding:24px 28px;border-radius:18px;background:var(--creme);border:1px solid var(--linha)}
+.t-faixa h2{margin:0;font-size:1.35rem}
+.t-faixa p{margin:6px 0 0;color:var(--suave)}
+.t-base{display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--suave);margin:0 0 16px}
+.t-base .ic{width:16px;height:16px;color:var(--v600)}
+.t-subs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.t-subs button{border:1px solid var(--linha-2);background:var(--branco);color:var(--tinta);border-radius:20px;padding:7px 14px;font:500 .84rem var(--sans);cursor:pointer}
+.t-subs button:hover{border-color:var(--v600)}
+.t-subs button[aria-selected="true"]{background:var(--v700);border-color:var(--v700);color:#fff}
+.t-exp{display:flex;gap:6px}
+.t-exp .btn{min-height:48px}
+.t-tabela-wrap{position:relative;overflow-x:auto;border:1px solid var(--linha);border-radius:14px}
+.t-tabela{margin:0;min-width:640px}
+.t-tabela td b{display:block;font-weight:600}
+.t-tabela td small{display:block;color:var(--suave);font-size:.84rem;margin-top:2px}
+.t-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.t-num{font-size:.78rem;color:var(--suave)}
+.t-data{white-space:nowrap;color:var(--suave);font-variant-numeric:tabular-nums}
+.t-tabela .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.t-abrir{min-height:38px;padding:0 12px;font-size:.84rem;white-space:nowrap}
+.t-vazio{text-align:center;padding:40px 20px!important;color:var(--suave)}
+.t-vazio .ic{width:30px;height:30px;color:var(--v600);margin:0 auto 8px;display:block}
+.t-vazio b{display:block;color:var(--tinta);margin-bottom:4px}
+.t-vazio span{display:block;max-width:56ch;margin:0 auto;font-size:.9rem}
+.t-realce td{background:var(--ouro-100)!important}
+.t-h2{font-size:1.3rem;margin:36px 0 14px}
+.t-links{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.t-links a{display:flex;align-items:center;gap:10px;padding:14px 16px;border:1px solid var(--linha);border-radius:12px;text-decoration:none;color:var(--tinta);font-weight:500}
+.t-links a:hover{border-color:var(--v600);background:var(--v50)}
+.t-links .ic{color:var(--v600);width:18px;height:18px}
+@media(max-width:680px){
+  .t-grade{grid-template-columns:1fr}
+  .t-busca{flex-wrap:wrap;padding:8px}
+  .t-busca .btn{width:100%}
+  .t-exp{width:100%}.t-exp .btn{flex:1}
+  .t-faixa{padding:20px}
+}
+@media(max-width:1020px){.transp .duas-col > .lateral{order:2}}
