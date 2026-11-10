@@ -28,7 +28,8 @@ const CONFIG = {
   },
   // Sistemas externos (trocar quando migrarem)
   legislacao: 'http://consulta.siscam.com.br/camaranevespaulista/index/81/8',
-  proposituras: 'http://consulta.siscam.com.br/camaranevespaulista/index/80/8',
+  proposituras: 'proposituras.html',
+  propositurasAntigo: 'http://consulta.siscam.com.br/camaranevespaulista/index/80/8',
   sessoesSiscam: 'http://consulta.siscam.com.br/camaranevespaulista/sessoes',
   atas: 'http://consulta.siscam.com.br/camaranevespaulista/index/84/8',
   docsAdmin: 'http://consulta.siscam.com.br/camaranevespaulista/index/79/8',

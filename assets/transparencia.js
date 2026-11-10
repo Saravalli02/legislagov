@@ -39,7 +39,7 @@ function iniciarTransparencia() {
   }
 
   function categoria() {
-    const c = transpCategoria(estado.c); if (!c) { estado.c = ''; return inicio(); }
+    const c = transpCategoria(estado.c); if (!c) { estado.c = ''; return inicio(); } estado.c = c.id;
     document.title = c.nome + ' — Portal da Transparência';
     const daCat = itens.filter(i => i.cat === c.id);
     const anos = [...new Set(daCat.map(i => (i.competencia || i.data || '').slice(0, 4)).filter(Boolean))].sort().reverse();
@@ -48,7 +48,8 @@ function iniciarTransparencia() {
         <nav class="lateral" aria-label="Seções da transparência"><h3>Transparência</h3>${TRANSP_CATALOGO.map(x => `<a href="transparencia.html?c=${x.id}"${x.id === c.id ? ' aria-current="page"' : ''}>${x.nome}</a>`).join('')}</nav>
         <div>
           <p class="t-base">${ic('escudo')} Base legal: ${c.base}</p>
-          <div class="t-subs" role="tablist" aria-label="Tipos de documento"><button type="button" role="tab" data-sub="" aria-selected="${!estado.sub}">Todos</button>${c.subs.map(s => `<button type="button" role="tab" data-sub="${esc(s)}" aria-selected="${estado.sub === s}">${esc(s)}</button>`).join('')}</div>
+          ${c.grupos ? `<div class="t-grupos" role="tablist" aria-label="Tipos de documento"><div class="t-subs"><button type="button" role="tab" data-sub="" aria-selected="${!estado.sub}">Todos</button></div>${c.grupos.map(([g, ss]) => `<div class="t-grupo"><span class="t-grupo-rot">${esc(g)}</span><div class="t-subs">${ss.map(s => `<button type="button" role="tab" data-sub="${esc(s)}" aria-selected="${estado.sub === s}">${esc(s)}</button>`).join('')}</div></div>`).join('')}</div>` :
+          `<div class="t-subs" role="tablist" aria-label="Tipos de documento"><button type="button" role="tab" data-sub="" aria-selected="${!estado.sub}">Todos</button>${c.subs.map(s => `<button type="button" role="tab" data-sub="${esc(s)}" aria-selected="${estado.sub === s}">${esc(s)}</button>`).join('')}</div>`}
           <div class="filtros">
             <label class="campo-busca">${ic('busca')}<span class="sr-only">Filtrar</span><input id="t-filtro" placeholder="Filtrar nesta seção" value="${esc(estado.q)}"></label>
             <label class="sr-only" for="t-ano">Ano</label><select class="sel" id="t-ano"><option value="">Todos os anos</option>${anos.map(a => `<option${a === estado.ano ? ' selected' : ''}>${a}</option>`).join('')}</select>

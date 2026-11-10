@@ -113,7 +113,7 @@ const MENU = [
   ]],
   ['Transparência', [
     ['grafico', 'Portal da Transparência', 'Receitas, despesas, pessoal e contratos', 'transparencia.html'],
-    ['contrato', 'Licitações e contratos', 'Editais, dispensas e contratos', 'transparencia.html?c=licitacoes'],
+    ['contrato', 'Licitações', 'Editais, dispensas, contratos e aditivos', 'transparencia.html?c=licitacoes'],
     ['moeda', 'Receitas e despesas', 'Duodécimos, empenhos e pagamentos', 'transparencia.html?c=despesas'],
     ['pessoa', 'Pessoal e remuneração', 'Quadro de servidores e folha', 'transparencia.html?c=pessoal'],
     ['info', 'Acesso à Informação (e-SIC)', 'Peça informações públicas', CONFIG.esic],
@@ -314,7 +314,7 @@ function montarTV(el) {
 function montarAgendaHome() { const el = $('#agenda-home'); if (!el) return; const f = futuras().slice(0, 4); el.innerHTML = f.length ? f.map(s => itemSessao(s)).join('') : '<p class="nota">Nenhuma sessão agendada no momento.</p>'; }
 function montarTranspHome() {
   const el = $('#transp-home'); if (!el) return;
-  const T = [['moeda', 'Receitas e despesas', 'Duodécimos, empenhos e pagamentos', 'transparencia.html?c=despesas'], ['contrato', 'Licitações e contratos', 'Editais, dispensas e contratos', 'transparencia.html?c=licitacoes'],
+  const T = [['moeda', 'Receitas e despesas', 'Duodécimos, empenhos e pagamentos', 'transparencia.html?c=despesas'], ['contrato', 'Licitações', 'Editais, dispensas, contratos e aditivos', 'transparencia.html?c=licitacoes'],
   ['pessoa', 'Pessoal', 'Servidores, cargos e remuneração', 'transparencia.html?c=pessoal'], ['ata', 'Prestação de contas', 'Balanços, RGF e parecer do TCE', 'transparencia.html?c=contas']];
   el.innerHTML = T.map(([i, t, d, u]) => `<a href="${u}">${ic(i)}<b>${t}</b><small>${d}</small></a>`).join('');
 }
@@ -348,7 +348,7 @@ function montarFicha() {
     <tr><th>Contato</th><td>Gabinete na Câmara · <a href="tel:${CONFIG.telefoneLink}">${CONFIG.telefone}</a></td></tr>
   </tbody></table>
   ${nots.length ? `<h3 style="margin:26px 0 8px">Notícias recentes</h3><div class="not-lista">${nots.map(n => `<a class="not-item" href="${linkNoticia(n)}"><div class="mini">${capaNot(n)}</div><div><div class="meta"><time>${dataLonga(n.data)}</time></div><h3>${esc(n.titulo)}</h3></div></a>`).join('')}</div>` : ''}
-  <div class="acoes"><a class="btn" href="${CONFIG.proposituras}" target="_blank" rel="noopener">${ic('doc')} Proposituras</a><a class="btn btn-claro" href="fale-conosco.html?assunto=${encodeURIComponent('Mensagem ao vereador ' + v.nome)}">${ic('email')} Enviar mensagem</a></div></div>`;
+  <div class="acoes"><a class="btn" href="proposituras.html?autor=${v.id}">${ic('doc')} Proposituras</a><a class="btn btn-claro" href="fale-conosco.html?assunto=${encodeURIComponent('Mensagem ao vereador ' + v.nome)}">${ic('email')} Enviar mensagem</a></div></div>`;
 }
 
 /* ---------------- notícias ---------------- */
@@ -462,6 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
   montarVereadores(); montarFicha(); montarListaNoticias(); montarNoticia(); montarCalendario(); montarSessoes(); montarPagina(); montarFale(); montarBusca();
   montarTV($('#tv-sessoes'));
   if (typeof iniciarTransparencia === 'function') iniciarTransparencia();
+  if (typeof iniciarProposituras === 'function') iniciarProposituras();
 });
 addEventListener('storage', e => {
   if (e.key === 'lgv11_agenda_v1') { montarCardSessao(); montarAgendaHome(); montarCalendario(); montarSessoes(); }

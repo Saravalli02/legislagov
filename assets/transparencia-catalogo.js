@@ -26,13 +26,13 @@
       base: 'LC 131/2009 · PNTP dimensão 4 (4.3 essencial)', valor: true, fornecedor: true,
       subs: ['Empenhos', 'Liquidações', 'Pagamentos', 'Ordem cronológica de pagamentos', 'Restos a pagar'],
       links: [['Sistema contábil (consulta detalhada)', CONTABIL], ['Contas públicas (site anterior)', ANTIGO + '/ContaPublica']] },
-    { id: 'licitacoes', nome: 'Licitações', icone: 'contrato', desc: 'Editais, dispensas, inexigibilidades, atas e resultados.',
-      base: 'Lei 14.133/2021 · PNTP dimensão 8', valor: true, fornecedor: true,
-      subs: ['Editais e avisos', 'Dispensas e inexigibilidades', 'Atas de registro de preços', 'Resultados e homologações', 'Plano de Contratações Anual'],
+    { id: 'licitacoes', nome: 'Licitações', icone: 'contrato', desc: 'Editais, dispensas, inexigibilidades, atas e resultados — e os contratos, aditivos, apostilamentos e fiscais designados.',
+      base: 'Lei 14.133/2021 (arts. 94, 117 e 174) · PNTP dimensões 8 e 9', valor: true, fornecedor: true,
+      grupos: [
+        ['Licitação', ['Editais e avisos', 'Dispensas', 'Inexigibilidades', 'Atas de registro de preços', 'Resultados e homologações', 'Plano de Contratações Anual']],
+        ['Contratos', ['Contratos', 'Termos aditivos', 'Apostilamentos', 'Fiscais designados']],
+      ],
       links: [['Licitações (site anterior)', ANTIGO + '/licitacao'], ['Plano de Contratações Anual', ANTIGO + '/Pagina/Listar/351']] },
-    { id: 'contratos', nome: 'Contratos', icone: 'contrato', desc: 'Contratos, aditivos, apostilamentos e fiscais designados.',
-      base: 'Lei 14.133/2021 art. 94 · PNTP dimensão 9', valor: true, fornecedor: true,
-      subs: ['Contratos', 'Termos aditivos', 'Apostilamentos', 'Fiscais e gestores de contrato'] },
     { id: 'pessoal', nome: 'Pessoal', icone: 'pessoa', desc: 'Quadro de servidores, remuneração, estagiários e concursos.',
       base: 'LAI · PNTP dimensão 6', valor: true,
       subs: ['Relação de servidores', 'Folha de pagamento / remuneração', 'Tabela de cargos e salários', 'Estagiários', 'Terceirizados', 'Concursos e seleções'] },
@@ -49,7 +49,7 @@
     { id: 'legislativo', nome: 'Atividade legislativa', icone: 'balanca', desc: 'Projetos e tramitação, pautas, atas com presença, votações e leis.',
       base: 'PNTP dimensão 20 (20.3, 20.5, 20.6)',
       subs: ['Projetos e tramitação', 'Pautas das sessões', 'Pautas das comissões', 'Atas e lista de presença', 'Votações nominais', 'Leis, resoluções e decretos legislativos'],
-      links: [['Proposituras e tramitação', SISCAM + '/index/80/8'], ['Atas das sessões', SISCAM + '/index/84/8'], ['Leis municipais', SISCAM + '/index/81/8'], ['Sessões e calendário', 'sessoes.html']] },
+      links: [['Proposituras e tramitação', 'proposituras.html'], ['Atas das sessões', SISCAM + '/index/84/8'], ['Leis municipais', SISCAM + '/index/81/8'], ['Sessões e calendário', 'sessoes.html']] },
     { id: 'convenios', nome: 'Convênios e transferências', icone: 'link', desc: 'Convênios, acordos de cooperação e transferências.',
       base: 'PNTP dimensão 5',
       subs: ['Convênios', 'Acordos de cooperação', 'Termos de fomento / parceria'] },
@@ -69,9 +69,20 @@
   g.TRANSP_TIPOS_ARQUIVO = '.pdf,.csv,.xlsx,.xls,.ods,.odt,.doc,.docx,.txt,.json,.jpg,.jpeg,.png';
   g.TRANSP_LIMITE_ARQUIVO = 2.5 * 1024 * 1024; // demonstração: o navegador guarda até ~5 MB no total
 
-  g.transpLer = function () { try { return JSON.parse(localStorage.getItem(g.TRANSP_CHAVE)) || []; } catch (e) { return []; } };
+  g.TRANSP_CATALOGO.forEach(c => { if (c.grupos && !c.subs) c.subs = c.grupos.flatMap(x => x[1]); });
+
+  /* Licitações e Contratos viraram uma seção só: publicações antigas são lidas no lugar novo */
+  const ALIAS_CAT = { contratos: 'licitacoes' };
+  const ALIAS_SUB = { 'Fiscais e gestores de contrato': 'Fiscais designados', 'Dispensas e inexigibilidades': 'Dispensas' };
+  function ajustar(i) {
+    if (!i) return i;
+    if (ALIAS_CAT[i.cat]) i.cat = ALIAS_CAT[i.cat];
+    if (ALIAS_SUB[i.sub]) i.sub = /inexig/i.test(i.titulo || '') ? 'Inexigibilidades' : ALIAS_SUB[i.sub];
+    return i;
+  }
+  g.transpLer = function () { try { return (JSON.parse(localStorage.getItem(g.TRANSP_CHAVE)) || []).map(ajustar); } catch (e) { return []; } };
   g.transpSalvar = function (lista) { localStorage.setItem(g.TRANSP_CHAVE, JSON.stringify(lista)); };
-  g.transpCategoria = function (id) { return g.TRANSP_CATALOGO.find(c => c.id === id); };
+  g.transpCategoria = function (id) { id = ALIAS_CAT[id] || id; return g.TRANSP_CATALOGO.find(c => c.id === id); };
   g.transpMoeda = function (v) { const n = Number(v); return v === '' || v == null || isNaN(n) ? '' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
   g.transpCompetencia = function (c) { if (!c) return ''; const [a, m] = String(c).split('-'); return m ? `${m}/${a}` : a; };
   /* abre um arquivo guardado como data URL em nova aba (navegadores bloqueiam data: direto) */

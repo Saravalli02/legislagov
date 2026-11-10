@@ -55,3 +55,9 @@
   .t-faixa{padding:20px}
 }
 @media(max-width:1020px){.transp .duas-col > .lateral{order:2}}
+/* seção com grupos (Licitações: licitação + contratos) */
+.t-grupos{display:grid;gap:10px;margin-bottom:18px}
+.t-grupos .t-subs{margin-bottom:0}
+.t-grupo{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:start;padding-top:10px;border-top:1px solid var(--linha)}
+.t-grupo-rot{font:700 .7rem var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--suave);padding-top:9px}
+@media (max-width:640px){.t-grupo{grid-template-columns:1fr;gap:6px}.t-grupo-rot{padding-top:0}}
