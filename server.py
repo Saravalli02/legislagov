@@ -41,7 +41,7 @@ class Handler(SimpleHTTPRequestHandler):
         nome = caminho.rsplit("/", 1)[-1]
         partes = [p for p in caminho.split("/") if p]
         # não expõe arquivos internos nem as ferramentas locais (.bat / .py)
-        if nome in BLOQUEADOS or nome.endswith((".bat", ".py")) or (partes and partes[0] in {"ferramentas", ".git"}):
+        if nome in BLOQUEADOS or nome.endswith((".bat", ".py")) or (partes and partes[0] in {"ferramentas", ".git", "portfolio"}):
             self.send_error(404)
             return
         if caminho == "/healthz":
