@@ -32,7 +32,9 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         if DEMONSTRACAO:
             self.send_header("X-Robots-Tag", "noindex, nofollow")
-        if self.path.endswith((".html", "/")) or "." not in self.path.rsplit("/", 1)[-1]:
+        caminho = self.path.split("?", 1)[0]
+        # páginas, scripts e estilos: o navegador sempre confere se há versão nova (evita sistema "pela metade" após atualização)
+        if caminho.endswith((".html", "/", ".js", ".css", ".json")) or "." not in caminho.rsplit("/", 1)[-1]:
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 

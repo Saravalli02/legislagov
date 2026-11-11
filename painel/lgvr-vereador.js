@@ -54,6 +54,7 @@
       c = { vereadores: VEREADORES_PADRAO.map(([id, nome, completo, partido, sug]) => ({ id: 'v' + id, nome, completo, partido, sugestao: sug, usuario: '' })), presidente: 'v56', historico: [{ data: new Date().toISOString(), texto: 'Presidente inicial: Edenilson Roselli (Mesa 2025–2026)', por: 'Sistema' }] };
       gravar(COMP_KEY, c);
     }
+    if (!c.vereadores.some(v => v.id === c.presidente)) { const de = c.presidente; c.presidente = c.vereadores.some(v => v.id === 'v56') ? 'v56' : (c.vereadores[0] || {}).id; c.historico = c.historico || []; c.historico.push({ data: new Date().toISOString(), texto: `Presidente “${de || '—'}” não existe mais na composição; voltou para ${(c.vereadores.find(v => v.id === c.presidente) || {}).nome || '—'}.`, por: 'Sistema' }); gravar(COMP_KEY, c); }
     if (!Array.isArray(c.comissoes)) { c.comissoes = COMISSOES_PADRAO.map(x => ({ ...x })); c.historico = c.historico || []; c.historico.push({ data: new Date().toISOString(), texto: 'Comissões permanentes 2025–2026 carregadas conforme o site da Câmara', por: 'Sistema' }); gravar(COMP_KEY, c); }
     return c;
   }
@@ -160,7 +161,9 @@
   function faixaDemo(a) {
     if (!a.demo) return '';
     const c = comp();
-    return `<div class="lgvr-demo-faixa"><span>${ic('vereador')} Você não é vereador; está vendo o portal <b>como</b></span><select onchange="lgvrComo(this.value)" aria-label="Ver o portal como">${c.vereadores.map(v => `<option value="${v.id}"${v.id === a.v.id ? ' selected' : ''}>${esc(v.nome)}${v.id === c.presidente ? ' (Presidente)' : ''}</option>`).join('')}</select><small>Modo de demonstração para administrador e Procuradoria.</small></div>`;
+    const pres = c.vereadores.find(v => v.id === c.presidente);
+    return `<div class="lgvr-demo-faixa"><span>${ic('vereador')} Você não é vereador; está vendo o portal <b>como</b></span><select onchange="lgvrComo(this.value)" aria-label="Ver o portal como">${c.vereadores.map(v => `<option value="${v.id}"${v.id === a.v.id ? ' selected' : ''}>${esc(v.nome)}${v.id === c.presidente ? ' — Presidente da Câmara' : ''}</option>`).join('')}</select>
+      <small>Modo de demonstração para administrador e Procuradoria. Presidente da Câmara hoje: <b>${esc(pres ? pres.nome : '—')}</b>${pres && pres.id !== a.v.id ? ` · <button type="button" class="lgvr-link" onclick="lgvrComo('${pres.id}')">ver como o Presidente</button>` : ''} (quem define é a Procuradoria, em Vereadores e usuários).</small></div>`;
   }
   window.lgvrComo = id => { try { sessionStorage.setItem('lgvr_como', id); } catch (e) { } if (window.lgv33Render) lgv33Render(); lgvrAbrir(PRES.includes(tela) && id !== comp().presidente ? 'inicio' : tela); };
   function pendentesAssinatura(v) {
@@ -174,6 +177,7 @@
     const a = atual(); const b = document.querySelector('.lgv31-item[data-v31="verAssinar"]'); if (!a || !b) return;
     let n = b.querySelector('.lgvr-n'); const t = pendentesAssinatura(a.v).total;
     if (!n) { n = document.createElement('b'); n.className = 'lgvr-n'; b.appendChild(n); } n.textContent = t || ''; n.hidden = !t;
+    const bd = document.querySelector('.lgv31-item[data-v31="presDespacho"]'); if (bd) { let m = bd.querySelector('.lgvr-n'); const q = a.v.id === comp().presidente ? listaProt().filter(p => p.status === 'protocolado').length : 0; if (!m) { m = document.createElement('b'); m.className = 'lgvr-n'; bd.appendChild(m); } m.textContent = q || ''; m.hidden = !q; }
     const bc = document.querySelector('.lgv31-item[data-v31="verComissoes"]'); if (bc && window.lgcmPendencias) { let m = bc.querySelector('.lgvr-n'); const q = lgcmPendencias(a.v).length; if (!m) { m = document.createElement('b'); m.className = 'lgvr-n'; bc.appendChild(m); } m.textContent = q || ''; m.hidden = !q; }
   }
   function sessoes() {
@@ -264,7 +268,7 @@
         origem: 'portal-vereador', tipo: r.tipo, tipoNome: T.nome, texto: r.texto, justificativa: r.justificativa, autorId: v.id, coautores: r.coautores || [], assinaturas: [ass] };
       listaProt().unshift(p); const d = dados(); d.rascunhos = d.rascunhos.filter(x => x.id !== id); salvarDados(d);
       persistirProt('Propositura protocolada pelo Portal do Vereador', p); UI().log('Portal do Vereador', `Protocolou ${p.numero}`);
-      UI().aviso(`${p.numero} assinado e protocolado.`); abaProp = 'tramitando'; if (tela === 'proposituras' || tela === 'assinar') desenhar(); lgvrVer(p.id);
+      { const pr = comp().vereadores.find(x => x.id === comp().presidente); UI().aviso(`${p.numero} assinado e protocolado. Já está com o Presidente${pr ? ' ' + pr.nome : ''} para despacho.`); } abaProp = 'tramitando'; if (tela === 'proposituras' || tela === 'assinar') desenhar(); lgvrVer(p.id);
     });
   };
 
@@ -637,6 +641,7 @@
   .lgvr-coaut,.lgvr-opts{border:1px solid var(--lg28-stroke);border-radius:10px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px 18px;margin:0}
   .lgvr-coaut label,.lgvr-opts label{display:flex!important;flex-direction:row!important;align-items:center;gap:8px!important;font-weight:500;color:var(--lg28-ink);font-size:13.5px}
   .lgvr-opts{flex-direction:column}
+  .lgvr-link{border:0;background:none;padding:0;color:inherit;text-decoration:underline;font:inherit;cursor:pointer;font-weight:700}
   .lgvr-coms[hidden]{display:none!important}.lgvr-com-op{align-items:flex-start!important}.lgvr-com-op input{margin-top:3px}.lgvr-com-op b{display:block;font-size:13.5px}.lgvr-com-op small{display:block;color:var(--lg28-muted);font-weight:400;font-size:12px;line-height:1.4}
   .lgvr-det{padding:14px 22px}.lgvr-det h3{margin:4px 0 12px!important;font-size:17px!important;line-height:1.35}.lgvr-det h4{margin:16px 0 8px!important;font-size:13.5px!important}
   .lgvr-tipo-l{margin:0;color:var(--lg28-muted);font-size:12.5px;font-weight:600}
