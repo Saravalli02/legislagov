@@ -710,10 +710,10 @@
     const garantir = (login, dados, forcar) => { const u = achar(login);
       if (!u) { us.push({ id: 'usr-' + login, usuario: login, senha: '123456', municipio: 'Neves Paulista — SP', orgao: 'cam', ativo: true, teste: true, ...dados }); mudou = true; }
       else if (forcar) { Object.assign(u, dados, { ativo: true }); mudou = true; } };
-    garantir('vinicius', { nome: 'Vinicius', cargo: 'Procurador Jurídico', setor: 'Procuradoria Legislativa', perfil: 'procurador' }, !flag);
-    garantir('erika', { nome: 'Erika', cargo: 'Secretária', setor: 'Secretaria Legislativa', perfil: 'secretaria' }, !flag);
-    garantir('ednilson', { nome: 'Edenilson Roselli', cargo: 'Presidente da Câmara', setor: 'Gabinete da Presidência', perfil: 'vereador' }, !flag);
-    garantir('andre', { nome: 'André', cargo: 'Tesoureiro', setor: 'Tesouraria e Transparência', perfil: 'financeiro' }, !flag);
+    garantir('vinicius', { nome: 'Vinicius', cargoId: 'procurador', cargo: 'Procurador(a) Legislativo', setor: 'Procuradoria Legislativa', perfil: 'procurador' }, !flag);
+    garantir('erika', { nome: 'Erika', cargoId: 'diretora', cargo: 'Diretor(a) de Secretaria', setor: 'Secretaria Legislativa', perfil: 'secretaria' }, !flag);
+    garantir('ednilson', { nome: 'Edenilson Roselli', cargoId: 'vereador', cargo: 'Vereador(a)', setor: 'Gabinete', perfil: 'vereador' }, !flag);
+    garantir('andre', { nome: 'André', cargoId: 'tesoureira', cargo: 'Tesoureiro(a)', setor: 'Tesouraria', perfil: 'financeiro' }, !flag);
     if (mudou) lgSaveUsers(us);
     if (flag) return;
     const c = comp();

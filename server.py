@@ -57,6 +57,30 @@ def _baixar(url, limite=3_000_000):
         return r.read(limite).decode("utf-8", "replace")
 
 
+_brasao_cache = {"bytes": b"", "quando": 0.0}
+URL_BRASAO = "https://www.camaranevespaulista.sp.gov.br/Arquivos/Uploads/Bras%C3%A3o_Neves_Paulista,_SP.jpg"
+
+
+def _brasao():
+    """Brasão em JPG: cópia local (assets/img/brasao.jpg) ou baixado do site antigo e guardado em memória."""
+    local = os.path.join(PASTA, "assets", "img", "brasao.jpg")
+    if os.path.isfile(local):
+        with open(local, "rb") as f:
+            return f.read()
+    if _brasao_cache["bytes"] or time.time() - _brasao_cache["quando"] < 600:
+        return _brasao_cache["bytes"]
+    _brasao_cache["quando"] = time.time()
+    try:
+        req = urllib.request.Request(URL_BRASAO, headers={"User-Agent": "Mozilla/5.0 (LegislaGov; Camara Neves Paulista)"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            dados = r.read(2_000_000)
+        if dados[:2] == b"\xff\xd8":
+            _brasao_cache["bytes"] = dados
+    except Exception as erro:
+        print("brasão: não consegui baixar:", erro, flush=True)
+    return _brasao_cache["bytes"]
+
+
 def _id_do_canal():
     if re.fullmatch(r"UC[\w-]{22}", CANAL):
         return CANAL
@@ -288,6 +312,19 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(corpo)))
+            self.end_headers()
+            self.wfile.write(corpo)
+            return
+        if caminho == "/api/brasao.jpg":
+            # o brasão oficial vem do site antigo; servido daqui (mesma origem) para o site recortar o fundo branco
+            corpo = _brasao()
+            if not corpo:
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Content-Length", str(len(corpo)))
+            self.send_header("Cache-Control", "public, max-age=604800")
             self.end_headers()
             self.wfile.write(corpo)
             return

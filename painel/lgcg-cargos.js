@@ -1,0 +1,127 @@
+/* =====================================================================
+   LegislaGov — CARGOS DA CÂMARA (cadastro de usuário)
+   · Órgão: só a Câmara Municipal.
+   · Cargos fixos: Diretor(a) de Secretaria, Técnico(a) Contábil, Tesoureiro(a) e Procurador(a)
+     Legislativo são únicos (um usuário ativo por cargo). Vereador fica sempre aberto.
+   · O Presidente da Câmara não é cargo de cadastro: é um vereador que a Procuradoria marca
+     em Administrativo › Vereadores e usuários.
+   · Cada cargo já entra com as funções do seu perfil; o administrador libera outras em
+     Administrativo › Áreas e acessos (ex.: Transparência ou site para a Diretora de Secretaria).
+   ===================================================================== */
+(function () {
+  const CARGOS = [
+    { id: 'diretora', nome: 'Diretor(a) de Secretaria', perfil: 'secretaria', setor: 'Secretaria Legislativa', unico: true, funcao: 'Protocolo, matérias, sessões e atendimento' },
+    { id: 'contabil', nome: 'Técnico(a) Contábil', perfil: 'financeiro', setor: 'Contabilidade', unico: true, funcao: 'Contabilidade e Portal da Transparência' },
+    { id: 'tesoureira', nome: 'Tesoureiro(a)', perfil: 'financeiro', setor: 'Tesouraria', unico: true, funcao: 'Tesouraria e Portal da Transparência' },
+    { id: 'procurador', nome: 'Procurador(a) Legislativo', perfil: 'procurador', setor: 'Procuradoria Legislativa', unico: true, funcao: 'Pareceres jurídicos, vereadores, Presidente e permissões' },
+    { id: 'vereador', nome: 'Vereador(a)', perfil: 'usuario', setor: 'Gabinete', unico: false, funcao: 'Portal do Vereador' },
+  ];
+  window.LG_CARGOS = CARGOS;
+  const $ = (s, el = document) => el.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const users = () => (typeof lgUsers === 'function' ? lgUsers() : []);
+  const comp = () => { try { return JSON.parse(localStorage.getItem('lgv_camara_v1')) || { vereadores: [] }; } catch (e) { return { vereadores: [] }; } };
+
+  function cargoDe(u) {
+    if (!u) return '';
+    if (u.cargoId && CARGOS.some(c => c.id === u.cargoId)) return u.cargoId;
+    const t = `${u.cargo || ''} ${u.setor || ''}`;
+    if (u.orgao === 'ambos' || u.perfil === 'admin') return '';
+    if (/procurad/i.test(t)) return 'procurador';
+    if (/tesour/i.test(t)) return 'tesoureira';
+    if (/cont[aá]b/i.test(t)) return 'contabil';
+    if (/diretor|secret/i.test(t)) return 'diretora';
+    if (/vereador|presidente da c/i.test(t) || (window.lgVereadorDoUsuario && lgVereadorDoUsuario(u))) return 'vereador';
+    return '';
+  }
+  window.lgCargoDe = cargoDe;
+  const ocupante = (id, exceto) => users().find(u => u.ativo !== false && u.id !== exceto && cargoDe(u) === id);
+  window.lgCargoOcupado = (id, exceto) => { const c = CARGOS.find(x => x.id === id); return !!(c && c.unico && ocupante(id, exceto)); };
+
+  /* usuários que já existiam: grava o cargo novo uma vez */
+  function migrar() {
+    if (typeof lgUsers !== 'function') return;
+    const a = lgUsers(); const vistos = {}; let mudou = false;
+    a.forEach(u => { if (u.cargoId && u.ativo !== false) vistos[u.cargoId] = 1; });
+    a.forEach(u => { if (u.cargoId) return; const id = cargoDe(u); if (!id) return; const c = CARGOS.find(x => x.id === id);
+      if (c.unico && u.ativo !== false) { if (vistos[id]) return; vistos[id] = 1; }
+      u.cargoId = id; u.cargo = c.nome; u.setor = c.setor; if (c.perfil !== 'usuario') u.perfil = c.perfil; mudou = true; });
+    if (mudou) lgSaveUsers(a);
+  }
+
+  /* ---------------- tela de cadastro ---------------- */
+  function ajustarFormulario() {
+    const f = document.getElementById('register-form'); if (!f || f.dataset.lgcg) return; f.dataset.lgcg = '1';
+    const org = document.getElementById('reg-orgao'); const grpOrg = org && org.closest('.field-group');
+    if (grpOrg) { grpOrg.style.display = 'none'; grpOrg.insertAdjacentHTML('afterend', '<div class="field-group lgcg-org"><label>Órgão</label><div class="lgcg-fixo">Câmara Municipal de Neves Paulista</div></div>'); }
+    ['reg-cpf', 'reg-telefone'].forEach(id => { const e = document.getElementById(id); if (e) e.required = false; }); // campos ocultos: não podem travar o envio
+    const mun = document.getElementById('reg-municipio'); if (mun) { const g = mun.closest('.field-group'); if (g) g.style.display = 'none'; }
+    const sel = document.getElementById('reg-cargo'); const grp = sel && sel.closest('.field-group');
+    if (grp) { const l = grp.querySelector('label'); if (l) { l.textContent = 'Cargo'; l.setAttribute('for', 'reg-cargo'); }
+      grp.insertAdjacentHTML('beforeend', '<small class="lgcg-ajuda" id="lgcg-ajuda"></small>');
+      grp.insertAdjacentHTML('afterend', '<div class="field-group" id="lgcg-ver" hidden><label for="reg-vereador">Qual vereador você é?</label><select id="reg-vereador"></select><small class="lgcg-ajuda">Se seu nome não estiver na lista, peça à Procuradoria para incluir você na composição da Câmara.</small></div>'); }
+    sel && sel.addEventListener('change', mostrarAjuda);
+    const hint = f.querySelector('.auth-hint'); if (hint) hint.textContent = 'O Presidente da Câmara é escolhido pela Procuradoria entre os vereadores. Outras funções são liberadas pelo administrador.';
+  }
+  function mostrarAjuda() {
+    const sel = document.getElementById('reg-cargo'); if (!sel) return; const c = CARGOS.find(x => x.id === sel.value);
+    const aj = document.getElementById('lgcg-ajuda'); if (aj) aj.textContent = c ? `Funções: ${c.funcao}.` : '';
+    const box = document.getElementById('lgcg-ver'); if (!box) return; box.hidden = !c || c.id !== 'vereador';
+    if (!box.hidden) { const vs = comp().vereadores || []; const livres = vs.filter(v => !v.usuario);
+      document.getElementById('reg-vereador').innerHTML = livres.length ? '<option value="">Escolha seu nome…</option>' + livres.map(v => `<option value="${esc(v.id)}">${esc(v.completo || v.nome)}${v.partido ? ' (' + esc(v.partido) + ')' : ''}</option>`).join('') : '<option value="">Todos os vereadores já têm usuário</option>'; }
+  }
+  window.atualizarCargos = function () {
+    ajustarFormulario();
+    const sel = document.getElementById('reg-cargo'); if (!sel) return;
+    sel.innerHTML = '<option value="">Escolha o cargo…</option>' + CARGOS.map(c => { const ocup = c.unico && ocupante(c.id); return `<option value="${c.id}" ${ocup ? 'disabled' : ''}>${esc(c.nome)}${ocup ? ' — já cadastrado' : ''}</option>`; }).join('');
+    const o = document.getElementById('reg-orgao'); if (o) o.value = 'cam';
+    mostrarAjuda();
+  };
+  window.fazerCadastro = async function (ev) {
+    ev.preventDefault();
+    const v = id => (document.getElementById(id) || {}).value || '';
+    const nome = v('reg-nome').trim(), usuario = v('reg-email').trim(), senha = v('reg-senha'), senha2 = v('reg-senha2'), cargoId = v('reg-cargo'), verId = v('reg-vereador');
+    const erro = m => { mostrarErro('register-error', m); return false; };
+    if (!nome || !usuario || !senha) return erro('Informe nome, usuário e senha.');
+    if (!/^[\p{L}0-9._-]{3,30}$/u.test(usuario)) return erro('O usuário deve ter de 3 a 30 letras ou números, sem espaços.');
+    const c = CARGOS.find(x => x.id === cargoId); if (!c) return erro('Escolha o cargo.');
+    if (c.unico && ocupante(c.id)) { atualizarCargos(); return erro(`Já existe um usuário ativo como ${c.nome}. Cada um desses cargos é único; fale com o administrador.`); }
+    if (c.id === 'vereador' && !verId) return erro('Escolha qual vereador você é. Se não estiver na lista, a Procuradoria precisa incluir seu nome primeiro.');
+    if (senha.length < 6) return erro('A senha precisa ter pelo menos 6 caracteres.');
+    if (senha !== senha2) return erro('As senhas não coincidem.');
+    const a = lgUsers(); if (a.some(u => String(u.usuario).toLowerCase() === usuario.toLowerCase())) return erro('Este usuário já existe.');
+    const novo = { id: 'usr-' + Date.now(), usuario, nome, senha, cargoId: c.id, cargo: c.nome, setor: c.setor, orgao: 'cam', municipio: 'Neves Paulista — SP', ativo: true, criadoEm: new Date().toISOString() };
+    if (c.perfil !== 'usuario') novo.perfil = c.perfil; else novo.perfil = 'usuario';
+    a.push(novo); lgSaveUsers(a);
+    if (c.id === 'vereador') { const cc = comp(); const vv = cc.vereadores.find(x => x.id === verId);
+      if (vv && !vv.usuario) { vv.usuario = usuario; (cc.historico = cc.historico || []).push({ data: new Date().toISOString(), texto: `Vereador ${vv.nome} criou o usuário "${usuario}"`, por: nome }); localStorage.setItem('lgv_camara_v1', JSON.stringify(cc)); } }
+    try { registrarLog('Usuário cadastrado', `${usuario} — ${c.nome}`); } catch (e) { }
+    esconderErro('register-error'); setAuthTab('login'); document.getElementById('login-email').value = usuario;
+    const ok = document.getElementById('login-success'); ok.textContent = `Cadastro criado como ${c.nome}. Faça login.`; ok.style.display = 'block';
+    document.getElementById('register-form').reset(); atualizarCargos();
+    return false;
+  };
+
+  /* no menu lateral: "Vereador · Presidente da Câmara" para quem a Procuradoria marcou */
+  function rotuloCargo() {
+    try { const u = typeof usuarioAtual !== 'undefined' ? usuarioAtual : null; if (!u) return;
+      const v = window.lgVereadorDoUsuario && lgVereadorDoUsuario(u); const pres = v && comp().presidente === v.id;
+      const atual = lgUsers().find(x => x.id === u.id) || u; const t = pres ? 'Vereador · Presidente da Câmara' : (atual.cargo || u.cargo || '');
+      ['user-cargo', 'lgv32-cg'].forEach(id => { const el = document.getElementById(id); if (el && el.textContent !== t) el.textContent = t; }); } catch (e) { }
+  }
+  window.lgcgRotuloCargo = rotuloCargo;
+
+  const css = document.createElement('style'); css.textContent = `
+  .lgcg-fixo{padding:11px 12px;border-radius:9px;border:1px solid #2c2f34;background:#141517;color:#f3f4f6;font-size:14px}
+  .lgcg-ajuda{display:block;margin-top:6px;font-size:12px;color:#9a9fa6;line-height:1.4}
+  #reg-cargo option:disabled{color:#6b6f76}`;
+  document.head.appendChild(css);
+
+  function iniciar() {
+    migrar(); atualizarCargos(); rotuloCargo(); setTimeout(() => { migrar(); atualizarCargos(); rotuloCargo(); }, 1500);
+    const tab = window.setAuthTab; if (typeof tab === 'function' && !tab.__lgcg) { const w = function (t) { const r = tab.apply(this, arguments); if (t === 'register') atualizarCargos(); return r; }; w.__lgcg = true; window.setAuthTab = w; }
+    const io = window.iniciarSessao; if (typeof io === 'function' && !io.__lgcg) { const w = function () { const r = io.apply(this, arguments); setTimeout(rotuloCargo, 50); return r; }; w.__lgcg = true; Object.keys(io).forEach(k => { w[k] = io[k]; }); window.iniciarSessao = w; }
+    setInterval(rotuloCargo, 3000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(iniciar, 250)); else setTimeout(iniciar, 250);
+})();

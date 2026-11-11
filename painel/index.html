@@ -379,9 +379,23 @@
 
 /* LegislaGov Câmara — Dark Modern, mesma estrutura do index original */
 :root, :root[data-theme="light"], :root[data-theme="dark"] { --paper:#0b1220; --paper-raised:#131e31; --ink:#f0f5ff; --ink-soft:#a7b7d0; --primary:#38c9ec; --primary-deep:#7c8fff; --brass:#7c8fff; --brass-soft:#44d8e9; --brick:#f78c9b; --sage:#56d5b3; --line:rgba(163,190,235,.17); --line-strong:rgba(163,190,235,.29); --sidebar-bg-top:#0c172a; --sidebar-bg-bottom:#0b1220; --sidebar-text:#edf4ff; --sidebar-text-dim:#a9bbd5; --font-display:Inter,Arial,sans-serif; --font-body:Inter,Arial,sans-serif; --radius:11px; --radius-sm:8px; }
-body { background:#0b1220!important;color:var(--ink); }
-.auth-screen { background:radial-gradient(ellipse at 70% 0%,#172b4a,#090f1b 70%)!important; }
-.auth-card { background:#111d31!important; border:1px solid #2a3c58!important; box-shadow:0 20px 65px #0007!important; border-radius:18px!important; }
+html,body { background:#000!important;color:var(--ink); }
+/* área restrita preta desde o primeiro quadro (antes era azul até o layout v31 carregar) */
+body #auth-screen{background:radial-gradient(1100px 520px at 50% -8%,#1b1c1f 0%,#0a0a0b 55%,#000 100%)!important}
+body #auth-screen .auth-card{background:#0d0e10!important;border:1px solid #24262a!important;border-radius:16px!important;box-shadow:0 30px 90px rgba(0,0,0,.65)!important}
+body #auth-screen .auth-brand{border-bottom:1px solid #24262a!important}
+body #auth-screen .demo-alert{background:#141209!important;border:1px solid #3a3220!important;color:#d6c38c!important;border-radius:10px!important}
+body #auth-screen .auth-tabs{background:#141517!important;border:1px solid #26282c!important;border-radius:10px!important;padding:4px!important}
+body #auth-screen .auth-tab{background:transparent!important;color:#8f949b!important;border:0!important;border-radius:7px!important;font-weight:500!important}
+body #auth-screen .auth-tab.current{background:#2a2c31!important;color:#fff!important}
+body #auth-screen :is(label,.auth-hint,p,small){color:#9a9fa6!important}
+body #auth-screen .auth-hint strong{color:#e6e7e9!important}
+body #auth-screen :is(input,select){background:#141517!important;border:1px solid #2c2f34!important;color:#f3f4f6!important;border-radius:9px!important;box-shadow:none!important}
+body #auth-screen :is(input,select)::placeholder{color:#62676e!important}
+body #auth-screen :is(input,select):focus{border-color:#6b7078!important;box-shadow:0 0 0 3px rgba(255,255,255,.07)!important;outline:none!important}
+body #auth-screen .btn-primary{background:#f2f3f5!important;background-image:none!important;color:#0b0c0e!important;border:0!important;border-radius:9px!important;font-weight:600!important;height:44px}
+body #auth-screen .btn-primary:hover{background:#fff!important}
+body #auth-screen a{color:#c9ccd1!important}
 .auth-brand {justify-content:center!important; padding-bottom:12px!important; margin-bottom:20px!important; }
 .official-logo {object-fit:contain; display:block; }
 .auth-logo { width:min(100%,390px); height:auto; margin:5px auto; }
@@ -3119,17 +3133,18 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
-<script src="../assets/transparencia-catalogo.js?v=202611111543"></script>
-<script src="lgt-publicacoes.js?v=202611111543"></script>
-<script src="lgf-financeiro.js?v=202611111543"></script>
-<script src="lgs-assinatura.js?v=202611111543"></script>
-<script src="lgvr-vereador.js?v=202611111543"></script>
-<script src="lgcm-comissoes.js?v=202611111543"></script>
-<script src="../assets/leis-comum.js?v=202611111543"></script>
-<script src="../assets/tv.js?v=202611111543"></script>
-<script src="lgpl-plenario.js?v=202611111543"></script>
-<script src="lgfx-funcoes.js?v=202611111543"></script>
-<script src="lgav-avisos.js?v=202611111543"></script>
-<script src="lgsc-site.js?v=202611111543"></script>
-<script src="lgtr-treinamento.js?v=202611111543"></script>
+<script src="../assets/transparencia-catalogo.js?v=202611111920"></script>
+<script src="lgt-publicacoes.js?v=202611111920"></script>
+<script src="lgf-financeiro.js?v=202611111920"></script>
+<script src="lgs-assinatura.js?v=202611111920"></script>
+<script src="lgvr-vereador.js?v=202611111920"></script>
+<script src="lgcm-comissoes.js?v=202611111920"></script>
+<script src="lgcg-cargos.js?v=202611111920"></script>
+<script src="../assets/leis-comum.js?v=202611111920"></script>
+<script src="../assets/tv.js?v=202611111920"></script>
+<script src="lgpl-plenario.js?v=202611111920"></script>
+<script src="lgfx-funcoes.js?v=202611111920"></script>
+<script src="lgav-avisos.js?v=202611111920"></script>
+<script src="lgsc-site.js?v=202611111920"></script>
+<script src="lgtr-treinamento.js?v=202611111920"></script>
 </body></html>

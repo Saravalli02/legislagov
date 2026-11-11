@@ -72,6 +72,42 @@ function img(src, alt = '', cls = '', ph = '') {
   const o = typeof src === 'string' ? (IMG[src] || { local: src }) : src;
   return `<img src="${esc(o.local)}"${o.remoto ? ` data-remoto="${esc(o.remoto)}"` : ''}${ph ? ` data-ph="${esc(ph)}"` : ''} alt="${esc(alt)}"${cls ? ` class="${cls}"` : ''} loading="lazy" decoding="async" onerror="imgFallback(this)">`;
 }
+/* Brasão sem fundo: o arquivo oficial é JPG com fundo branco (aparecia como um "recorte" no cabeçalho).
+   O site pede o brasão ao próprio servidor (/api/brasao.jpg), apaga o branco de fora e o vão sob a fita,
+   e guarda o resultado (WebP transparente) no navegador. Regra do site: imagens com fundo bonito ou PNG transparente. */
+const BRASAO_KEY = 'lg_brasao_v1';
+try { const b = localStorage.getItem(BRASAO_KEY); if (b && b.startsWith('data:image/')) IMG.brasao = { local: b, limpo: true }; } catch (e) { }
+function brasaoTransparente() {
+  if (IMG.brasao.limpo || location.protocol === 'file:') return;
+  const im = new Image();
+  im.onload = () => { try {
+    const W = im.naturalWidth, H = im.naturalHeight; if (!W || !H) return;
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+    const id = x.getImageData(0, 0, W, H), d = id.data;
+    const claro = p => { const k = p * 4, mn = Math.min(d[k], d[k + 1], d[k + 2]); return d[k + 3] > 0 && mn >= 200 && Math.max(d[k], d[k + 1], d[k + 2]) - mn < 40; };
+    const f = new Uint8Array(W * H);
+    const encher = sementes => { const q = sementes.slice(); while (q.length) { const p = q.pop(); if (f[p] || !claro(p)) continue; f[p] = 1; const i = p % W, j = (p - i) / W;
+      if (i > 0) q.push(p - 1); if (i < W - 1) q.push(p + 1); if (j > 0) q.push(p - W); if (j < H - 1) q.push(p + W); } };
+    const borda = []; for (let i = 0; i < W; i++) borda.push(i, (H - 1) * W + i); for (let j = 0; j < H; j++) borda.push(j * W, j * W + W - 1);
+    encher(borda);
+    // vão branco entre a fita "Centro Cafeeiro" e os ramos (fica fechado, não encosta na borda)
+    const vi = Math.round(W * .5), vj = Math.round(H * .84); let semente = -1;
+    for (let r = 0; r < 25 && semente < 0; r++) for (let dj = -r; dj <= r && semente < 0; dj++) for (let di = -r; di <= r; di++) { const p = (vj + dj) * W + vi + di; if (p >= 0 && p < W * H && claro(p) && !f[p]) { semente = p; break; } }
+    if (semente >= 0) encher([semente]);
+    for (let p = 0; p < W * H; p++) if (f[p]) d[p * 4 + 3] = 0;
+    for (let p = 0; p < W * H; p++) { if (f[p]) continue; const i = p % W, j = (p - i) / W;
+      if ((i > 0 && f[p - 1]) || (i < W - 1 && f[p + 1]) || (j > 0 && f[p - W]) || (j < H - 1 && f[p + W])) { const k = p * 4, mn = Math.min(d[k], d[k + 1], d[k + 2]); if (mn > 150) d[k + 3] = Math.round(255 * (255 - mn) / 105); } }
+    x.putImageData(id, 0, 0);
+    let x0 = W, y0 = H, x1 = 0, y1 = 0; for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (d[(j * W + i) * 4 + 3] > 10) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (j < y0) y0 = j; if (j > y1) y1 = j; }
+    const c2 = document.createElement('canvas'); c2.width = x1 - x0 + 1; c2.height = y1 - y0 + 1; c2.getContext('2d').drawImage(c, x0, y0, c2.width, c2.height, 0, 0, c2.width, c2.height);
+    let url = c2.toDataURL('image/webp', .92); if (!url.startsWith('data:image/webp')) url = c2.toDataURL('image/png');
+    const antigos = [IMG.brasao.local, IMG.brasao.remoto];
+    IMG.brasao = { local: url, limpo: true };
+    try { localStorage.setItem(BRASAO_KEY, url); } catch (e) { }
+    document.querySelectorAll('img').forEach(el => { const src = el.getAttribute('src'); if (antigos.includes(src) || antigos.includes(el.getAttribute('data-remoto'))) { el.removeAttribute('data-remoto'); el.src = url; } });
+  } catch (e) { } };
+  im.src = '/api/brasao.jpg';
+}
 const marcaAgua = () => `<div class="marca-agua">${img('brasao', '')}</div>`;
 function fotoVer(v) { if (v.fotoData) return { local: v.fotoData }; return { local: `assets/img/vereadores/${v.arq}.jpg`, remoto: `${ORIGEM}/Arquivos/Vereadores/${encodeURIComponent(v.foto)}?quality=82&w=600` }; }
 const iniciais = n => String(n).split(' ').filter(p => p.length > 2).map(p => p[0]).slice(0, 2).join('').toUpperCase();
@@ -435,6 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
   montarTV($('#tv-sessoes'));
   if (typeof iniciarTransparencia === 'function') iniciarTransparencia();
   if (typeof iniciarProposituras === 'function') iniciarProposituras();
+  brasaoTransparente();
 });
 addEventListener('storage', e => {
   if (e.key === 'lgv11_agenda_v1') { montarCardSessao(); montarAgendaHome(); montarCalendario(); montarSessoes(); }
