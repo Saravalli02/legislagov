@@ -159,7 +159,6 @@
   .pl-itens{margin:12px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:10px}.pl-itens a{color:inherit}.pl-res{display:inline-block;margin-left:8px;font-size:12.5px;font-weight:700;padding:2px 8px;border-radius:20px}.pl-res.ok{background:#d9f2e3;color:#1d7a46}.pl-res.er{background:#f8d7da;color:#842029}
   .pl-nom{margin-top:6px}.pl-nom summary{font-size:13px;cursor:pointer}.pl-nom ul{list-style:none;padding:0;margin:6px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px 12px;font-size:13.5px}.pl-nom li{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted var(--linha,#ddd)}
   .pl-pres{font-size:14px;margin:10px 0}
-  html[data-contraste=alto] .pp-seguir,html[data-contraste=alto] .lei-card,html[data-contraste=alto] .pl-sessao,html[data-contraste=alto] .ouv-cons{background:#000;border-color:#fff}
   @media(max-width:700px){.lei-em{margin-left:0!important}.ouv-cons dl{grid-template-columns:1fr}}`;
   document.head.appendChild(css);
 

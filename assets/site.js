@@ -111,7 +111,6 @@ function montarCabecalho() {
         <button type="button" onclick="fonte(-1)" aria-label="Diminuir texto" accesskey="5">A−</button>
         <button type="button" onclick="fonte(1)" aria-label="Aumentar texto" accesskey="4">A+</button>
         <button type="button" id="btn-tema" onclick="tema()" aria-pressed="${document.documentElement.dataset.tema === 'escuro'}" aria-label="Modo escuro" title="Modo escuro">${ic(document.documentElement.dataset.tema === 'escuro' ? 'sol' : 'lua')}</button>
-        <button type="button" id="btn-contraste" onclick="contraste()" aria-pressed="${document.documentElement.dataset.contraste === 'alto'}" aria-label="Alto contraste" title="Alto contraste" accesskey="6">${ic('contraste')}</button>
         <a href="pagina.html?p=acessibilidade" aria-label="Recursos de acessibilidade" accesskey="7">${ic('mao')}</a>
       </span>
     </nav>
@@ -201,8 +200,8 @@ document.addEventListener('keydown', e => {
 });
 function fonte(d) { const r = document.documentElement; const v = Math.max(0, Math.min(2, (+r.dataset.fonte || 0) + d)); r.dataset.fonte = v; ls.set('site_fonte', v); }
 function contraste() { const r = document.documentElement; const on = r.dataset.contraste === 'alto'; if (on) delete r.dataset.contraste; else r.dataset.contraste = 'alto'; ls.set('site_contraste', on ? '' : 'alto'); const b = $('#btn-contraste'); if (b) b.setAttribute('aria-pressed', String(!on)); }
-function tema(forcar) { const r = document.documentElement; const escuro = forcar !== undefined ? forcar === 'escuro' : r.dataset.tema !== 'escuro'; r.dataset.tema = escuro ? 'escuro' : 'claro'; if (forcar === undefined) ls.set('site_tema', r.dataset.tema); const b = $('#btn-tema'); if (b) { b.setAttribute('aria-pressed', String(escuro)); b.setAttribute('aria-label', escuro ? 'Modo claro' : 'Modo escuro'); b.title = escuro ? 'Modo claro' : 'Modo escuro'; b.innerHTML = ic(escuro ? 'sol' : 'lua'); } const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = escuro ? '#07120e' : '#0f2a22'; }
-(() => { const r = document.documentElement; const f = ls.get('site_fonte', ''); if (f) r.dataset.fonte = f; if (ls.get('site_contraste', '') === 'alto') r.dataset.contraste = 'alto';
+function tema(forcar) { const r = document.documentElement; const escuro = forcar !== undefined ? forcar === 'escuro' : r.dataset.tema !== 'escuro'; r.dataset.tema = escuro ? 'escuro' : 'claro'; if (forcar === undefined) ls.set('site_tema', r.dataset.tema); const b = $('#btn-tema'); if (b) { b.setAttribute('aria-pressed', String(escuro)); b.setAttribute('aria-label', escuro ? 'Modo claro' : 'Modo escuro'); b.title = escuro ? 'Modo claro' : 'Modo escuro'; b.innerHTML = ic(escuro ? 'sol' : 'lua'); } const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = escuro ? '#0a0d1a' : '#ffffff'; }
+(() => { const r = document.documentElement; const f = ls.get('site_fonte', ''); if (f) r.dataset.fonte = f; delete r.dataset.contraste; ls.set('site_contraste', '');
   const t = ls.get('site_tema', ''); r.dataset.tema = t || (matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'); })();
 function inscrever(e) {
   e.preventDefault(); const em = $('#news-email').value.trim(); const l = ls.json('site_inscricoes', []); if (!l.includes(em)) l.push(em); ls.set('site_inscricoes', JSON.stringify(l));

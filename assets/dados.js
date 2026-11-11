@@ -221,7 +221,6 @@ const PAGINAS = {
       <tr><th>Alt + 2</th><td>Ir para o menu</td></tr>
       <tr><th>Alt + 3</th><td>Ir para o rodapé</td></tr>
       <tr><th>Alt + 4 / Alt + 5</th><td>Aumentar / diminuir o texto</td></tr>
-      <tr><th>Alt + 6</th><td>Alto contraste</td></tr>
       <tr><th>Botão da lua</th><td>Modo escuro (o botão do sol volta ao claro)</td></tr>
     </tbody></table>
     <p class="nota">No Firefox use Alt + Shift + número. No Mac, Control + Option + número.</p>
