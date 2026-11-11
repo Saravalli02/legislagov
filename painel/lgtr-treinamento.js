@@ -124,6 +124,7 @@
       { abrir: 'siteNoticias', alvo: ['#view-lgt-noticias button[onclick="lgtFormNoticia()"]', '#view-lgt-noticias'], titulo: 'Nova matéria', texto: 'Escreva as matérias que aparecem no início do site e em Notícias.', como: ['Título, categoria, resumo e texto.', 'Foto de capa e, se quiser, uma galeria de fotos.', 'Marque “Destaque” para entrar no carrossel da capa.', 'Clique em “Pré-visualizar” para ver como vai ficar e depois publique.'] },
       { abrir: 'siteFotos', alvo: ['#view-lgsc-fotos .lgsc-dest', '#view-lgsc-fotos'], titulo: 'Destaques da capa', texto: 'As fotos grandes que passam na página inicial. Troque a foto, o título e o botão; mude a ordem, oculte ou crie um novo destaque.' },
       { abrir: 'siteFotos', alvo: ['#view-lgsc-fotos .lgsc-fixas', '#view-lgsc-fotos'], titulo: 'Imagens fixas', texto: 'Brasão e bandeira usados no site. Dá para trocar e voltar à original.' },
+      { abrir: 'siteVideos', alvo: ['#view-lgfx-videos .lgfx-yt-st', '#view-lgfx-videos'], titulo: 'TV Câmara (YouTube)', texto: 'Os vídeos postados no canal da Câmara entram no site sozinhos, com um resumo da sessão (presença, pauta, resultados e votos). Aqui você só confere: liga o vídeo a outra sessão, edita o resumo ou esconde um vídeo.' },
       { abrir: 'siteVereadores', alvo: ['#view-lgsc-vereadores .lgsc-vgrade', '#view-lgsc-vereadores'], titulo: 'Vereadores', texto: 'Troque a foto, o nome, o partido e o contato de cada vereador. Quando alguém sair (licença, renúncia ou fim dos 4 anos), use “Tirar do mandato” e cadastre o novo.' },
       { abrir: 'siteVereadores', alvo: ['#lgsc-mesa', '#view-lgsc-vereadores'], titulo: 'Mesa Diretora', texto: 'Escolha quem é Presidente, Vice e Secretários. O site mostra os cargos na página dos vereadores.' },
       { abrir: 'siteMenus', alvo: ['#view-lgsc-menus .lgsc-menus', '#view-lgsc-menus'], titulo: 'Menus do site', texto: 'Mude os textos, os links e a ordem do menu do site, oculte itens ou crie novos. Dá para restaurar o menu original.' },
@@ -134,6 +135,7 @@
 
   /* ================= O QUE CADA FUNÇÃO FAZ ================= */
   const FUNCOES = {
+    siteVideos: 'Vídeos do canal da Câmara no YouTube: sessão ligada, resumo e o que aparece no site.',
     pendencias: 'O que depende de você agora, com prazo e semáforo, e as novidades das suas proposituras.',
     prazos: 'Prazos de cada etapa da tramitação e onde está cada matéria, com semáforo.',
     plenario: 'Sessão plenária pela Mesa/Secretaria: pauta, presença, votos e ata.',

@@ -2772,7 +2772,8 @@ const AREAS={
   ['Conteúdo do site',[
    ['pendencias','Minhas pendências','notificacoes',()=>window.lgavTela&&lgavTela()],
    ['siteNoticias','Matérias e notícias','noticiasSite',()=>window.lgtAbrir&&lgtAbrir('noticias')],
-   ['siteFotos','Fotos e destaques da capa','foto',()=>window.lgscAbrir&&lgscAbrir('fotos')]
+   ['siteFotos','Fotos e destaques da capa','foto',()=>window.lgscAbrir&&lgscAbrir('fotos')],
+   ['siteVideos','TV Câmara (YouTube)','telao',()=>window.lgfxAbrir&&lgfxAbrir('videos')]
   ]],
   ['A Câmara no site',[
    ['siteVereadores','Vereadores e Mesa','vereador',()=>window.lgscAbrir&&lgscAbrir('vereadores')]
@@ -3068,7 +3069,7 @@ html[data-lgv31-layout] :is(body,#v32) aside.sidebar .brand{padding:0 8px 12px!i
 <div id="lgv32-usermenu" role="menu" aria-label="Conta"></div>
 <script id="lgv32-logic">
 (function(){
-const TITLES={livro:'Livro de leis',verLivro:'Livro de leis',oficios:'Ofícios e respostas da Prefeitura',ouvidoria:'Ouvidoria e e-SIC',relatorio:'Relatório mensal',calendario:'Calendário de publicações',pntp:'Nota de transparência (PNTP)',verRespostas:'Respostas da Prefeitura',pendencias:'Minhas pendências',prazos:'Prazos da tramitação',verInicio:'Portal do Vereador',verProposituras:'Minhas proposituras',verAssinar:'Para assinar',treinamento:'Ajuda e treinamento',usuariosProto:'Usuários para protocolos',finMaterias:'Acompanhar matérias',siteNoticias:'Matérias e notícias',siteFotos:'Fotos e destaques da capa',siteVereadores:'Vereadores e Mesa',siteMenus:'Menus do site',siteConfig:'Endereços e responsáveis',verComissoes:'Minhas comissões',verSessoes:'Sessões e pauta',verMaterias:'Acompanhar matérias',presDespacho:'Despachar proposições',presPauta:'Ordem do Dia',presSessao:'Sessão plenária',plenario:'Sessão plenária',presAutografos:'Autógrafos e promulgação',presAtos:'Atos da Presidência',inicio:'Início',materias:'Matérias',sessoes:'Sessões e agenda',comissoes:'Comissões',expedientes:'Expedientes',protocolo:'Protocolo e numeração',editor:'Editor de documentos',mensagens:'Mensagens',avisos:'Notificações',ia:'LegislaIA',admin:'Administração',usuarios:'Vereadores, Presidente e usuários',_x:'Usuários e permissões',config:'Configurações',melhorias:'Sugestões e melhorias',transp:'Portal da Transparência',noticiasSite:'Notícias do site',acessos:'Áreas e acessos',finGeral:'Financeiro · Visão geral',finDotacoes:'Dotações orçamentárias',finEmpenhos:'Empenhos',finPagamentos:'Liquidação e pagamento',finContratos:'Contratos',finCredores:'Credores',finParametros:'Parâmetros financeiros'};
+const TITLES={siteVideos:'TV Câmara (YouTube)',livro:'Livro de leis',verLivro:'Livro de leis',oficios:'Ofícios e respostas da Prefeitura',ouvidoria:'Ouvidoria e e-SIC',relatorio:'Relatório mensal',calendario:'Calendário de publicações',pntp:'Nota de transparência (PNTP)',verRespostas:'Respostas da Prefeitura',pendencias:'Minhas pendências',prazos:'Prazos da tramitação',verInicio:'Portal do Vereador',verProposituras:'Minhas proposituras',verAssinar:'Para assinar',treinamento:'Ajuda e treinamento',usuariosProto:'Usuários para protocolos',finMaterias:'Acompanhar matérias',siteNoticias:'Matérias e notícias',siteFotos:'Fotos e destaques da capa',siteVereadores:'Vereadores e Mesa',siteMenus:'Menus do site',siteConfig:'Endereços e responsáveis',verComissoes:'Minhas comissões',verSessoes:'Sessões e pauta',verMaterias:'Acompanhar matérias',presDespacho:'Despachar proposições',presPauta:'Ordem do Dia',presSessao:'Sessão plenária',plenario:'Sessão plenária',presAutografos:'Autógrafos e promulgação',presAtos:'Atos da Presidência',inicio:'Início',materias:'Matérias',sessoes:'Sessões e agenda',comissoes:'Comissões',expedientes:'Expedientes',protocolo:'Protocolo e numeração',editor:'Editor de documentos',mensagens:'Mensagens',avisos:'Notificações',ia:'LegislaIA',admin:'Administração',usuarios:'Vereadores, Presidente e usuários',_x:'Usuários e permissões',config:'Configurações',melhorias:'Sugestões e melhorias',transp:'Portal da Transparência',noticiasSite:'Notícias do site',acessos:'Áreas e acessos',finGeral:'Financeiro · Visão geral',finDotacoes:'Dotações orçamentárias',finEmpenhos:'Empenhos',finPagamentos:'Liquidação e pagamento',finContratos:'Contratos',finCredores:'Credores',finParametros:'Parâmetros financeiros'};
 const ic=(n)=>window.lgv31Icon?lgv31Icon(n):'';
 function me(){try{return typeof usuarioAtual!=='undefined'?usuarioAtual:null}catch(e){return null}}
 function ini(n){return String(n||'?').split(' ').filter(Boolean).map(p=>p[0]).slice(0,2).join('').toUpperCase()}
@@ -3110,16 +3111,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
-<script src="../assets/transparencia-catalogo.js?v=202611111457"></script>
-<script src="lgt-publicacoes.js?v=202611111457"></script>
-<script src="lgf-financeiro.js?v=202611111457"></script>
-<script src="lgs-assinatura.js?v=202611111457"></script>
-<script src="lgvr-vereador.js?v=202611111457"></script>
-<script src="lgcm-comissoes.js?v=202611111457"></script>
-<script src="../assets/leis-comum.js?v=202611111457"></script>
-<script src="lgpl-plenario.js?v=202611111457"></script>
-<script src="lgfx-funcoes.js?v=202611111457"></script>
-<script src="lgav-avisos.js?v=202611111457"></script>
-<script src="lgsc-site.js?v=202611111457"></script>
-<script src="lgtr-treinamento.js?v=202611111457"></script>
+<script src="../assets/transparencia-catalogo.js?v=202611111517"></script>
+<script src="lgt-publicacoes.js?v=202611111517"></script>
+<script src="lgf-financeiro.js?v=202611111517"></script>
+<script src="lgs-assinatura.js?v=202611111517"></script>
+<script src="lgvr-vereador.js?v=202611111517"></script>
+<script src="lgcm-comissoes.js?v=202611111517"></script>
+<script src="../assets/leis-comum.js?v=202611111517"></script>
+<script src="../assets/tv.js?v=202611111517"></script>
+<script src="lgpl-plenario.js?v=202611111517"></script>
+<script src="lgfx-funcoes.js?v=202611111517"></script>
+<script src="lgav-avisos.js?v=202611111517"></script>
+<script src="lgsc-site.js?v=202611111517"></script>
+<script src="lgtr-treinamento.js?v=202611111517"></script>
 </body></html>

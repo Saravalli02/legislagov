@@ -27,7 +27,7 @@
   const equipe = () => ['adm', 'procurador', 'secretaria'].includes(perfil());
 
   /* ================= telas ================= */
-  const VIEWS = { livro: 'livro', oficios: 'oficios', ouvidoria: 'ouvidoria', relatorio: 'relatorio', respostas: 'verRespostas', calendario: 'calendario', pntp: 'pntp' };
+  const VIEWS = { livro: 'livro', oficios: 'oficios', ouvidoria: 'ouvidoria', relatorio: 'relatorio', respostas: 'verRespostas', calendario: 'calendario', pntp: 'pntp', videos: 'siteVideos' };
   function criarView(id) {
     const main = document.querySelector('#app main') || document.querySelector('main'); if (!main || document.getElementById('view-lgfx-' + id)) return;
     main.insertAdjacentHTML('beforeend', `<section class="view lgt lgvr lgfx" id="view-lgfx-${id}" style="display:none"></section>`);
@@ -39,7 +39,7 @@
     if (!VIEWS[k]) return; criarView(k); tela = k; alvo = id || '';
     gotoShared('lgfx-' + k); if (window.lgv31Mark) lgv31Mark(VIEWS[k]); scrollTo(0, 0); desenhar();
   };
-  function desenhar() { const f = { livro: tLivro, oficios: tOficios, ouvidoria: tOuvidoria, relatorio: tRelatorio, respostas: tRespostas, calendario: tCalendario, pntp: tPntp }[tela]; if (f && $('#view-lgfx-' + tela)) f($('#view-lgfx-' + tela)); }
+  function desenhar() { const f = { livro: tLivro, oficios: tOficios, ouvidoria: tOuvidoria, relatorio: tRelatorio, respostas: tRespostas, calendario: tCalendario, pntp: tPntp, videos: tVideos }[tela]; if (f && $('#view-lgfx-' + tela)) f($('#view-lgfx-' + tela)); }
   const redesenhar = () => { if (tela && $('#view-lgfx-' + tela)?.style.display === 'block') desenhar(); };
 
   /* =====================================================================
@@ -508,6 +508,33 @@
   window.lgfxPn = (id, v) => { const m = ler(PN, {}) || {}; if (v) m[id] = v; else delete m[id]; gravar(PN, m); desenhar(); };
 
   /* =====================================================================
+     9) TV CÂMARA (YouTube) — Publicação de matérias › TV Câmara
+     O servidor lê o canal sozinho (/api/youtube). Aqui dá para ligar o vídeo à sessão certa,
+     editar o resumo, esconder um vídeo e escolher se os vídeos entram também em Notícias.
+     ===================================================================== */
+  const AJ = 'lgs_site_videos_v1';
+  let ytEstado = null;
+  async function lerYT() { try { const r = await fetch('/api/youtube', { cache: 'no-store' }); if (r.ok) { ytEstado = await r.json(); try { localStorage.setItem('lgtv_cache_v1', JSON.stringify(ytEstado)); } catch (e) { } } } catch (e) { } return ytEstado || ler('lgtv_cache_v1', null); }
+  async function tVideos(el) {
+    const pode = window.lgNivelArea && lgNivelArea('site') === 'edicao';
+    el.innerHTML = cab('TV Câmara (YouTube)', 'Os vídeos do canal da Câmara entram no site sozinhos, com resumo da sessão') + '<p class="lgt-p">Consultando o canal…</p>';
+    const d = await lerYT(); const aj = ler(AJ, {}) || {}; const c = ler('lgt_site_cfg_v1', {}) || {};
+    const sessoes = window.lgplDados ? lgplDados().sessoes.slice().sort((a, b) => new Date(b.quando) - new Date(a.quando)) : [];
+    const l = (d && d.videos) || [];
+    el.innerHTML = cab('TV Câmara (YouTube)', 'Os vídeos do canal da Câmara entram no site sozinhos, com resumo da sessão', `<a class="lgt-btn" href="${esc((d && d.canal && d.canal.url) || 'https://www.youtube.com/@camaramunicipalnevespaulista')}" target="_blank" rel="noopener">${ic('externo')} Abrir o canal</a>`) +
+      regra('A cada 20 minutos o servidor confere o canal. Vídeo novo aparece na capa (TV Câmara), na página Sessões, em Notícias e numa página própria com o resumo. O resumo junta os dados da sessão do mesmo dia (presença, pauta, resultados e votos) e a descrição do vídeo; marcações de tempo na descrição (ex.: “00:15:30 Ordem do Dia”) viram capítulos.') +
+      `<div class="lgt-card lgfx-yt-st"><div><b>${d && d.atualizado ? 'Conectado ao canal' : 'Aguardando a primeira leitura do canal'}</b><small>${d && d.atualizado ? `Última conferência: ${new Date(d.atualizado).toLocaleString('pt-BR')} · ${l.length} vídeo(s)` : 'O servidor confere logo após iniciar e depois a cada 20 minutos.'}${d && d.erro ? ` · Último erro: ${esc(d.erro)}` : ''}</small></div>
+        <label class="lgfx-sw"><input type="checkbox" ${c.youtubeNoticias === false ? '' : 'checked'} ${pode ? '' : 'disabled'} onchange="lgfxYtNoticias(this.checked)"> Publicar os vídeos também em Notícias</label></div>
+      ${l.length ? `<div class="lgfx-yt">${l.slice(0, 30).map(v => { const a = aj[v.id] || {}; const auto = window.lgtvResumo ? lgtvResumo({ ...v }) : ''; const sAuto = window.lgtvDataDoVideo ? lgtvDataDoVideo(v) : '';
+        return `<article class="lgt-card ${a.oculto ? 'oculto' : ''}"><img src="${esc(v.thumb)}" alt="" loading="lazy"><div><b>${esc(v.titulo)}</b><small>${new Date(v.publicado).toLocaleString('pt-BR')}${v.views != null ? ` · ${Number(v.views).toLocaleString('pt-BR')} visualizações` : ''}</small>
+          <label><span class="lgt-rot">Sessão</span><select ${pode ? '' : 'disabled'} onchange="lgfxYt('${esc(v.id)}','sessao',this.value)"><option value="">Automático (pela data ${sAuto ? sAuto.split('-').reverse().join('/') : ''})</option>${sessoes.map(x => `<option value="${x.id}" ${a.sessao === x.id ? 'selected' : ''}>${esc(x.titulo)} · ${new Date(x.quando).toLocaleDateString('pt-BR')}</option>`).join('')}</select></label>
+          <label><span class="lgt-rot">Resumo no site ${a.resumo ? '(editado)' : '(automático)'}</span><textarea rows="4" ${pode ? '' : 'disabled'} onchange="lgfxYt('${esc(v.id)}','resumo',this.value)">${esc(a.resumo || auto)}</textarea></label>
+          <div class="lgt-acoes">${pode ? `${a.resumo ? `<button class="lgt-mini" type="button" onclick="lgfxYt('${esc(v.id)}','resumo','')">Voltar ao automático</button>` : ''}<button class="lgt-mini" type="button" onclick="lgfxYt('${esc(v.id)}','oculto',${a.oculto ? 'false' : 'true'})">${a.oculto ? 'Mostrar no site' : 'Esconder do site'}</button>` : ''}<a class="lgt-mini" href="../video.html?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener">Ver no site</a><a class="lgt-mini" href="${esc(v.url)}" target="_blank" rel="noopener">YouTube</a></div></div></article>`; }).join('')}</div>` : '<div class="lgt-card"><p class="lgt-p">Nenhum vídeo lido ainda. Se o site estiver aberto pelo servidor da Câmara, os vídeos aparecem aqui em poucos minutos.</p></div>'}`;
+  }
+  window.lgfxYt = function (id, campo, v) { if (!(window.lgNivelArea && lgNivelArea('site') === 'edicao')) return; const aj = ler(AJ, {}) || {}; aj[id] = { ...(aj[id] || {}) }; if (v === '' || v === false || v === 'false') delete aj[id][campo]; else aj[id][campo] = v === 'true' ? true : v; gravar(AJ, aj); UI().aviso('Salvo. O site já mostra a mudança.'); if (campo !== 'resumo' || v === '') desenhar(); };
+  window.lgfxYtNoticias = v => { const c = ler('lgt_site_cfg_v1', {}) || {}; c.youtubeNoticias = !!v; gravar('lgt_site_cfg_v1', c); UI().aviso(v ? 'Os vídeos aparecem também em Notícias.' : 'Os vídeos não aparecem mais em Notícias.'); };
+
+  /* =====================================================================
      pendências para o sino (Transparência, Ouvidoria/e-SIC)
      ===================================================================== */
   window.lgfxPendencias = function () {
@@ -535,6 +562,10 @@
   .lgfx-nota{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.lgfx-anel{--p:0;width:110px;height:110px;border-radius:50%;background:conic-gradient(#e2aa1c calc(var(--p)*1%),var(--lg28-inset) 0);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
   .lgfx-anel::before{content:'';position:absolute;inset:10px;border-radius:50%;background:var(--lg28-panel,#141820)}.lgfx-anel b,.lgfx-anel small{position:relative}.lgfx-anel b{font-size:26px}.lgfx-anel small{font-size:11px;color:var(--lg28-muted)}
   .lgfx-nota > div:last-child{flex:1;min-width:240px}.lgfx-dim td{background:var(--lg28-inset);font-weight:800;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase}
+  .lgfx-yt-st{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.lgfx-yt-st b{display:block}.lgfx-yt-st small{color:var(--lg28-muted)}
+  .lgfx-yt{display:flex;flex-direction:column;gap:12px}.lgfx-yt article{display:grid;grid-template-columns:220px 1fr;gap:14px}.lgfx-yt article.oculto{opacity:.55}.lgfx-yt img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#111}.lgfx-yt b{display:block;font-size:15px}.lgfx-yt small{color:var(--lg28-muted);font-size:12.5px}
+  .lgfx-yt label{display:flex;flex-direction:column;gap:4px;margin-top:8px}.lgfx-yt select,.lgfx-yt textarea{border-radius:8px;border:1px solid var(--lg28-stroke);background:var(--lg28-inset);color:var(--lg28-ink);padding:6px 8px;font:13.5px var(--v32-font,inherit)}.lgfx-yt .lgt-acoes{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+  @media(max-width:700px){.lgfx-yt article{grid-template-columns:1fr}}
   .lgfx-pn select{padding:0 8px!important;line-height:1.2!important;height:32px;border-radius:8px;border:1px solid var(--lg28-stroke);background:var(--lg28-inset);color:var(--lg28-ink);font-size:12.5px}
   @media(max-width:700px){.lgfx-mod-campos{grid-template-columns:1fr}}`;
   document.head.appendChild(css);

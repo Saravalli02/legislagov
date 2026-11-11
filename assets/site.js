@@ -88,9 +88,10 @@ function noticias() {
     id: String(n.id), data: n.data, titulo: n.titulo, categoria: n.categoria, resumo: n.resumo || '', corpo: '',
     capa: n.capa ? { local: n.capa, remoto: n.capaRemota || '' } : null, fotos: (n.fotos || []).slice(1), original: n.original, origem: 'arquivo',
   }));
-  return [...painel, ...arquivo].sort((a, b) => (b.data || '').localeCompare(a.data || '') || String(b.id).localeCompare(String(a.id), 'pt', { numeric: true }));
+  const tv = window.lgtvNoticias ? lgtvNoticias() : [];
+  return [...painel, ...tv, ...arquivo].sort((a, b) => (b.data || '').localeCompare(a.data || '') || String(b.id).localeCompare(String(a.id), 'pt', { numeric: true }));
 }
-const linkNoticia = n => `noticia.html?id=${encodeURIComponent(n.id)}`;
+const linkNoticia = n => n.link || `noticia.html?id=${encodeURIComponent(n.id)}`;
 const capaNot = (n, cls = '') => n.capa ? img(n.capa, '', cls, 'brasao') : marcaAgua();
 
 /* ---------------- menu principal: definido em assets/site-conteudo.js (editável no painel) ---------------- */
