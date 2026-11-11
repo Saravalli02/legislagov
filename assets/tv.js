@@ -95,6 +95,16 @@
     if (el.id === 'tv-pagina') { const l = videos().slice(1, 25); if (l.length) el.insertAdjacentHTML('afterend', `<h2 style="margin-top:28px">Vídeos anteriores</h2><div class="tv-grade">${l.map(v => `<a class="tv-mini" href="video.html?v=${encodeURIComponent(v.id)}"><img src="${E(v.thumb)}" alt="" loading="lazy"><b>${E(v.titulo)}</b><small>${dBR(v.publicado)}</small></a>`).join('')}</div>`); }
   };
 
+  function mdSimples(t) {
+    let out = '', lista = false;
+    String(t).split('\n').forEach(l => {
+      const item = /^\s*[-*•]\s+(.*)$/.exec(l);
+      if (item) { if (!lista) { out += '<ul>'; lista = true; } out += `<li>${E(item[1])}</li>`; return; }
+      if (lista) { out += '</ul>'; lista = false; }
+      if (/^#{1,3}\s*/.test(l)) out += `<h3>${E(l.replace(/^#{1,3}\s*/, ''))}</h3>`; else if (l.trim()) out += `<p>${E(l)}</p>`;
+    });
+    return out + (lista ? '</ul>' : '');
+  }
   /* ---------- página do vídeo ---------- */
   function montarVideo() {
     const app = document.getElementById('video-app'); if (!app) return;
@@ -107,6 +117,9 @@
       <div class="wrap conteudo pp-det"><div>
         <div class="tv-grande" id="tv-player"><iframe src="${embed(v.id)}" title="${E(v.titulo)}" allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
         ${caps.length ? `<h2 class="pp-h2">Capítulos</h2><ol class="tv-caps">${caps.map(c => `<li><button type="button" onclick="lgtvPular(${c.s})"><time>${E(c.t)}</time><span>${E(c.nome)}</span></button></li>`).join('')}</ol>` : ''}
+        ${(() => { const a = ajustes()[v.id] || {}; const f = v.fala || {}; const t = a.falaAprovada ? (a.falaTexto || f.resumo || '') : ''; if (!t) return '';
+          const html = mdSimples(t);
+          return `<h2 class="pp-h2">O que foi falado</h2><div class="tv-resumo tv-fala">${html}<p class="nota">Resumo feito com inteligência artificial a partir das legendas do vídeo e revisado pela Câmara. Na dúvida, vale o vídeo e a ata.</p></div>`; })()}
         <h2 class="pp-h2">Resumo</h2><div class="tv-resumo">${E(resumo(v)).split(/\n{2,}/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('')}</div>
         ${s && s.itens.length ? `<h2 class="pp-h2">Pauta e resultados</h2><ol class="pl-itens">${s.itens.map(i => { const p = prots.find(x => x.id === i.pid) || {}; return `<li><a href="proposituras.html?id=${encodeURIComponent(i.pid)}"><b>${E(p.numero || '')}</b> ${E(p.ementa || '')}</a>${i.resultado ? ` <span class="pl-res ${/Aprovado|derrubado/.test(i.resultado) ? 'ok' : 'er'}">${E(i.resultado)}${i.placar ? ` (${i.placar.sim} × ${i.placar.nao})` : ''}</span>` : ''}${i.nominal && i.nominal.length ? `<details class="pl-nom"><summary>Votos de cada vereador</summary><ul>${i.nominal.map(x => `<li><span>${E(x.nome)}</span><b>${E(x.voto)}</b></li>`).join('')}</ul></details>` : ''}</li>`; }).join('')}</ol>` : ''}
         <div class="acoes"><a class="btn" href="${E(v.url)}" target="_blank" rel="noopener">${I('youtube')} Ver no YouTube</a><a class="btn btn-claro" href="pagina.html?p=tv">${I('esq')} Todos os vídeos</a></div></div>
@@ -126,7 +139,7 @@
   .tv .rodape-tv{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .tv-grande{aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;margin-bottom:8px}
   .tv-caps{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:4px}.tv-caps button{all:unset;cursor:pointer;display:flex;gap:12px;padding:8px 10px;border-radius:8px;width:100%;box-sizing:border-box}.tv-caps button:hover,.tv-caps button:focus-visible{background:var(--creme,#f5f2ea)}.tv-caps time{font-variant-numeric:tabular-nums;font-weight:700;color:#c4302b;min-width:64px}
-  .tv-resumo p{font-size:16px;line-height:1.65}
+  .tv-resumo p,.tv-resumo li{font-size:16px;line-height:1.65}.tv-fala{border-left:3px solid var(--ouro,#d4a017);padding-left:16px}.tv-fala h3{font-size:16px;margin:16px 0 6px}
   .tv-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}.tv-mini{text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:6px}.tv-mini img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#111}.tv-mini b{font-size:14.5px;line-height:1.3}.tv-mini small{color:var(--suave,#6b7280)}`;
   document.head.appendChild(css);
 

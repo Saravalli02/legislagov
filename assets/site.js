@@ -166,6 +166,7 @@ function montarRodape() {
     </div>
     <div class="base-rodape"><div class="wrap">
       <span>© ${new Date().getFullYear()} ${CONFIG.nome}. Informação de interesse público.</span>
+      <span class="marca-lg">Desenvolvido por <a href="https://legislagov.com.br" target="_blank" rel="noopener"><b>Legisla<i>Gov</i></b></a> · <a href="https://legislagov.com.br" target="_blank" rel="noopener">legislagov.com.br</a></span>
       <span><a href="pagina.html?p=mapa-do-site">Mapa do site</a> · <a href="pagina.html?p=lgpd">Privacidade</a> · <a href="pagina.html?p=acessibilidade">Acessibilidade</a> · <a href="${CONFIG.painel}">Área restrita</a></span>
     </div></div>
   </footer>`;

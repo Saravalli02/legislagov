@@ -488,7 +488,7 @@
       <p class="lgp-sub">Câmara Municipal de Neves Paulista · ${esc(u.cargo || '')}</p>
       <p class="lgp-msg" id="lgp-msg" role="alert"></p>
       <div class="lgp-cards">${PAINEIS.slice().sort((a, b) => (nivelArea(a[0], u) === 'nenhum') - (nivelArea(b[0], u) === 'nenhum')).map(([k, n, d, i]) => { const nv = nivelArea(k, u); return `<button type="button" class="lgp-card ${nv === 'nenhum' ? 'bloq' : ''}" data-painel="${k}" onclick="lgpEntrar('${k}')"><span class="lgp-ic">${ic(i)}</span><span class="lgp-tx"><b>${n}</b><small>${d}</small></span><span class="lgp-st n-${nv}">${nv === 'nenhum' ? ic('cadeado') : ''}${nivelTxt[nv]}${nv !== 'nenhum' ? ic('seta') : ''}</span></button>`; }).join('')}</div>
-      <p class="lgp-rodape">Cada usuário abre os painéis do seu cargo. Os demais aparecem com cadeado. Quem libera é o administrador ou a Procuradoria, em Administrativo › Áreas e acessos.</p></div>`;
+      <p class="lgp-rodape">Cada usuário abre os painéis do seu cargo. Os demais aparecem com cadeado. Quem libera é o administrador ou a Procuradoria, em Administrativo › Áreas e acessos.</p>${window.lgMarcaHTML ? `<p class="lg-marca-p" style="margin-top:22px">${lgMarcaHTML}</p>` : ''}</div>`;
     if (!$('#lgt-modal').hidden) fecharModal();
     el.hidden = false; document.documentElement.classList.add('lgp-aberto');
     setTimeout(() => el.querySelector('.lgp-card:not(.bloq)')?.focus(), 40);

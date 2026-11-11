@@ -463,3 +463,7 @@ select.sel{height:48px;border:1px solid var(--linha-2);border-radius:12px;paddin
 /* pré-visualização vinda do painel */
 .faixa-previa{position:sticky;top:0;z-index:999;background:#e2aa1c;color:#1a1300;text-align:center;padding:8px 14px;font-size:.92rem}
 .faixa-previa b{letter-spacing:.08em;margin-right:8px}
+
+/* assinatura LegislaGov no rodapé */
+.marca-lg{font-size:12.5px;opacity:.9}.marca-lg a{color:inherit;text-decoration:none}.marca-lg a:hover{text-decoration:underline}.marca-lg b{font-weight:800;color:#fff;letter-spacing:.01em}.marca-lg b i{font-style:normal;color:#2bb3e8}
+html[data-contraste=alto] .marca-lg b i{color:#ffd400}

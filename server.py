@@ -14,6 +14,14 @@ TV Câmara (YouTube): a cada 20 minutos o servidor lê o feed público do canal 
 novo sozinho, com o resumo da sessão montado a partir da pauta e das votações.
   YOUTUBE_CANAL     endereço do canal (@nome) ou o ID que começa com UC (opcional)
   YOUTUBE_FEED_URL  feed alternativo, para testes (opcional)
+
+Resumo do que foi falado (opcional, desligado até ter a chave):
+  ANTHROPIC_API_KEY  chave da API (colocar só nas variáveis do Render, nunca no código)
+  IA_MODELO          modelo usado (padrão: claude-haiku-5-5)
+  ANTHROPIC_BASE_URL endereço da API (padrão oficial; troca só para testes)
+O servidor tenta ler as legendas automáticas do vídeo; se o YouTube bloquear, a Câmara envia
+o arquivo de legenda (baixado no YouTube Studio) pelo painel. O resumo fica como rascunho até
+alguém da Câmara aprovar no painel.
 """
 import json
 import os
@@ -108,9 +116,128 @@ def atualizar_youtube():
         print("YouTube: falha ao atualizar —", erro, flush=True)
 
 
+# ------------------------------------------------------------------ resumo da fala (IA)
+IA_CHAVE = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+IA_MODELO = os.environ.get("IA_MODELO", "claude-haiku-5-5").strip()
+IA_URL = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com").rstrip("/")
+_ia_pedidos = {}  # id -> [horários] (limite de envios manuais por dia)
+
+PROMPT_RESUMO = """Você vai resumir a gravação de uma sessão da Câmara Municipal de Neves Paulista (SP).
+O texto abaixo vem de legendas automáticas: pode ter erros de palavras e de nomes e não indica quem fala.
+Título do vídeo: {titulo}
+
+Escreva em português do Brasil, em linguagem simples, para o cidadão:
+1. "Resumo": 2 a 3 parágrafos curtos sobre o que aconteceu na sessão.
+2. "Principais assuntos": de 3 a 8 tópicos curtos.
+3. "Votações mencionadas": só as que aparecem claramente no texto, com o resultado; se não houver, escreva "Nenhuma identificada com segurança".
+Regras: não invente nomes, números ou resultados; quando não tiver certeza de quem falou, diga "um vereador" ou "a Presidência"; não dê opinião.
+Use exatamente os títulos acima, cada um em uma linha começando com "## ".
+
+Transcrição:
+{texto}"""
+
+
+def _texto_de_legenda(bruto):
+    """Aceita SRT, VTT, SBV, JSON3 do YouTube ou texto simples e devolve só as falas."""
+    bruto = bruto or ""
+    if bruto.lstrip().startswith("{"):
+        try:
+            j = json.loads(bruto)
+            return " ".join("".join(seg.get("utf8", "") for seg in ev.get("segs", []) or []) for ev in j.get("events", [])).replace("\n", " ")
+        except Exception:
+            pass
+    linhas = []
+    for l in bruto.splitlines():
+        l = l.strip()
+        if not l or l.isdigit() or l.upper().startswith(("WEBVTT", "KIND:", "LANGUAGE:", "NOTE")) or re.match(r"^[\d:.,]+\s*(-->|,)\s*[\d:.,]+", l):
+            continue
+        l = re.sub(r"<[^>]+>", "", l)
+        if not linhas or linhas[-1] != l:
+            linhas.append(l)
+    return re.sub(r"\s+", " ", " ".join(linhas)).strip()
+
+
+def _legenda_automatica(vid):
+    html = _baixar(f"https://www.youtube.com/watch?v={vid}&hl=pt-BR")
+    m = re.search(r'"captionTracks":(\[.*?\])', html)
+    if not m:
+        return ""
+    trilhas = json.loads(m.group(1))
+    trilhas.sort(key=lambda t: (not str(t.get("languageCode", "")).startswith("pt"), t.get("kind") != "asr"))
+    url = trilhas[0].get("baseUrl", "") if trilhas else ""
+    if not url:
+        return ""
+    return _texto_de_legenda(_baixar(url + "&fmt=json3", limite=8_000_000))
+
+
+def _resumir(titulo, texto):
+    texto = texto[:180_000]
+    corpo = json.dumps({"model": IA_MODELO, "max_tokens": 1800,
+                        "messages": [{"role": "user", "content": PROMPT_RESUMO.format(titulo=titulo, texto=texto)}]}).encode("utf-8")
+    req = urllib.request.Request(IA_URL + "/v1/messages", data=corpo, method="POST", headers={
+        "x-api-key": IA_CHAVE, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        j = json.loads(r.read().decode("utf-8"))
+    return "".join(b.get("text", "") for b in j.get("content", []) if b.get("type") == "text").strip()
+
+
+def _salvar_yt():
+    os.makedirs(PASTA_DADOS, exist_ok=True)
+    with open(ARQ_YT, "w", encoding="utf-8") as f:
+        json.dump(_yt, f, ensure_ascii=False)
+
+
+def _gravar_fala(vid, **dados):
+    with _yt_trava:
+        for v in _yt["videos"]:
+            if v["id"] == vid:
+                v["fala"] = {**(v.get("fala") or {}), **dados, "quando": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+        _salvar_yt()
+
+
+def resumir_video(vid, texto=None, fonte="legenda automática do YouTube"):
+    v = next((x for x in _yt["videos"] if x["id"] == vid), None)
+    if not v:
+        return
+    if not IA_CHAVE:
+        _gravar_fala(vid, status="sem_ia")
+        return
+    try:
+        if texto is None:
+            texto = _legenda_automatica(vid)
+        if len(texto or "") < 200:
+            _gravar_fala(vid, status="sem_legenda", erro="O YouTube não liberou a legenda automática deste vídeo.")
+            return
+        _gravar_fala(vid, status="processando", fonte=fonte)
+        _gravar_fala(vid, status="pronto", resumo=_resumir(v.get("titulo", ""), texto), fonte=fonte, modelo=IA_MODELO, caracteres=len(texto), erro="")
+        print(f"IA: resumo pronto para {vid}", flush=True)
+    except Exception as erro:
+        _gravar_fala(vid, status="erro", erro=str(erro)[:300])
+        print("IA: falha ao resumir", vid, "—", erro, flush=True)
+
+
+def resumir_novos():
+    # só os 5 vídeos mais recentes; cada um é tentado de novo no máximo a cada 6 horas
+    agora = time.time()
+    for v in list(_yt["videos"])[:5]:
+        f = v.get("fala") or {}
+        if f.get("status") == "pronto":
+            continue
+        if f.get("tentativa") and agora - f["tentativa"] < 6 * 3600 and f.get("status") != "sem_ia":
+            continue
+        if f.get("status") == "sem_ia" and not IA_CHAVE:
+            continue
+        _gravar_fala(v["id"], tentativa=agora)
+        resumir_video(v["id"])
+
+
 def _laco_youtube():
     while True:
         atualizar_youtube()
+        try:
+            resumir_novos()
+        except Exception as erro:
+            print("IA:", erro, flush=True)
         time.sleep(INTERVALO)
 
 
@@ -157,7 +284,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if caminho == "/api/youtube":
             with _yt_trava:
-                corpo = json.dumps(_yt, ensure_ascii=False).encode("utf-8")
+                corpo = json.dumps({**_yt, "ia": bool(IA_CHAVE)}, ensure_ascii=False).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(corpo)))
@@ -170,6 +297,42 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             return
         super().do_GET()
+
+    def do_POST(self):
+        caminho = self.path.split("?", 1)[0]
+        if caminho != "/api/youtube/transcricao":
+            self.send_error(404)
+            return
+        def responder(cod, dados):
+            corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
+            self.send_response(cod)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(corpo)))
+            self.end_headers()
+            self.wfile.write(corpo)
+        try:
+            tam = int(self.headers.get("Content-Length", "0"))
+            if tam <= 0 or tam > 2_500_000:
+                return responder(413, {"ok": False, "erro": "Arquivo vazio ou grande demais (máximo 2,5 MB)."})
+            dados = json.loads(self.rfile.read(tam).decode("utf-8"))
+            vid = str(dados.get("id", ""))
+            if not any(v["id"] == vid for v in _yt["videos"]):
+                return responder(404, {"ok": False, "erro": "Vídeo não encontrado no canal."})
+            if not IA_CHAVE:
+                return responder(503, {"ok": False, "erro": "A inteligência artificial ainda não foi ativada no servidor."})
+            agora = time.time()
+            hist = [t for t in _ia_pedidos.get(vid, []) if agora - t < 86400]
+            if len(hist) >= 3:
+                return responder(429, {"ok": False, "erro": "Limite de 3 envios por vídeo por dia."})
+            texto = _texto_de_legenda(str(dados.get("texto", "")))
+            if len(texto) < 200:
+                return responder(400, {"ok": False, "erro": "Não encontrei falas no arquivo enviado."})
+            _ia_pedidos[vid] = hist + [agora]
+            _gravar_fala(vid, status="processando", fonte="legenda enviada pela Câmara", tentativa=agora)
+            threading.Thread(target=resumir_video, args=(vid, texto, "legenda enviada pela Câmara"), daemon=True).start()
+            return responder(202, {"ok": True})
+        except Exception as erro:
+            return responder(400, {"ok": False, "erro": str(erro)[:200]})
 
     def log_message(self, fmt, *args):
         print("%s - %s" % (self.address_string(), fmt % args), flush=True)
