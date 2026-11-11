@@ -46,7 +46,9 @@ h1,h2,h3,h4{font-family:var(--serif);font-weight:650;letter-spacing:-.01em;line-
 .barra .a11y .ic{width:15px;height:15px}
 
 /* ---------------------------------------------------------- cabeçalho */
-.topo{background:color-mix(in srgb,var(--branco) 84%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--linha);position:sticky;top:0;z-index:60;transition:box-shadow .2s}
+.topo{background:transparent;border-bottom:1px solid var(--linha);position:sticky;top:0;z-index:60;transition:box-shadow .2s}
+/* o vidro fica num pseudo-elemento: backdrop-filter no próprio .topo prenderia o menu do celular (position:fixed) dentro do cabeçalho */
+.topo::before{content:"";position:absolute;inset:0;z-index:-1;background:color-mix(in srgb,var(--branco) 84%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px)}
 .topo.rolou{box-shadow:0 10px 30px rgba(15,42,34,.08)}
 .topo .wrap{display:flex;align-items:center;gap:20px;min-height:88px;transition:min-height .2s}
 .topo.rolou .wrap{min-height:70px}
@@ -517,6 +519,7 @@ html[data-contraste="alto"] .capa::after{background:rgba(0,0,0,.84)}
 html[data-contraste="alto"] .btn,html[data-contraste="alto"] .btn-restrita,html[data-contraste="alto"] .btn-claro,html[data-contraste="alto"] .btn-vidro{background:#000!important;color:#ffef00!important;border:2px solid #ffef00!important}
 html[data-contraste="alto"] .btn-ouro,html[data-contraste="alto"] .news-form button,html[data-contraste="alto"] .lateral a[aria-current="page"],html[data-contraste="alto"] .paginacao button[aria-current="true"],html[data-contraste="alto"] .cal-grade .d.ev,html[data-contraste="alto"] .card-sessao .dia{background:#ffef00!important;color:#000!important;border-color:#ffef00!important}
 html[data-contraste="alto"] .btn-ouro *,html[data-contraste="alto"] .card-sessao .dia *{color:#000!important}
+html[data-contraste="alto"] .topo::before{background:#000}
 html[data-contraste="alto"] .card-sessao,html[data-contraste="alto"] .servicos ul,html[data-contraste="alto"] .tv,html[data-contraste="alto"] .cookies,html[data-contraste="alto"] .topo{background:#000!important;border:2px solid #fff!important}
 html[data-contraste="alto"] :is(.chip,.pp-sit,.ouv-st,.lei-alt,.lei-rev,.pl-res,.pl-st,.pp-novo,.t-previa-selo){background:#000!important;color:#fff!important;border:1px solid #fff}
 html[data-contraste="alto"] .rodape,html[data-contraste="alto"] .cab-pag,html[data-contraste="alto"] .secao.verde,html[data-contraste="alto"] .barra{background:#000!important;border-color:#fff}
