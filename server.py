@@ -42,7 +42,7 @@ BLOQUEADOS = {"server.py", "render.yaml", ".gitignore", "README.md", "LEIA_PRIME
 # ------------------------------------------------------------------ TV Câmara (YouTube)
 CANAL = os.environ.get("YOUTUBE_CANAL", "https://www.youtube.com/@camaramunicipalnevespaulista").strip()
 FEED_TESTE = os.environ.get("YOUTUBE_FEED_URL", "").strip()
-PASTA_DADOS = os.path.join(PASTA, "dados_servidor")
+PASTA_DADOS = os.environ.get("LG_DADOS") or os.path.join(PASTA, "dados_servidor")   # na Amazon: /var/lib/legislagov
 ARQ_YT = os.path.join(PASTA_DADOS, "youtube.json")
 INTERVALO = 20 * 60
 _yt = {"canal": {"id": "", "url": CANAL}, "atualizado": "", "videos": [], "erro": ""}
