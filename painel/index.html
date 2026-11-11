@@ -2679,6 +2679,9 @@ const AREAS={
    ['admin','Administração','admin',()=>gotoShared('admin'),'admin'],
    ['usuarios','Vereadores e usuários','usuarios',()=>gotoShared('usuarios'),'gestor'],
    ['acessos','Áreas e acessos','acessos',()=>window.lgtAbrir&&lgtAbrir('acessos'),'gestor']
+  ]],
+  ['Ajuda',[
+   ['treinamento','Treinamento','ajuda',()=>window.lgtrAbrir&&lgtrAbrir()]
   ]]
  ]},
  transparencia:{nome:'Transparência',desc:'Portal da Transparência e site',icone:'transp',inicio:'transp',menu:[
@@ -2690,6 +2693,9 @@ const AREAS={
    ['noticiasSite','Notícias do site','noticiasSite',()=>window.lgtAbrir&&lgtAbrir('noticias')],
    ['site','Abrir o site','site',null,'ext:site'],
    ['webmail','Webmail','webmail',null,'ext:webmail']
+  ]],
+  ['Ajuda',[
+   ['treinamento','Treinamento','ajuda',()=>window.lgtrAbrir&&lgtrAbrir()]
   ]]
  ]},
  vereador:{nome:'Portal do Vereador',desc:'Proposituras, comissões, assinaturas e pauta',icone:'vereador',inicio:'verInicio',menu:[
@@ -2711,6 +2717,9 @@ const AREAS={
    ['leis','Legislação municipal','leis',null,'ext:leis'],
    ['site','Site da Câmara','site',null,'ext:site'],
    ['webmail','Webmail','webmail',null,'ext:webmail']
+  ]],
+  ['Ajuda',[
+   ['treinamento','Treinamento','ajuda',()=>window.lgtrAbrir&&lgtrAbrir()]
   ]]
  ]},
  financeiro:{nome:'Financeiro',desc:'Dotações, empenhos e contratos',icone:'moeda',inicio:'finGeral',menu:[
@@ -2726,6 +2735,9 @@ const AREAS={
   ]],
   ['Configuração',[
    ['finParametros','Parâmetros','config',()=>window.lgfAbrir&&lgfAbrir('parametros')]
+  ]],
+  ['Ajuda',[
+   ['treinamento','Treinamento','ajuda',()=>window.lgtrAbrir&&lgtrAbrir()]
   ]]
  ]}
 };
@@ -3008,7 +3020,7 @@ html[data-lgv31-layout] :is(body,#v32) aside.sidebar .brand{padding:0 8px 12px!i
 <div id="lgv32-usermenu" role="menu" aria-label="Conta"></div>
 <script id="lgv32-logic">
 (function(){
-const TITLES={verInicio:'Portal do Vereador',verProposituras:'Minhas proposituras',verAssinar:'Para assinar',verComissoes:'Minhas comissões',verSessoes:'Sessões e pauta',verMaterias:'Acompanhar matérias',presDespacho:'Despachar proposições',presPauta:'Ordem do Dia e votação',presAutografos:'Autógrafos e promulgação',presAtos:'Atos da Presidência',inicio:'Início',materias:'Matérias',sessoes:'Sessões e agenda',comissoes:'Comissões',expedientes:'Expedientes',protocolo:'Protocolo e numeração',editor:'Editor de documentos',mensagens:'Mensagens',avisos:'Notificações',ia:'LegislaIA',admin:'Administração',usuarios:'Vereadores, Presidente e usuários',_x:'Usuários e permissões',config:'Configurações',melhorias:'Sugestões e melhorias',transp:'Portal da Transparência',noticiasSite:'Notícias do site',acessos:'Áreas e acessos',finGeral:'Financeiro · Visão geral',finDotacoes:'Dotações orçamentárias',finEmpenhos:'Empenhos',finPagamentos:'Liquidação e pagamento',finContratos:'Contratos',finCredores:'Credores',finParametros:'Parâmetros financeiros'};
+const TITLES={verInicio:'Portal do Vereador',verProposituras:'Minhas proposituras',verAssinar:'Para assinar',treinamento:'Ajuda e treinamento',verComissoes:'Minhas comissões',verSessoes:'Sessões e pauta',verMaterias:'Acompanhar matérias',presDespacho:'Despachar proposições',presPauta:'Ordem do Dia e votação',presAutografos:'Autógrafos e promulgação',presAtos:'Atos da Presidência',inicio:'Início',materias:'Matérias',sessoes:'Sessões e agenda',comissoes:'Comissões',expedientes:'Expedientes',protocolo:'Protocolo e numeração',editor:'Editor de documentos',mensagens:'Mensagens',avisos:'Notificações',ia:'LegislaIA',admin:'Administração',usuarios:'Vereadores, Presidente e usuários',_x:'Usuários e permissões',config:'Configurações',melhorias:'Sugestões e melhorias',transp:'Portal da Transparência',noticiasSite:'Notícias do site',acessos:'Áreas e acessos',finGeral:'Financeiro · Visão geral',finDotacoes:'Dotações orçamentárias',finEmpenhos:'Empenhos',finPagamentos:'Liquidação e pagamento',finContratos:'Contratos',finCredores:'Credores',finParametros:'Parâmetros financeiros'};
 const ic=(n)=>window.lgv31Icon?lgv31Icon(n):'';
 function me(){try{return typeof usuarioAtual!=='undefined'?usuarioAtual:null}catch(e){return null}}
 function ini(n){return String(n||'?').split(' ').filter(Boolean).map(p=>p[0]).slice(0,2).join('').toUpperCase()}
@@ -3056,4 +3068,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script src="lgs-assinatura.js"></script>
 <script src="lgvr-vereador.js"></script>
 <script src="lgcm-comissoes.js"></script>
+<script src="lgtr-treinamento.js"></script>
 </body></html>
