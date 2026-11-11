@@ -195,7 +195,7 @@
     const pend = pendentesAssinatura(v); const prox = sessoes()[0];
     const movs = minhas.flatMap(p => (p.timeline || []).map(t => ({ p, t }))).slice(-60).reverse().slice(0, 6);
     const despachar = prot.filter(p => p.status === 'protocolado').length, naPauta = prot.filter(p => p.status === 'votacao' && !p.resultado).length;
-    $('#view-lgvr-inicio').innerHTML = faixaDemo(a) +
+    $('#view-lgvr-inicio').innerHTML = faixaDemo(a) + (window.lgavCardPendencias ? lgavCardPendencias() : '') + (window.lgplCardVereador ? lgplCardVereador(a) : '') +
       `<div class="lgvr-hero"><div class="lgvr-av">${esc(v.nome.split(' ').map(x => x[0]).slice(0, 2).join(''))}</div><div><small>${pres ? 'Presidente da Câmara Municipal' : 'Vereador(a)'} · ${esc(v.partido)}</small><h1>${esc(v.completo || v.nome)}</h1><p>Gabinete do Vereador · Legislatura 2025–2028</p></div>
         <div class="lgt-acoes">${btn(ic('materias') + ' Nova propositura', "lgvrNova()")}</div></div>
       <div class="lgvr-kpis"><button type="button" onclick="lgvrAbrir('proposituras')"><b>${minhas.length}</b><span>minhas proposituras</span></button><button type="button" onclick="lgvrAbrir('proposituras')"><b>${tram.length}</b><span>em tramitação</span></button><button type="button" class="${pend.total ? 'k-alerta' : ''}" onclick="lgvrAbrir('assinar')"><b>${pend.total}</b><span>aguardando sua assinatura</span></button><button type="button" onclick="lgvrAbrir('sessoes')"><b>${prox ? prox.quando.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'}</b><span>próxima sessão</span></button></div>
@@ -323,7 +323,7 @@
   /* ---- sessões e pauta ---- */
   function tSessoes(a) {
     const prot = listaProt(); const pauta = prot.filter(p => p.status === 'votacao' && !p.resultado); const com = prot.filter(p => p.status === 'comissao' || p.status === 'analise');
-    $('#view-lgvr-sessoes').innerHTML = faixaDemo(a) + cab('Sessões e pauta', 'Próximas sessões, Ordem do Dia e matérias em comissão') +
+    $('#view-lgvr-sessoes').innerHTML = faixaDemo(a) + cab('Sessões e pauta', 'Próximas sessões, presença, votação, Ordem do Dia e matérias em comissão') + (window.lgplCardVereador ? lgplCardVereador(a) : '') +
       `<div class="lgvr-grade"><div class="lgt-card"><h3>Próximas sessões</h3>${sessoes().slice(0, 6).map(s => `<div class="lgvr-sessao"><div class="lgvr-dia"><b>${s.quando.getDate()}</b><span>${s.quando.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span></div><div><b>${esc(s.titulo)}</b><small>${esc(fmtSessao(s))} · ${esc(s.local)}</small></div></div>`).join('') || '<p class="lgt-p">Nenhuma sessão agendada.</p>'}</div>
        <div class="lgt-card"><h3>Ordem do Dia (${pauta.length})</h3>${pauta.map(p => `<button type="button" class="lgvr-linha" onclick="lgvrVer('${p.id}')"><b>${esc(p.numero)}</b><span>${esc(p.ementa)}</span><small>${esc(p.autor || '')}</small></button>`).join('') || '<p class="lgt-p">Nenhuma matéria na Ordem do Dia.</p>'}</div></div>
       <div class="lgt-card" style="margin-top:14px"><h3>Em comissão ou na Procuradoria (${com.length})</h3>${com.map(p => `<button type="button" class="lgvr-linha" onclick="lgvrVer('${p.id}')"><b>${esc(p.numero)}</b><span>${esc(p.ementa)}</span><small>${esc(statusTxt(p))}</small></button>`).join('') || '<p class="lgt-p">Nenhuma.</p>'}</div>`;
@@ -396,13 +396,26 @@
     const calc = () => { const fa = +f.favor.value || 0, co = +f.contra.value || 0, emp = fa === co && fa + co > 0; $('#lgvr-desemp').hidden = !emp; const de = f.desempate.value; const ok = emp ? de === 'Favorável' : fa > co; $('#lgvr-res').innerHTML = fa + co ? `<span>Resultado <b class="${ok ? '' : 'neg'}">${ok ? 'APROVADO' : 'REJEITADO'}</b></span><span>${fa} × ${co}</span>` : '<span>Informe os votos.</span>'; return { fa, co, emp, de, ok }; };
     f.oninput = () => { f.querySelector('.lgt-erro').textContent = ''; calc(); }; calc();
     f.onsubmit = e => { e.preventDefault(); const r = calc(); if (!(r.fa + r.co)) { f.querySelector('.lgt-erro').textContent = 'Informe os votos.'; return; } if (r.fa + r.co + (+f.abst.value || 0) > n + 1) { f.querySelector('.lgt-erro').textContent = 'Total de votos maior que o número de vereadores.'; return; } if (r.emp && !r.de) { f.querySelector('.lgt-erro').textContent = 'Em caso de empate, registre o voto de desempate do Presidente.'; return; }
-      p.votacao = { favor: r.fa, contra: r.co, abst: +f.abst.value || 0, desempate: r.emp ? r.de : '', sessao: f.sessao.value.trim(), data: new Date().toISOString() };
-      const placar = `${r.fa} a ${r.co}${r.emp ? ', desempate do Presidente' : ''}`;
-      if (!r.ok) { p.status = 'rejeitado'; p.resultado = 'rejeitado'; p.timeline.push({ date: agoraTL(), label: `Rejeitado em votação (${placar}) — ${p.votacao.sessao}` }); }
-      else { const fl = TIPOS[tipoDe(p)].fluxo; p.resultado = 'aprovado'; p.timeline.push({ date: agoraTL(), label: `Aprovado em votação (${placar}) — ${p.votacao.sessao}` });
-        if (fl === 'simples') { p.status = 'concluido'; p.timeline.push({ date: agoraTL(), label: 'Encaminhado por ofício ao destinatário' }); } }
-      persistirProt('Votação registrada', p); UI().fecharModal(); UI().aviso(r.ok ? 'Aprovado.' : 'Rejeitado.'); desenhar(); };
+      aplicarVotacao(p, { favor: r.fa, contra: r.co, abst: +f.abst.value || 0, desempate: r.emp ? r.de : '', sessao: f.sessao.value.trim() }, r.ok);
+      UI().fecharModal(); UI().aviso(r.ok ? 'Aprovado.' : 'Rejeitado.'); desenhar(); };
   };
+  /* Resultado da votação aplicado na tramitação (usado aqui e pela Sessão plenária, com voto nominal) */
+  function aplicarVotacao(p, v, aprovado) {
+    p.votacao = { ...v, data: v.data || new Date().toISOString() };
+    const placar = `${v.favor} a ${v.contra}${v.desempate ? ', desempate do Presidente' : ''}`;
+    if (!aprovado) { p.status = 'rejeitado'; p.resultado = 'rejeitado'; p.timeline.push({ date: agoraTL(), label: `Rejeitado em votação (${placar}) — ${v.sessao}` }); }
+    else { const fl = TIPOS[tipoDe(p)].fluxo; p.resultado = 'aprovado'; p.timeline.push({ date: agoraTL(), label: `Aprovado em votação (${placar}) — ${v.sessao}` });
+      if (fl === 'simples') { p.status = 'concluido'; p.oficio = p.oficio || { enviado: new Date().toISOString() }; p.timeline.push({ date: agoraTL(), label: tipoDe(p) === 'MOC' ? 'Moção encaminhada por ofício ao homenageado/destinatário' : 'Encaminhado por ofício ao Prefeito — aguardando resposta' }); } }
+    persistirProt('Votação registrada', p);
+  }
+  function aplicarVeto(p, v) {
+    const total = comp().vereadores.length, abs = Math.floor(total / 2) + 1, derrubado = v.rejeicao >= abs;
+    p.veto.resultado = derrubado ? 'rejeitado' : 'mantido'; p.veto.votacao = { ...v, data: v.data || new Date().toISOString() };
+    if (derrubado) { p.status = 'aguardando_exec'; p.timeline.push({ date: agoraTL(), label: `Veto rejeitado pela Câmara (${v.rejeicao} a ${v.manutencao}) — ${v.sessao}; segue para promulgação` }); }
+    else if (p.veto.tipo === 'parcial' && p.lei) { p.status = 'concluido'; p.timeline.push({ date: agoraTL(), label: `Veto parcial mantido (${v.rejeicao} a ${v.manutencao}) — vale a ${p.lei} sem as partes vetadas` }); }
+    else { p.status = 'rejeitado'; p.timeline.push({ date: agoraTL(), label: `Veto mantido pela Câmara (${v.rejeicao} a ${v.manutencao}) — projeto arquivado` }); }
+    persistirProt('Apreciação de veto', p); return derrubado;
+  }
   /* Apreciação do veto (guia, item 7): a Câmara mantém ou rejeita; rejeitado, o Presidente promulga */
   function votarVeto(p, a) {
     const total = comp().vereadores.length, abs = Math.floor(total / 2) + 1, prox = sessoes()[0];
@@ -418,11 +431,7 @@
     const calc = () => { const r = +f.rej.value || 0, m = +f.man.value || 0, derrubado = r >= abs; $('#lgvr-res').innerHTML = r + m ? `<span>Resultado <b class="${derrubado ? '' : 'neg'}">${derrubado ? 'VETO REJEITADO' : 'VETO MANTIDO'}</b></span><span>${r} × ${m}</span>` : '<span>Informe os votos.</span>'; return { r, m, derrubado }; };
     f.oninput = calc; calc();
     f.onsubmit = e => { e.preventDefault(); const r = calc(); if (!(r.r + r.m)) { f.querySelector('.lgt-erro').textContent = 'Informe os votos.'; return; } if (r.r + r.m + (+f.abst.value || 0) > total) { f.querySelector('.lgt-erro').textContent = 'Total de votos maior que o número de vereadores.'; return; }
-      p.veto.resultado = r.derrubado ? 'rejeitado' : 'mantido'; p.veto.votacao = { rejeicao: r.r, manutencao: r.m, abst: +f.abst.value || 0, sessao: f.sessao.value.trim(), data: new Date().toISOString() };
-      if (r.derrubado) { p.status = 'aguardando_exec'; p.timeline.push({ date: agoraTL(), label: `Veto rejeitado pela Câmara (${r.r} a ${r.m}) — ${p.veto.votacao.sessao}; segue para promulgação` }); }
-      else if (p.veto.tipo === 'parcial' && p.lei) { p.status = 'concluido'; p.timeline.push({ date: agoraTL(), label: `Veto parcial mantido (${r.r} a ${r.m}) — vale a ${p.lei} sem as partes vetadas` }); }
-      else { p.status = 'rejeitado'; p.timeline.push({ date: agoraTL(), label: `Veto mantido pela Câmara (${r.r} a ${r.m}) — projeto arquivado` }); }
-      persistirProt('Apreciação de veto', p); UI().fecharModal(); UI().aviso(r.derrubado ? 'Veto rejeitado. Promulgue a lei em “Autógrafos e promulgação”.' : 'Veto mantido.'); desenhar(); };
+      aplicarVeto(p, { rejeicao: r.r, manutencao: r.m, abst: +f.abst.value || 0, sessao: f.sessao.value.trim() }); UI().fecharModal(); UI().aviso(r.derrubado ? 'Veto rejeitado. Promulgue a lei em “Autógrafos e promulgação”.' : 'Veto mantido.'); desenhar(); };
   }
   /* Executivo (guia, itens 7 a 9): sanção com publicação e vigência, ou veto */
   const campoVigencia = `<fieldset class="cheio lgvr-opts"><legend>Vigência</legend><label><input type="radio" name="vig" value="pub" checked> Na data da publicação</label><label><input type="radio" name="vig" value="data"> A partir de <input name="vigdata" type="date" style="height:32px;margin-left:6px"></label><label><input type="radio" name="vig" value="texto"> Outra regra prevista no texto <input name="vigtxt" placeholder="Ex.: 90 dias após a publicação" style="height:32px;margin-left:6px;min-width:220px"></label></fieldset>`;
@@ -516,7 +525,7 @@
       listaProt().filter(p => p.origem === 'portal-vereador' || p.votacao || p.lei).forEach(p => {
         const d = iso(p.data);
         if (p.origem === 'portal-vereador') novos.push({ id: 'leg-p-' + p.id, origem: 'legislativo', cat: 'legislativo', sub: 'Projetos e tramitação', titulo: `${p.numero} — ${p.tipoNome}`, descricao: `${p.ementa} · Autor: ${p.autor} · Situação: ${statusTxt(p)}`, data: d, competencia: d.slice(0, 7), numero: p.numero, publicado: true, criadoEm: agora, atualizadoEm: agora });
-        if (p.votacao) novos.push({ id: 'leg-v-' + p.id, origem: 'legislativo', cat: 'legislativo', sub: 'Votações nominais', titulo: `Votação — ${p.numero}`, descricao: `${p.ementa} · ${p.votacao.favor} favoráveis, ${p.votacao.contra} contrários, ${p.votacao.abst} abstenções/ausentes${p.votacao.desempate ? ', desempate do Presidente' : ''} · ${p.resultado === 'rejeitado' ? 'Rejeitado' : 'Aprovado'} · ${p.votacao.sessao}`, data: p.votacao.data.slice(0, 10), competencia: p.votacao.data.slice(0, 7), numero: p.numero, publicado: true, criadoEm: agora, atualizadoEm: agora });
+        if (p.votacao) novos.push({ id: 'leg-v-' + p.id, origem: 'legislativo', cat: 'legislativo', sub: 'Votações nominais', titulo: `Votação — ${p.numero}`, descricao: `${p.ementa} · ${p.votacao.favor} favoráveis, ${p.votacao.contra} contrários, ${p.votacao.abst} abstenções/ausentes${p.votacao.desempate ? ', desempate do Presidente' : ''} · ${p.resultado === 'rejeitado' ? 'Rejeitado' : 'Aprovado'} · ${p.votacao.sessao}${(p.votacao.nominal || []).length ? ' · Votos: ' + p.votacao.nominal.map(x => `${x.nome}: ${x.voto}`).join('; ') : ''}`, data: p.votacao.data.slice(0, 10), competencia: p.votacao.data.slice(0, 7), numero: p.numero, publicado: true, criadoEm: agora, atualizadoEm: agora });
         if (p.lei && p.status === 'concluido') novos.push({ id: 'leg-l-' + p.id, origem: 'legislativo', cat: 'legislativo', sub: 'Leis, resoluções e decretos legislativos', titulo: p.lei, descricao: `${p.ementa} · Origem: ${p.numero}`, data: agora.slice(0, 10), competencia: agora.slice(0, 7), numero: p.lei, publicado: true, criadoEm: agora, atualizadoEm: agora });
       });
       transpSalvar([...outros, ...novos]);
@@ -589,7 +598,7 @@
     const f = $('#lgt-modal form'); f.onsubmit = e => { e.preventDefault(); if (!f.completo.value.trim() || !f.nome.value.trim()) { f.querySelector('.lgt-erro').textContent = 'Informe os nomes.'; return; } const c = comp(); c.vereadores.push({ id: uid('v'), nome: f.nome.value.trim(), completo: f.completo.value.trim(), partido: f.partido.value.trim(), usuario: '' }); c.historico.push({ data: new Date().toISOString(), texto: `Vereador incluído: ${f.nome.value.trim()}`, por: (usuario() || {}).nome || '' }); gravar(COMP_KEY, c); UI().fecharModal(); desenharComposicao(); }; };
 
   /* ================= API para módulos irmãos (comissões) ================= */
-  window.lgvrAPI = { comp, gravar, COMP_KEY, atual, podeEditar, ehGestor, assinarDoc, arq, agoraTL, hojeBR, listaProt, persistirProt, verPorId, TIPOS, tipoDe, UI, esc, ic, cab, btn, faixaDemo, regra, tag, statusTxt, uid, redesenhar: () => desenhar(), tela: () => tela, usuario };
+  window.lgvrAPI = { comp, gravar, COMP_KEY, atual, podeEditar, ehGestor, assinarDoc, arq, agoraTL, hojeBR, listaProt, persistirProt, verPorId, TIPOS, tipoDe, UI, esc, ic, cab, btn, faixaDemo, regra, tag, statusTxt, uid, redesenhar: () => desenhar(), tela: () => tela, usuario, aplicarVotacao, aplicarVeto, sessoes, fmtSessao, ehMinha, pendentesAssinatura, dados, salvarDados, exigePres };
 
   /* ================= estilos ================= */
   const css = document.createElement('style'); css.id = 'lgvr-style'; css.textContent = `

@@ -19,7 +19,7 @@ const MENU_PADRAO = [
   ['Legislativo', [
     ['cal', 'Sessões e pautas', 'Calendário e sessões realizadas', 'sessoes.html'],
     ['doc', 'Proposituras', 'Projetos, indicações e requerimentos', CONFIG.proposituras],
-    ['balanca', 'Leis municipais', 'Legislação em vigor', CONFIG.legislacao],
+    ['balanca', 'Leis municipais', 'Busca no texto e texto atualizado', CONFIG.leis],
     ['ata', 'Atas das sessões', 'Registros oficiais', CONFIG.atas],
     ['jornal', 'Diário Oficial', 'Publicações oficiais', CONFIG.diarioOficial],
     ['video', 'TV Câmara', 'Sessões gravadas e ao vivo', 'pagina.html?p=tv'],
@@ -39,7 +39,7 @@ const MENU_PADRAO = [
   ], true],
   ['Atendimento', [
     ['email', 'Fale conosco', 'Envie sua mensagem', 'fale-conosco.html'],
-    ['ouvido', 'Ouvidoria', 'Sugestões, elogios e reclamações', 'pagina.html?p=ouvidoria'],
+    ['ouvido', 'Ouvidoria', 'Sugestões, elogios e reclamações', 'ouvidoria.html'],
     ['info', 'Perguntas frequentes', 'Dúvidas mais comuns', 'pagina.html?p=perguntas'],
     ['local', 'Endereço e horário', 'Como chegar', 'pagina.html?p=localizacao'],
     ['mao', 'Acessibilidade', 'Recursos deste portal', 'pagina.html?p=acessibilidade'],

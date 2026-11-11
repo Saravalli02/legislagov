@@ -50,6 +50,7 @@
   };
 
   /* o que o vereador precisa fazer nas comissões dele */
+  window.lgcmFase = fase;
   window.lgcmPendencias = function (v) {
     const out = [];
     A().listaProt().filter(p => p.status === 'comissao' && p.comissao).forEach(p => {

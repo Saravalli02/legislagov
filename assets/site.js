@@ -24,6 +24,7 @@ const dataLonga = s => s ? new Date(s + (s.length === 10 ? 'T12:00:00' : '')).to
 
 /* ---------------- ícones ---------------- */
 const ICONES = {
+  sino: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
   busca: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', chev: '<path d="m6 9 6 6 6-6"/>', esq: '<path d="m15 18-6-6 6-6"/>', dir: '<path d="m9 18 6-6-6-6"/>',
   seta: '<path d="M5 12h14M13 6l6 6-6 6"/>', ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', cadeado: '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
@@ -102,7 +103,7 @@ function montarCabecalho() {
   <div class="barra"><div class="wrap">
     <span class="oficial"><i aria-hidden="true"></i>Portal oficial do Poder Legislativo de Neves Paulista — SP</span>
     <nav aria-label="Acesso rápido">
-      <a href="transparencia.html">Transparência</a><a href="${CONFIG.esic}"${alvo(CONFIG.esic)}>e-SIC</a><a href="pagina.html?p=ouvidoria">Ouvidoria</a><a href="${CONFIG.webmail}"${alvo(CONFIG.webmail)}>Webmail</a>
+      <a href="transparencia.html">Transparência</a><a href="${CONFIG.esic}"${alvo(CONFIG.esic)}>e-SIC</a><a href="ouvidoria.html">Ouvidoria</a><a href="${CONFIG.webmail}"${alvo(CONFIG.webmail)}>Webmail</a>
       <span class="a11y" role="group" aria-label="Acessibilidade">
         <button type="button" onclick="fonte(-1)" aria-label="Diminuir texto" accesskey="5">A−</button>
         <button type="button" onclick="fonte(1)" aria-label="Aumentar texto" accesskey="4">A+</button>
@@ -154,7 +155,7 @@ function montarRodape() {
       </ul></div>
       <div><h3>Acesso rápido</h3><ul>
         <li><a href="transparencia.html">Portal da Transparência</a></li><li><a href="${CONFIG.esic}"${alvo(CONFIG.esic)}>e-SIC</a></li>
-        <li><a href="sessoes.html">Sessões</a></li><li><a href="noticias.html">Notícias</a></li><li><a href="${CONFIG.legislacao}"${alvo(CONFIG.legislacao)}>Leis municipais</a></li>
+        <li><a href="sessoes.html">Sessões</a></li><li><a href="noticias.html">Notícias</a></li><li><a href="${CONFIG.leis}">Leis municipais</a></li>
       </ul></div>
       <div><h3>Receba as notícias</h3>
         <p style="margin:0">Cadastre seu e-mail para receber o resumo das sessões.</p>
@@ -206,7 +207,9 @@ function sessoes() {
   const painel = ls.json('lgv11_agenda_v1', []).filter(x => x && x.when).map(x => ({ quando: new Date(x.when), titulo: x.title || ('Sessão ' + (x.type || '')), tipo: x.type || 'Ordinária', resumo: x.summary || '', fonte: 'painel' }));
   const dias = new Set(painel.map(s => s.quando.toDateString()));
   const publ = SESSOES.map(([d, t]) => ({ quando: new Date(d), titulo: t, tipo: 'Ordinária', resumo: '', fonte: 'calendário' })).filter(s => !dias.has(s.quando.toDateString()));
-  return [...painel, ...publ].sort((a, b) => a.quando - b.quando);
+  const pl = (ls.json('lgpl_v1', { sessoes: [] }).sessoes || []).filter(s => s.convocacao).map(s => ({ quando: new Date(s.quando), titulo: s.titulo, tipo: s.tipo || 'Ordinária', resumo: s.status === 'encerrada' ? 'Realizada — pauta, resultados e ata abaixo' : 'Pauta publicada — veja abaixo', fonte: 'plenário' }));
+  const diasPl = new Set(pl.map(s => s.quando.toDateString()));
+  return [...pl, ...painel.filter(s => !diasPl.has(s.quando.toDateString())), ...publ.filter(s => !diasPl.has(s.quando.toDateString()))].sort((a, b) => a.quando - b.quando);
 }
 const hoje0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 const futuras = () => sessoes().filter(s => s.quando >= hoje0());
@@ -411,9 +414,10 @@ function montarBusca() {
   Object.entries(PAGINAS).forEach(([k, p]) => { if (norm(p.titulo + ' ' + (p.html || '').replace(/<[^>]+>/g, ' ')).includes(qq)) res.push(['Página', p.titulo, 'pagina.html?p=' + k]); });
   MENU.forEach(([g, itens]) => itens.forEach(([, l, d, u]) => { if (norm(l + ' ' + d).includes(qq) && !res.some(r => r[2] === u)) res.push([g, l, u]); }));
   (window.TRANSP_BUSCA ? TRANSP_BUSCA(q) : []).forEach(r => res.push(r));
+  (window.lgLeisTodas ? lgLeisTodas() : []).filter(x => norm([x.titulo, x.ementa, x.texto].join(' ')).includes(qq)).slice(0, 20).forEach(x => res.push(['Lei municipal', `${x.titulo} — ${x.ementa}`, 'leis.html?id=' + encodeURIComponent(x.id)]));
   noticias().filter(n => norm(n.titulo).includes(qq)).slice(0, 30).forEach(n => res.push(['Notícia · ' + dataLonga(n.data), n.titulo, linkNoticia(n)]));
   el.innerHTML = (res.length ? `<p class="contador">${res.length} resultado(s)</p>` + res.map(([t, l, u]) => `<a class="sessao" href="${u}"${alvo(u)}><div><h3>${esc(l)}</h3><p><span>${esc(t)}${ehExterno(u) ? ' · abre em outro site' : ''}</span></p></div></a>`).join('') : '<p>Nada encontrado no portal.</p>') +
-    `<div class="aviso" style="margin-top:24px">Procurando uma lei ou projeto? <a href="${CONFIG.legislacao}" target="_blank" rel="noopener">Pesquise na consulta legislativa oficial</a>.</div>`;
+    `<div class="aviso" style="margin-top:24px">Procurando uma lei ou um projeto? Veja <a href="leis.html?q=${encodeURIComponent(q)}">Leis municipais</a> (busca dentro do texto) e <a href="proposituras.html?q=${encodeURIComponent(q)}">Proposituras</a>.</div>`;
 }
 
 /* ---------------- inicialização ---------------- */

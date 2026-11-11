@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Painel do Plenário · Câmara Municipal de Neves Paulista</title>
+<style>
+:root{--bg:#07080a;--card:#111317;--linha:#23262c;--tx:#f4f5f7;--mut:#9aa0a8;--ouro:#e2aa1c;--sim:#2fbf71;--nao:#e5484d;--abs:#7d8cff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font-family:Inter,"Segoe UI",system-ui,sans-serif}
+body{display:flex;flex-direction:column;min-height:100vh;padding:2.2vh 2.4vw;gap:2vh}
+header{display:flex;align-items:center;justify-content:space-between;gap:2vw;border-bottom:1px solid var(--linha);padding-bottom:1.6vh}
+header .casa{display:flex;align-items:center;gap:1.2vw}
+header img{height:6vh;width:auto}
+header b{display:block;font-size:clamp(16px,2.1vw,34px);letter-spacing:.01em}
+header small{display:block;color:var(--mut);font-size:clamp(12px,1.2vw,20px)}
+.relogio{font-variant-numeric:tabular-nums;font-size:clamp(22px,3.2vw,56px);font-weight:800;color:var(--ouro)}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:2vw;min-height:0}
+.painel{background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:2.4vh 2vw;display:flex;flex-direction:column;min-height:0}
+.kicker{display:flex;align-items:center;gap:.7vw;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ouro);font-size:clamp(12px,1.25vw,22px)}
+.vivo{width:1.1vw;height:1.1vw;min-width:10px;min-height:10px;border-radius:50%;background:var(--nao);animation:p 1.2s infinite}
+@keyframes p{50%{opacity:.25}}
+h1{font-size:clamp(26px,4vw,72px);margin:1vh 0 .6vh;line-height:1.05}
+.ementa{font-size:clamp(16px,1.9vw,34px);line-height:1.3;margin:0 0 1.4vh;color:#dfe2e6}
+.autor{color:var(--mut);font-size:clamp(13px,1.2vw,22px);margin:0 0 2vh}
+.placar{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2vw;margin-top:auto}
+.placar div{border-radius:16px;padding:2vh 1vw;text-align:center;border:2px solid var(--linha)}
+.placar b{display:block;font-size:clamp(40px,7vw,130px);line-height:1;font-variant-numeric:tabular-nums}
+.placar span{font-size:clamp(13px,1.3vw,24px);color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.placar .s b{color:var(--sim)}.placar .n b{color:var(--nao)}.placar .a b{color:var(--abs)}
+.resultado{margin-top:2vh;border-radius:16px;padding:2.2vh 1vw;text-align:center;font-weight:900;font-size:clamp(30px,5.5vw,104px);letter-spacing:.04em}
+.resultado.ok{background:rgba(47,191,113,.16);color:var(--sim);border:2px solid var(--sim)}
+.resultado.er{background:rgba(229,72,77,.14);color:var(--nao);border:2px solid var(--nao)}
+.lado h2{margin:0 0 1.4vh;font-size:clamp(15px,1.5vw,28px);display:flex;justify-content:space-between;align-items:baseline;gap:1vw}
+.lado h2 small{color:var(--mut);font-weight:600;font-size:.75em}
+.ver{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.9vh;overflow:hidden}
+.ver li{display:flex;align-items:center;gap:.9vw;padding:.9vh .8vw;border-radius:12px;border:1px solid var(--linha);opacity:.45}
+.ver li.p{opacity:1}
+.ver .f{width:5.2vh;height:5.2vh;min-width:36px;min-height:36px;border-radius:50%;object-fit:cover;background:#1d2026;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--mut);flex:none;overflow:hidden}
+.ver .f img{width:100%;height:100%;object-fit:cover}
+.ver .nm{flex:1;min-width:0}
+.ver .nm b{display:block;font-size:clamp(14px,1.45vw,27px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ver .nm small{display:block;color:var(--mut);font-size:clamp(11px,1vw,18px)}
+.ver .v{font-weight:900;font-size:clamp(13px,1.35vw,25px);padding:.5vh .8vw;border-radius:10px;min-width:6.5vw;text-align:center;border:1px solid var(--linha);color:var(--mut)}
+.ver .v.sim{background:var(--sim);border-color:var(--sim);color:#fff}
+.ver .v.nao{background:var(--nao);border-color:var(--nao);color:#fff}
+.ver .v.abs{background:var(--abs);border-color:var(--abs);color:#fff}
+.pauta{list-style:none;margin:1vh 0 0;padding:0;display:flex;flex-direction:column;gap:1.1vh;overflow:hidden}
+.pauta li{display:flex;gap:1vw;align-items:baseline;font-size:clamp(14px,1.45vw,27px);padding:1vh 0;border-bottom:1px solid var(--linha)}
+.pauta li b{color:var(--ouro);min-width:9vw}
+.pauta li em{font-style:normal;margin-left:auto;font-weight:800;font-size:.8em}
+.pauta li em.ok{color:var(--sim)}.pauta li em.er{color:var(--nao)}
+.vazio{margin:auto;text-align:center;color:var(--mut);font-size:clamp(18px,2vw,36px)}
+.vazio b{display:block;color:var(--tx);font-size:clamp(26px,3.4vw,60px);margin-bottom:1vh}
+footer{display:flex;justify-content:space-between;color:var(--mut);font-size:clamp(11px,1vw,17px)}
+footer button{background:transparent;border:1px solid var(--linha);color:var(--mut);border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+footer button:hover{color:var(--tx);border-color:var(--mut)}
+@media(max-width:900px){main{grid-template-columns:1fr}.ver{display:grid;grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:reduce){.vivo{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="casa"><img alt="" onerror="this.remove()"><div><b>Câmara Municipal de Neves Paulista</b><small id="t-sessao">Painel do Plenário</small></div></div>
+  <div class="relogio" id="relogio" aria-live="off">--:--</div>
+</header>
+<main id="main" aria-live="polite"></main>
+<footer><span>Painel eletrônico · LegislaGov</span><button type="button" onclick="tela()">Tela cheia (F)</button></footer>
+<script src="../assets/dados.js?v=202611111457"></script>
+<script src="../assets/site-conteudo.js?v=202611111457"></script>
+<script>
+(function () {
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ler = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+  const pad = n => String(n).padStart(2, '0');
+  const hora = iso => { const d = new Date(iso); return `${pad(d.getHours())}h${pad(d.getMinutes())}`; };
+  const q = new URLSearchParams(location.search);
+  const VERS = (() => { try { return VEREADORES; } catch (e) { return []; } })();
+  const ORIG = (() => { try { return ORIGEM; } catch (e) { return ''; } })();
+  function foto(vid) {
+    const v = VERS.find(x => 'v' + x.id === vid); if (!v) return '';
+    if (v.fotoData) return v.fotoData;
+    return v.foto && ORIG ? `${ORIG}/Arquivos/Vereadores/${encodeURIComponent(v.foto)}?quality=80&w=200` : '';
+  }
+  const ini = n => String(n).split(' ').filter(x => x.length > 1).map(x => x[0]).slice(0, 2).join('').toUpperCase();
+  const QN = { simples: 'Maioria simples', absoluta: 'Maioria absoluta', dois_tercos: 'Dois terços', veto: 'Apreciação de veto' };
+  const rot = (it, v) => it.quorum === 'veto' ? ({ Sim: 'DERRUBAR', 'Não': 'MANTER', 'Abstenção': 'ABST.' })[v] : ({ Sim: 'SIM', 'Não': 'NÃO', 'Abstenção': 'ABST.' })[v];
+  function render() {
+    const d = ler('lgpl_v1', { sessoes: [] }); const c = ler('lgv_camara_v1', { vereadores: [] }); const prots = ler('legislagov_protocolos_v2_neves-paulista-sp', []);
+    const P = id => prots.find(p => p.id === id);
+    const h = new Date(); h.setHours(0, 0, 0, 0);
+    const s = d.sessoes.find(x => x.id === q.get('s') && x.status !== 'encerrada') || d.sessoes.find(x => x.status === 'aberta') || d.sessoes.filter(x => x.status !== 'encerrada' && new Date(x.quando) >= h).sort((a, b) => new Date(a.quando) - new Date(b.quando))[0];
+    const main = document.getElementById('main');
+    if (!s) { document.getElementById('t-sessao').textContent = 'Painel do Plenário'; main.innerHTML = '<div class="painel" style="grid-column:1/-1"><div class="vazio"><b>Nenhuma sessão em andamento</b>A próxima sessão aparece aqui quando for convocada.</div></div>'; return; }
+    document.getElementById('t-sessao').textContent = `${s.titulo} · ${new Date(s.quando).toLocaleDateString('pt-BR')} às ${hora(s.quando)}`;
+    const pres = s.presenca || {}; const presId = c.presidente;
+    const it = s.itens.find(i => i.status === 'votacao') || s.itens.find(i => i.status === 'discussao');
+    const ult = [...s.itens].filter(i => i.status === 'votado').sort((a, b) => new Date(b.fimVotacao || 0) - new Date(a.fimVotacao || 0))[0];
+    const mostra = it || (ult && (Date.now() - new Date(ult.fimVotacao || 0)) < 5 * 60e3 ? ult : null);
+    let esquerda;
+    if (mostra) {
+      const p = P(mostra.pid) || {}; const vot = mostra.votos || {};
+      const conta = v => Object.values(vot).filter(x => x === v).length;
+      const n = (mostra.placar || { sim: conta('Sim'), nao: conta('Não'), abst: conta('Abstenção') });
+      const kick = mostra.status === 'votacao' ? '<i class="vivo"></i> Em votação' : mostra.status === 'discussao' ? 'Em discussão' : 'Resultado';
+      const ok = /Aprovado|derrubado/i.test(mostra.resultado || '');
+      esquerda = `<section class="painel"><div class="kicker">${kick} · ${esc(QN[mostra.quorum] || '')}</div><h1>${esc(p.numero || '')}</h1><p class="ementa">${esc(p.ementa || '')}</p><p class="autor">${esc(p.tipoNome || '')} · ${esc(p.autor || '')}</p>
+        ${mostra.status !== 'discussao' ? `<div class="placar"><div class="s"><b>${n.sim}</b><span>${mostra.quorum === 'veto' ? 'Derrubar veto' : 'Sim'}</span></div><div class="n"><b>${n.nao}</b><span>${mostra.quorum === 'veto' ? 'Manter veto' : 'Não'}</span></div><div class="a"><b>${n.abst}</b><span>Abstenção</span></div></div>` : ''}
+        ${mostra.status === 'votado' ? `<div class="resultado ${ok ? 'ok' : 'er'}">${esc((mostra.resultado || '').toUpperCase())}</div>` : ''}</section>`;
+    } else {
+      esquerda = `<section class="painel"><div class="kicker">${s.status === 'aberta' ? '<i class="vivo"></i> Sessão em andamento' : 'Pauta da sessão'}</div><h1>${esc(s.titulo)}</h1>
+        <ol class="pauta">${s.itens.map((i, k) => { const p = P(i.pid) || {}; return `<li><b>${k + 1}. ${esc(p.numero || '')}</b><span>${esc((p.ementa || '').slice(0, 110))}${(p.ementa || '').length > 110 ? '…' : ''}</span>${i.status === 'votado' ? `<em class="${/Aprovado|derrubado/i.test(i.resultado) ? 'ok' : 'er'}">${esc(i.resultado)}</em>` : ''}</li>`; }).join('') || '<li>Pauta ainda não publicada.</li>'}</ol></section>`;
+    }
+    const total = c.vereadores.length; const np = c.vereadores.filter(v => pres[v.id]).length;
+    const lista = c.vereadores.map(v => {
+      const voto = mostra && mostra.votos ? mostra.votos[v.id] : '';
+      const cls = voto === 'Sim' ? 'sim' : voto === 'Não' ? 'nao' : voto === 'Abstenção' ? 'abs' : '';
+      const f = foto(v.id);
+      const tx = mostra && mostra.status !== 'discussao' ? (voto ? rot(mostra, voto) : !pres[v.id] ? 'AUSENTE' : (v.id === presId && mostra.quorum === 'simples') ? 'PRES.' : '—') : (pres[v.id] ? 'PRESENTE' : 'AUSENTE');
+      return `<li class="${pres[v.id] ? 'p' : ''}"><span class="f">${f ? `<img src="${esc(f)}" alt="" onerror="this.parentNode.textContent='${ini(v.nome)}'">` : ini(v.nome)}</span><span class="nm"><b>${esc(v.nome)}</b><small>${esc(v.partido || '')}${v.id === presId ? ' · Presidente' : ''}</small></span><span class="v ${cls}">${tx}</span></li>`;
+    }).join('');
+    main.innerHTML = esquerda + `<section class="painel lado"><h2>Vereadores <small>${np} de ${total} presentes</small></h2><ul class="ver">${lista}</ul></section>`;
+  }
+  try { const b = IMG.brasao; const im = document.querySelector('header img'); if (im && b) { im.src = /^data:/.test(b.local) ? b.local : (b.remoto || ('../' + b.local)); } } catch (e) { }
+  function relogio() { const d = new Date(); document.getElementById('relogio').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+  window.tela = () => { const el = document.documentElement; if (!document.fullscreenElement) el.requestFullscreen && el.requestFullscreen(); else document.exitFullscreen && document.exitFullscreen(); };
+  addEventListener('keydown', e => { if (e.key === 'f' || e.key === 'F') tela(); });
+  addEventListener('storage', render);
+  render(); relogio(); setInterval(relogio, 1000); setInterval(render, 2500);
+})();
+</script>
+</body>
+</html>

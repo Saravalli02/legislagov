@@ -30,6 +30,10 @@
      O Administrador e a Procuradoria podem ajustar exceções em "Áreas e acessos" (ex.: quem cuida do site).
      Painel sem permissão aparece com cadeado e não abre. */
   const AREAS_KEY = 'lgt_areas_v1';
+  /* Painéis travados e escondidos de todos (nem aparecem com cadeado). Para reativar, tire da lista.
+     Financeiro: travado em 11/11/2026 a pedido do Ricardo (não será usado por enquanto). */
+  const PAINEIS_OCULTOS = ['financeiro'];
+  window.lgPainelOculto = k => PAINEIS_OCULTOS.includes(k);
   const ACESSO_TOTAL_PADRAO = ['ricardo'];
   const AREAS_INFO = [
     ['legislativo', 'Painel Administrativo', 'Matérias, sessões, expedientes, protocolo e gestão.'],
@@ -37,12 +41,12 @@
     ['transparencia', 'Portal da Transparência', 'Publicar documentos no Portal da Transparência.'],
     ['financeiro', 'Painel Financeiro', 'Empenhos, pagamentos, dotações, contratos e vencimentos.'],
     ['site', 'Publicação de matérias', 'Notícias, fotos, vereadores e menus do site.'],
-  ];
+  ].filter(a => !PAINEIS_OCULTOS.includes(a[0]));
   const PERFIS = {
     adm: { nome: 'Administrador do sistema', areas: { legislativo: 'edicao', vereador: 'edicao', transparencia: 'edicao', financeiro: 'edicao', site: 'edicao' } },
     procurador: { nome: 'Procurador(a)', areas: { legislativo: 'edicao' } },
     secretaria: { nome: 'Secretaria', areas: { legislativo: 'edicao' } },
-    financeiro: { nome: 'Financeiro e Transparência', areas: { financeiro: 'edicao', transparencia: 'edicao' } },
+    financeiro: { nome: 'Tesouraria e Transparência', areas: { financeiro: 'edicao', transparencia: 'edicao' } },
     vereador: { nome: 'Vereador(a)', areas: { vereador: 'edicao' } },
     servidor: { nome: 'Servidor(a)', areas: { legislativo: 'consulta' } },
   };
@@ -69,6 +73,7 @@
   function nivelPadrao(area, u) { const p = perfilDe(u); return ((PERFIS[p] || PERFIS.servidor).areas[area]) || 'nenhum'; }
   function nivelArea(area, u) {
     u = u || usuario(); if (!u) return 'nenhum';
+    if (PAINEIS_OCULTOS.includes(area)) return 'nenhum';
     const p = perfilDe(u); if (p === 'adm') return 'edicao';
     const r = (mapaAreas()[loginDe(u)] || {})[area];
     if (r) return r;
@@ -468,7 +473,7 @@
     ['transparencia', 'Portal da Transparência', 'Publicar documentos no Portal da Transparência do site.', 'transp'],
     ['financeiro', 'Painel Financeiro', 'Empenhos, liquidação, pagamentos, dotações, contratos e vencimentos.', 'moeda'],
     ['site', 'Publicação de matérias', 'Notícias, fotos, vereadores e menus do site da Câmara.', 'site'],
-  ];
+  ].filter(p => !PAINEIS_OCULTOS.includes(p[0]));
   const nivelTxt = { edicao: 'Acesso liberado', consulta: 'Somente consulta', nenhum: 'Sem permissão' };
   function escolherPainel(auto) {
     const u = usuario(); if (!u) return;

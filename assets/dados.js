@@ -39,7 +39,9 @@ const CONFIG = {
   transparencia: 'transparencia.html',
   sistemaContabil: 'http://143.0.202.245:6767/',
   radar: 'https://radardatransparencia.atricon.org.br/',
-  esic: ORIGEM + '/Sic/Cidadao',
+  esic: 'ouvidoria.html#esic',
+  esicAntigo: ORIGEM + '/Sic/Cidadao',
+  leis: 'leis.html',
   licitacoes: ORIGEM + '/licitacao',
   contas: ORIGEM + '/ContaPublica',
   pca: ORIGEM + '/Pagina/Listar/351',
@@ -209,7 +211,7 @@ const PAGINAS = {
     </ul>
     <h2>Tipos de manifestação</h2>
     <div class="chips"><span>Sugestão</span><span>Elogio</span><span>Solicitação</span><span>Reclamação</span><span>Denúncia</span></div>
-    <p class="acoes"><a class="btn" href="fale-conosco.html?assunto=Ouvidoria">Registrar manifestação</a> <a class="btn btn-sec" href="${CONFIG.esic}" target="_blank" rel="noopener">Pedido de informação (e-SIC)</a></p>` },
+    <p class="acoes"><a class="btn" href="ouvidoria.html">Registrar manifestação</a> <a class="btn btn-sec" href="ouvidoria.html#esic">Pedido de informação (e-SIC)</a> <a class="btn btn-sec" href="ouvidoria.html#consulta">Consultar protocolo</a></p>` },
   'perguntas': { grupo: 'Atendimento', titulo: 'Perguntas frequentes', especial: 'faq' },
   'acessibilidade': { grupo: 'Atendimento', titulo: 'Acessibilidade', html: `
     <p>Este portal foi feito para ser usado por todas as pessoas, inclusive com leitores de tela, apenas pelo teclado ou no celular.</p>

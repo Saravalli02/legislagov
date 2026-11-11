@@ -170,6 +170,7 @@
           <label class="sr-only" for="pp-ano">Ano</label><select class="sel" id="pp-ano"><option value="">Todos os anos</option>${anos.map(a => `<option${a === estado.ano ? ' selected' : ''}>${a}</option>`).join('')}</select>
         </div>
         ${vAutor ? `<div class="pp-autor-fil">${img(fotoVer(vAutor), '', '', iniciais(vAutor.completo))}<span>Proposituras de <b>${esc(vAutor.nome)}</b> (como autor ou coautor)</span><button type="button" class="btn btn-claro" id="pp-limpa-autor">Ver todas</button></div>` : ''}
+        ${(() => { const sg = window.lgcSeguindo ? lgcSeguindo() : {}; const ids = Object.keys(sg); if (!ids.length) return ''; const nov = L.filter(p => sg[p.id] && lgcNovidades(p)).length; return `<div class="pp-seg-faixa">${ic('sino')}<span>Você acompanha <b>${ids.length}</b> propositura(s) neste aparelho${nov ? ` · <b>${nov}</b> com novidade` : ''}.</span><button type="button" class="btn btn-claro" id="pp-ver-seg">Ver só as que acompanho</button></div>`; })()}
         <p class="contador" id="pp-cont" role="status"></p>
         <div class="pp-lista" id="pp-lista"></div>
         <nav class="paginacao" id="pp-pag" aria-label="Páginas"></nav>
@@ -178,7 +179,8 @@
       </div>`;
     const filtrar = () => {
       const q = norm(estado.q);
-      return L.filter(p => (!estado.tipo || p.t === estado.tipo) && (!estado.sit || grupoSit(p) === estado.sit) && (!estado.ano || p.ano === estado.ano) &&
+      const sg = estado.seg && window.lgcSeguindo ? lgcSeguindo() : null;
+      return L.filter(p => (!sg || sg[p.id]) && (!estado.tipo || p.t === estado.tipo) && (!estado.sit || grupoSit(p) === estado.sit) && (!estado.ano || p.ano === estado.ano) &&
         (!estado.autor || (estado.autor === 'executivo' || estado.autor === 'outros' ? p.origemAutor === estado.autor : p.vs.some(v => String(v.id) === estado.autor))) &&
         (!q || norm([p.numero, p.ementa, p.autorTxt, p.T.nome, p.lei].join(' ')).includes(q) || norm(p.numero).replace(/\s/g, '').includes(q.replace(/\s/g, ''))));
     };
@@ -193,13 +195,14 @@
     };
     $('#pp-q').oninput = e => { estado.q = e.target.value; estado.pag = 1; desenhar(); };
     [['#pp-tipo', 'tipo'], ['#pp-sit', 'sit'], ['#pp-autor', 'autor'], ['#pp-ano', 'ano']].forEach(([s, k]) => $(s).onchange = e => { estado[k] = e.target.value; estado.pag = 1; desenhar(); if (k === 'autor') lista(app); });
+    const vs = $('#pp-ver-seg'); if (vs) vs.onclick = () => { estado.seg = !estado.seg; vs.textContent = estado.seg ? 'Ver todas' : 'Ver só as que acompanho'; estado.pag = 1; desenhar(); };
     const lim = $('#pp-limpa-autor'); if (lim) lim.onclick = () => { history.replaceState(null, '', 'proposituras.html'); lista(app); };
     $('#pp-pag').onclick = e => { const b = e.target.closest('button[data-p]'); if (b) { estado.pag = +b.dataset.p; desenhar(); $('#pp-lista').scrollIntoView({ block: 'start' }); } };
     desenhar();
   }
   function card(p) {
     return `<a class="pp-card" href="proposituras.html?id=${encodeURIComponent(p.id)}">
-      <div class="pp-card-cab"><span class="pp-tipo">${esc(p.T.nome)}</span><b class="pp-num">${esc(p.numero)}</b>${p.exemplo ? '<span class="pp-ex">exemplo</span>' : ''}${chipSit(p)}</div>
+      <div class="pp-card-cab"><span class="pp-tipo">${esc(p.T.nome)}</span><b class="pp-num">${esc(p.numero)}</b>${p.exemplo ? '<span class="pp-ex">exemplo</span>' : ''}${window.lgcNovidades && lgcNovidades(p) ? `<span class="pp-novo">${lgcNovidades(p)} novidade(s)</span>` : ''}${chipSit(p)}</div>
       <h2 class="pp-ementa">${esc(p.ementa)}</h2>
       <div class="pp-card-info">
         <div class="pp-quem">${avatar(p)}<span><small>Autoria</small><b>${esc(p.autorTxt)}</b></span></div>
@@ -232,6 +235,7 @@
           <div class="acoes"><a class="btn btn-claro" href="proposituras.html">${ic('esq')} Todas as proposituras</a><button class="btn btn-claro" type="button" onclick="print()">${ic('imprimir')} Imprimir</button><button class="btn btn-claro" type="button" id="pp-comp">${ic('compartilhar')} Compartilhar</button></div>
         </div>
         <aside class="pp-ficha">
+          ${window.lgcCaixaSeguir ? lgcCaixaSeguir(p) : ''}
           <h2>Autoria</h2>
           ${p.vs.length ? p.vs.map((x, k) => `<a class="pp-autor" href="vereador.html?id=${x.id}">${img(fotoVer(x), '', '', iniciais(x.completo))}<span><b>${esc(x.nome)}</b><small>${k ? 'Coautor' + (x.f ? 'a' : '') : 'Autor' + (x.f ? 'a' : '')} · ${esc(x.partido)}</small></span></a>`).join('')
             : `<div class="pp-autor">${avatar(p)}<span><b>${esc(p.autor || 'Não informado')}</b><small>${p.origemAutor === 'executivo' ? 'Poder Executivo' : 'Autoria institucional'}</small></span></div>`}
