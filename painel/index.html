@@ -1900,7 +1900,7 @@ const LG_USERS='lg_camara_local_users_v3', LG_SESSION='lg_camara_session_v3';
 const LG_MUNICIPIO='Neves Paulista — SP';
 function lgUsers(){try{return JSON.parse(localStorage.getItem(LG_USERS))||[]}catch{return []}}
 function lgSaveUsers(users){localStorage.setItem(LG_USERS,JSON.stringify(users))}
-function lgSeed(){let a=lgUsers();let r=a.find(u=>u.usuario.toLowerCase()==='ricardo');if(r){r.cargo='Servidor Legislativo';r.setor=r.setor||'Procuradoria Legislativa';r.orgao='cam';r.perfil='usuario';r.ativo=true;r.senha='123456';}else{a.push({id:'usr-ricardo',usuario:'Ricardo',senha:'123456',nome:'Ricardo',cargo:'Servidor Legislativo',setor:'Procuradoria Legislativa',orgao:'cam',perfil:'usuario',municipio:LG_MUNICIPIO,ativo:true});}if(!a.some(u=>u.usuario.toLowerCase()==='administrador'))a.push({id:'adm-local',usuario:'Administrador',senha:'admin123',nome:'Administrador',cargo:'Administrador da Câmara',orgao:'ambos',perfil:'admin',municipio:LG_MUNICIPIO,ativo:true});lgSaveUsers(a)}
+function lgSeed(){let a=lgUsers();let r=a.find(u=>u.usuario.toLowerCase()==='ricardo');if(r){r.cargo='Administrador do sistema';r.setor='Administração do sistema';r.orgao='cam';r.perfil='admin';r.ativo=true;r.senha='123456';}else{a.push({id:'usr-ricardo',usuario:'Ricardo',senha:'123456',nome:'Ricardo',cargo:'Administrador do sistema',setor:'Administração do sistema',orgao:'cam',perfil:'admin',municipio:LG_MUNICIPIO,ativo:true});}if(!a.some(u=>u.usuario.toLowerCase()==='administrador'))a.push({id:'adm-local',usuario:'Administrador',senha:'admin123',nome:'Administrador',cargo:'Administrador da Câmara',orgao:'ambos',perfil:'admin',municipio:LG_MUNICIPIO,ativo:true});lgSaveUsers(a)}
 function lgEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function fazerLogin(ev){ev.preventDefault();let name=document.getElementById('login-email').value.trim().toLowerCase(),pass=document.getElementById('login-senha').value;let user=lgUsers().find(u=>u.usuario.toLowerCase()===name&&u.senha===pass&&u.ativo!==false);if(!user){mostrarErro('login-error','Usuário ou senha incorretos.');return false}esconderErro('login-error');sessionStorage.setItem(LG_SESSION,user.id);iniciarSessao({...user,email:user.usuario});return false}
 async function fazerCadastro(ev){ev.preventDefault();let nome=document.getElementById('reg-nome').value.trim(),usuario=document.getElementById('reg-email').value.trim(),senha=document.getElementById('reg-senha').value,senha2=document.getElementById('reg-senha2').value;if(!nome||!usuario||!senha){mostrarErro('register-error','Informe nome, usuário e senha.');return false}if(senha.length<6){mostrarErro('register-error','Senha precisa ter pelo menos 6 caracteres.');return false}if(senha!==senha2){mostrarErro('register-error','Senhas não coincidem.');return false}let a=lgUsers();if(a.some(u=>u.usuario.toLowerCase()===usuario.toLowerCase())){mostrarErro('register-error','Este usuário já existe.');return false}a.push({id:'usr-'+Date.now(),usuario,nome,senha,cargo:document.getElementById('reg-cargo').value||'Servidor Legislativo',setor:document.getElementById('reg-cargo').value||'',orgao:'cam',municipio:LG_MUNICIPIO,ativo:true});lgSaveUsers(a);setAuthTab('login');document.getElementById('login-email').value=usuario;const ok=document.getElementById('login-success');ok.textContent='Usuário cadastrado para testes. Faça login.';ok.style.display='block';return false}
@@ -2428,6 +2428,9 @@ html[data-lgv31-font="grande"] body{zoom:1.12}
 .lgv33-area-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border:0;border-radius:8px;background:transparent;color:#e8e9eb;cursor:pointer;font:inherit;text-align:left}
 .lgv33-area-menu .lgv33-todos{border-top:1px solid rgba(255,255,255,.08);border-radius:0 0 8px 8px;margin-top:4px;padding-top:10px}
 .lgv33-area-menu button:hover,.lgv33-area-menu button[aria-checked="true"]{background:rgba(255,255,255,.07)}
+.lgv33-area-menu button.lgv33-bloq{opacity:.55;cursor:not-allowed}.lgv33-area-menu button.lgv33-bloq .lgv33-area-ic{background:rgba(255,255,255,.08)!important;color:#c9ccd2!important}
+.lgv35-site{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;margin:0 0 8px;border-radius:10px;border:1px solid rgba(226,170,28,.45);background:rgba(226,170,28,.1);color:var(--v31-side-ink,#e8e9eb)!important;text-decoration:none;font-weight:600;font-size:13.5px}
+.lgv35-site:hover{background:rgba(226,170,28,.18)}.lgv35-site span{flex:1}.lgv35-site .lgv31-ic{width:18px;height:18px}.lgv35-site .lgv31-ext{width:14px;height:14px;opacity:.7}
 .lgv33-area-menu .lgv33-area-tx small{text-transform:none;letter-spacing:0;font-size:12px}
 :root[data-lg-area="financeiro"][data-lgv31-layout][data-lg27-theme]{--v31-side-bar:#e2aa1c}
 :root[data-lg-area="vereador"][data-lgv31-layout][data-lg27-theme]{--v31-side-bar:#8b9cff}
@@ -2617,6 +2620,8 @@ const I={
  mensagens:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
  notificacoes:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
  leis:'<path d="M12 3v18M5 7h14M8 21h8"/><path d="M7 7l-3 7a3.2 3.2 0 0 0 6 0zM17 7l-3 7a3.2 3.2 0 0 0 6 0z"/>',
+ foto:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/>',
+ lista:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
  site:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
  admin:'<path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6z"/><path d="m9 12 2 2 4-4"/>',
  usuarios:'<circle cx="10" cy="8" r="4"/><path d="M2.5 20.5c.7-3.7 3.6-6 7.5-6 1.2 0 2.3.2 3.2.6"/><circle cx="18" cy="17" r="2.5"/><path d="M18 13v1.5M18 19.5V21M14.5 17H16M20 17h1.5"/>',
@@ -2672,26 +2677,24 @@ const AREAS={
   ]],
   ['Consultas',[
    ['leis','Legislação municipal','leis',null,'ext:leis'],
-   ['site','Site da Câmara','site',null,'ext:site'],
    ['ia','LegislaIA','ia',()=>lgv7Open('ia')]
   ]],
   ['Gestão',[
    ['admin','Administração','admin',()=>gotoShared('admin'),'admin'],
    ['usuarios','Vereadores e usuários','usuarios',()=>gotoShared('usuarios'),'gestor'],
-   ['acessos','Áreas e acessos','acessos',()=>window.lgtAbrir&&lgtAbrir('acessos'),'gestor']
+   ['acessos','Áreas e acessos','acessos',()=>window.lgtAbrir&&lgtAbrir('acessos'),'gestor'],
+   ['usuariosProto','Usuários (protocolo)','usuarios',()=>window.lgtAbrir&&lgtAbrir('uproto'),'secretaria']
   ]],
   ['Ajuda',[
    ['treinamento','Treinamento','ajuda',()=>window.lgtrAbrir&&lgtrAbrir()]
   ]]
  ]},
- transparencia:{nome:'Transparência',desc:'Portal da Transparência e site',icone:'transp',inicio:'transp',menu:[
+ transparencia:{nome:'Transparência',desc:'Documentos do Portal da Transparência',icone:'transp',inicio:'transp',menu:[
   ['Portal da Transparência',[
    ['transp','Publicações','transp',()=>window.lgtAbrir&&lgtAbrir('transp')],
    ['verTransp','Ver portal público','externo',null,'ext:transp']
   ]],
-  ['Site da Câmara',[
-   ['noticiasSite','Notícias do site','noticiasSite',()=>window.lgtAbrir&&lgtAbrir('noticias')],
-   ['site','Abrir o site','site',null,'ext:site'],
+  ['Comunicação',[
    ['webmail','Webmail','webmail',null,'ext:webmail']
   ]],
   ['Ajuda',[
@@ -2715,7 +2718,6 @@ const AREAS={
   ]],
   ['Consultas',[
    ['leis','Legislação municipal','leis',null,'ext:leis'],
-   ['site','Site da Câmara','site',null,'ext:site'],
    ['webmail','Webmail','webmail',null,'ext:webmail']
   ]],
   ['Ajuda',[
@@ -2736,6 +2738,26 @@ const AREAS={
   ['Configuração',[
    ['finParametros','Parâmetros','config',()=>window.lgfAbrir&&lgfAbrir('parametros')]
   ]],
+  ['Consultas',[
+   ['finMaterias','Acompanhar matérias','protocolo',()=>window.lgvrMateriasConsulta&&lgvrMateriasConsulta('finMaterias')],
+   ['webmail','Webmail','webmail',null,'ext:webmail']
+  ]],
+  ['Ajuda',[
+   ['treinamento','Treinamento','ajuda',()=>window.lgtrAbrir&&lgtrAbrir()]
+  ]]
+ ]},
+ site:{nome:'Publicação de matérias',desc:'Notícias, fotos, vereadores e menus do site',icone:'site',inicio:'siteNoticias',menu:[
+  ['Conteúdo do site',[
+   ['siteNoticias','Matérias e notícias','noticiasSite',()=>window.lgtAbrir&&lgtAbrir('noticias')],
+   ['siteFotos','Fotos e destaques da capa','foto',()=>window.lgscAbrir&&lgscAbrir('fotos')]
+  ]],
+  ['A Câmara no site',[
+   ['siteVereadores','Vereadores e Mesa','vereador',()=>window.lgscAbrir&&lgscAbrir('vereadores')]
+  ]],
+  ['Estrutura',[
+   ['siteMenus','Menus do site','lista',()=>window.lgscAbrir&&lgscAbrir('menus')],
+   ['siteConfig','Endereços e responsáveis','config',()=>window.lgscAbrir&&lgscAbrir('config')]
+  ]],
   ['Ajuda',[
    ['treinamento','Treinamento','ajuda',()=>window.lgtrAbrir&&lgtrAbrir()]
   ]]
@@ -2755,6 +2777,7 @@ function buildMenu(){
  const nav=document.createElement('nav'); nav.className='lgv31-nav'; nav.setAttribute('aria-label','Menu principal');
  const foot=aside.querySelector('.sidebar-foot'); aside.insertBefore(sw,foot); aside.insertBefore(nav,foot);
  const lo=aside.querySelector('.logout-btn'); if(lo){lo.innerHTML=ic('sair')+' Sair';}
+ if(foot&&!document.getElementById('lgv35-site')){const a=document.createElement('a');a.id='lgv35-site';a.className='lgv35-site';a.target='_blank';a.rel='noopener';a.href=URLS.site();a.innerHTML=ic('site')+'<span>Abrir o site da Câmara</span>'+ic('externo','lgv31-ext');foot.insertBefore(a,foot.firstChild);}
  const old=aside.querySelector('nav.primary-nav')||aside;
  ['config','notificacoes','documentos','inicio'].forEach(k=>{if(!document.querySelector('.nav-item[data-nav="'+k+'"]')){const b=document.createElement('button');b.className='nav-item';b.dataset.nav=k;b.style.display='none';b.hidden=true;old.appendChild(b);}});
  renderMenu(areaAtual());
@@ -2765,17 +2788,17 @@ function renderMenu(area){
  document.documentElement.setAttribute('data-lg-area',AREA);
  const ok=areasPermitidas(), A=AREAS[AREA];
  sw.innerHTML='<button type="button" class="lgv33-area-btn" id="lgv33-area-btn" aria-haspopup="true" aria-expanded="false" onclick="lgv33AreaMenu()"><span class="lgv33-area-ic">'+ic(A.icone)+'</span><span class="lgv33-area-tx"><small>Painel</small><b>'+A.nome+'</b></span>'+ic('chev','lgv33-chev')+'</button>'+
-  '<div class="lgv33-area-menu" id="lgv33-area-menu" role="menu">'+ok.map(k=>'<button type="button" role="menuitemradio" aria-checked="'+(k===AREA)+'" onclick="lgv33TrocarArea(\''+k+'\')"><span class="lgv33-area-ic">'+ic(AREAS[k].icone)+'</span><span class="lgv33-area-tx"><b>'+AREAS[k].nome+'</b><small>'+AREAS[k].desc+'</small></span></button>').join('')+'<button type="button" role="menuitem" class="lgv33-todos" onclick="lgv33AreaMenu(false);window.lgpEscolherPainel&&lgpEscolherPainel()"><span class="lgv33-area-ic">'+ic('grade')+'</span><span class="lgv33-area-tx"><b>Ver todos os painéis</b><small>Tela de escolha do painel</small></span></button></div>';
+  '<div class="lgv33-area-menu" id="lgv33-area-menu" role="menu">'+[...ok,...Object.keys(AREAS).filter(k=>!ok.includes(k))].map(k=>{const bl=!ok.includes(k);return '<button type="button" role="menuitemradio" class="'+(bl?'lgv33-bloq':'')+'" aria-checked="'+(k===AREA)+'"'+(bl?' aria-disabled="true"':'')+' onclick="lgv33TrocarArea(\''+k+'\')"><span class="lgv33-area-ic">'+ic(bl?'cadeado':AREAS[k].icone)+'</span><span class="lgv33-area-tx"><b>'+AREAS[k].nome+'</b><small>'+(bl?'Sem permissão para este usuário':AREAS[k].desc)+'</small></span></button>';}).join('')+'<button type="button" role="menuitem" class="lgv33-todos" onclick="lgv33AreaMenu(false);window.lgpEscolherPainel&&lgpEscolherPainel()"><span class="lgv33-area-ic">'+ic('grade')+'</span><span class="lgv33-area-tx"><b>Ver todos os painéis</b><small>Tela de escolha do painel</small></span></button></div>';
  let html='';
  A.menu.forEach(([group,items])=>{
-  const adminGroup=items.every(i=>i[4]==='admin'), gestorGroup=!adminGroup&&items.every(i=>i[4]==='admin'||i[4]==='gestor'), presGroup=items.every(i=>i[4]==='pres');
-  html+='<div class="lgv31-group'+(adminGroup?' admin-only':gestorGroup?' gestor-only':presGroup?' pres-only':'')+'">'+group+'</div>';
+  const adminGroup=items.every(i=>i[4]==='admin'), gestorGroup=!adminGroup&&items.every(i=>i[4]==='admin'||i[4]==='gestor'), presGroup=items.every(i=>i[4]==='pres'), restrito=items.every(i=>['admin','gestor','pres','secretaria'].includes(i[4]));
+  html+='<div class="lgv31-group'+(adminGroup?' admin-only':gestorGroup?' gestor-only':presGroup?' pres-only':restrito?' grupo-restrito':'')+'">'+group+'</div>';
   items.forEach(([key,label,icon,fn,flag])=>{
-   const cls='lgv31-item'+(flag==='admin'?' admin-only':flag==='gestor'?' gestor-only':flag==='pres'?' pres-only':'');
+   const cls='lgv31-item'+(flag==='admin'?' admin-only':flag==='gestor'?' gestor-only':flag==='pres'?' pres-only':flag==='secretaria'?' secretaria-only':'');
    if(flag&&flag.startsWith('ext:')){
     html+='<a class="'+cls+'" data-v31="'+key+'" href="'+URLS[flag.slice(4)]()+'" target="_blank" rel="noopener">'+ic(icon)+'<span>'+label+'</span>'+ic('externo','lgv31-ext')+'</a>';
    }else{
-    html+='<button type="button" class="'+cls+'" data-v31="'+key+'" onclick="lgv31Go(\''+key+'\')"'+(flag==='admin'||flag==='gestor'||flag==='pres'?' style="display:none"':'')+'>'+ic(icon)+'<span>'+label+'</span>'+(flag==='count'?'<b class="lgv31-count" id="lgv31-menu-count"></b>':'')+'</button>';
+    html+='<button type="button" class="'+cls+'" data-v31="'+key+'" onclick="lgv31Go(\''+key+'\')"'+(flag==='admin'||flag==='gestor'||flag==='pres'||flag==='secretaria'?' style="display:none"':'')+'>'+ic(icon)+'<span>'+label+'</span>'+(flag==='count'?'<b class="lgv31-count" id="lgv31-menu-count"></b>':'')+'</button>';
    }
   });
  });
@@ -2784,8 +2807,9 @@ function renderMenu(area){
 }
 window.lgv33Render=function(){renderMenu(areaAtual());};
 window.lgv33AreaMenu=function(force){const m=document.getElementById('lgv33-area-menu'),b=document.getElementById('lgv33-area-btn');if(!m||!b||b.disabled)return;const o=force===undefined?!m.classList.contains('open'):force;m.classList.toggle('open',o);b.setAttribute('aria-expanded',o);};
+window.lgv33Negado=function(k){const n=(AREAS[k]||{}).nome||'este painel';const m='Este usuário não tem permissão para acessar o painel '+n+'. Peça a liberação à Procuradoria.';if(window.lgtUI)lgtUI.aviso(m,'erro');else alert(m);};
 window.lgv33TrocarArea=function(k){
- lgv33AreaMenu(false); if(!areasPermitidas().includes(k))return;
+ lgv33AreaMenu(false); if(!areasPermitidas().includes(k)){lgv33Negado(k);return;}
  renderMenu(k); const ini=AREAS[k].inicio; lgv31Go(ini);
 };
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#lgv33-area'))window.lgv33AreaMenu&&lgv33AreaMenu(false)});
@@ -2854,7 +2878,8 @@ function wrap(name,keyFn){const f=window[name];if(typeof f!=='function'||f.__v31
 function syncBadge(){const src=document.getElementById('lgv10-count');const n=src&&src.style.display!=='none'?src.textContent.trim():'';['lgv31-badge','lgv31-menu-count'].forEach(id=>{const b=document.getElementById(id);if(b){b.textContent=n;b.style.display=n&&n!=='0'?'inline-flex':'none';}});}
 
 window.lgv31ApplyAdmin=function(){applyAdmin()};
-function applyAdmin(){let u=null;try{u=typeof usuarioAtual!=='undefined'?usuarioAtual:null}catch(e){}const ok=!!(u&&u.orgao==='ambos');const ges=ok||!!(window.lgEhGestor&&lgEhGestor());const pres=!!(window.lgvrPresidenteAtual&&lgvrPresidenteAtual());const show=(sel,v)=>document.querySelectorAll('.lgv31-nav '+sel).forEach(el=>el.style.display=v?(el.classList.contains('lgv31-group')?'block':'flex'):'none');show('.admin-only',ok);show('.gestor-only',ges);show('.pres-only',pres);}
+function applyAdmin(){const pf=window.lgPerfil?lgPerfil():null;const ok=pf==='adm';const ges=ok||pf==='procurador';const sec=ok||pf==='secretaria'&&!ges;const pres=ok||!!(window.lgvrPresidenteAtual&&lgvrPresidenteAtual());const show=(sel,v)=>document.querySelectorAll('.lgv31-nav '+sel).forEach(el=>el.style.display=v?(el.classList.contains('lgv31-group')?'block':'flex'):'none');show('.admin-only',ok);show('.gestor-only',ges);show('.pres-only',pres);show('.secretaria-only',pf==='secretaria');
+ document.querySelectorAll('.lgv31-nav .lgv31-group.grupo-restrito').forEach(g=>{let n=g.nextElementSibling,vis=false;while(n&&!n.classList.contains('lgv31-group')){if(n.style.display!=='none')vis=true;n=n.nextElementSibling;}g.style.display=vis?'block':'none';});}
 /* Preferências da tela Configurações passam a ser lembradas */
 function persistToggles(){document.querySelectorAll('#view-config .toggle:not([id])').forEach((t,i)=>{const k='lgv31_cfg_toggle_'+i;try{const v=localStorage.getItem(k);if(v!==null)t.classList.toggle('on',v==='1')}catch(e){}t.setAttribute('role','switch');t.tabIndex=0;const upd=()=>t.setAttribute('aria-checked',String(t.classList.contains('on')));upd();t.addEventListener('click',()=>{upd();try{localStorage.setItem(k,t.classList.contains('on')?'1':'0')}catch(e){}});t.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();t.click()}});});}
 function init(){
@@ -3020,7 +3045,7 @@ html[data-lgv31-layout] :is(body,#v32) aside.sidebar .brand{padding:0 8px 12px!i
 <div id="lgv32-usermenu" role="menu" aria-label="Conta"></div>
 <script id="lgv32-logic">
 (function(){
-const TITLES={verInicio:'Portal do Vereador',verProposituras:'Minhas proposituras',verAssinar:'Para assinar',treinamento:'Ajuda e treinamento',verComissoes:'Minhas comissões',verSessoes:'Sessões e pauta',verMaterias:'Acompanhar matérias',presDespacho:'Despachar proposições',presPauta:'Ordem do Dia e votação',presAutografos:'Autógrafos e promulgação',presAtos:'Atos da Presidência',inicio:'Início',materias:'Matérias',sessoes:'Sessões e agenda',comissoes:'Comissões',expedientes:'Expedientes',protocolo:'Protocolo e numeração',editor:'Editor de documentos',mensagens:'Mensagens',avisos:'Notificações',ia:'LegislaIA',admin:'Administração',usuarios:'Vereadores, Presidente e usuários',_x:'Usuários e permissões',config:'Configurações',melhorias:'Sugestões e melhorias',transp:'Portal da Transparência',noticiasSite:'Notícias do site',acessos:'Áreas e acessos',finGeral:'Financeiro · Visão geral',finDotacoes:'Dotações orçamentárias',finEmpenhos:'Empenhos',finPagamentos:'Liquidação e pagamento',finContratos:'Contratos',finCredores:'Credores',finParametros:'Parâmetros financeiros'};
+const TITLES={verInicio:'Portal do Vereador',verProposituras:'Minhas proposituras',verAssinar:'Para assinar',treinamento:'Ajuda e treinamento',usuariosProto:'Usuários para protocolos',finMaterias:'Acompanhar matérias',siteNoticias:'Matérias e notícias',siteFotos:'Fotos e destaques da capa',siteVereadores:'Vereadores e Mesa',siteMenus:'Menus do site',siteConfig:'Endereços e responsáveis',verComissoes:'Minhas comissões',verSessoes:'Sessões e pauta',verMaterias:'Acompanhar matérias',presDespacho:'Despachar proposições',presPauta:'Ordem do Dia e votação',presAutografos:'Autógrafos e promulgação',presAtos:'Atos da Presidência',inicio:'Início',materias:'Matérias',sessoes:'Sessões e agenda',comissoes:'Comissões',expedientes:'Expedientes',protocolo:'Protocolo e numeração',editor:'Editor de documentos',mensagens:'Mensagens',avisos:'Notificações',ia:'LegislaIA',admin:'Administração',usuarios:'Vereadores, Presidente e usuários',_x:'Usuários e permissões',config:'Configurações',melhorias:'Sugestões e melhorias',transp:'Portal da Transparência',noticiasSite:'Notícias do site',acessos:'Áreas e acessos',finGeral:'Financeiro · Visão geral',finDotacoes:'Dotações orçamentárias',finEmpenhos:'Empenhos',finPagamentos:'Liquidação e pagamento',finContratos:'Contratos',finCredores:'Credores',finParametros:'Parâmetros financeiros'};
 const ic=(n)=>window.lgv31Icon?lgv31Icon(n):'';
 function me(){try{return typeof usuarioAtual!=='undefined'?usuarioAtual:null}catch(e){return null}}
 function ini(n){return String(n||'?').split(' ').filter(Boolean).map(p=>p[0]).slice(0,2).join('').toUpperCase()}
@@ -3068,5 +3093,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script src="lgs-assinatura.js"></script>
 <script src="lgvr-vereador.js"></script>
 <script src="lgcm-comissoes.js"></script>
+<script src="lgsc-site.js"></script>
 <script src="lgtr-treinamento.js"></script>
 </body></html>

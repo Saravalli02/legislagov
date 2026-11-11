@@ -23,18 +23,42 @@
   function alertaArmazenamento() { aviso('Espaço do navegador esgotado. Remova arquivos grandes ou use links. Na versão com servidor não há esse limite.', 'erro'); }
   function usoArmazenamento() { let t = 0; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); t += (k.length + (localStorage.getItem(k) || '').length) * 2; } } catch (e) { } return t; }
 
-  /* ---------------- áreas e permissões ----------------
-     Cada usuário tem um nível por área: 'nenhum', 'consulta' ou 'edicao'.
-     Administradores têm edição em todas. Padrão: Legislativo = edição, demais = nenhum. */
+  /* ---------------- perfis, áreas e permissões ----------------
+     Cada usuário tem um PERFIL (cargo) que define os painéis que ele abre:
+       Administrador → todos · Procurador → Administrativo + gestão de usuários · Secretaria → Administrativo
+       Financeiro → Financeiro + Transparência · Vereador/Presidente → Portal do Vereador
+     O Administrador e a Procuradoria podem ajustar exceções em "Áreas e acessos" (ex.: quem cuida do site).
+     Painel sem permissão aparece com cadeado e não abre. */
   const AREAS_KEY = 'lgt_areas_v1';
-  // usuários que começam com os três painéis liberados (o administrador pode mudar em "Áreas e acessos")
   const ACESSO_TOTAL_PADRAO = ['ricardo'];
   const AREAS_INFO = [
-    ['legislativo', 'Painel Administrativo', 'Matérias, sessões, expedientes, protocolo, mensagens e gestão.'],
-    ['vereador', 'Portal do Vereador', 'Proposituras, assinaturas, pauta e acompanhamento; funções da Presidência.'],
-    ['transparencia', 'Portal da Transparência', 'Publicar documentos no Portal da Transparência e notícias no site.'],
+    ['legislativo', 'Painel Administrativo', 'Matérias, sessões, expedientes, protocolo e gestão.'],
+    ['vereador', 'Portal do Vereador', 'Proposituras, assinaturas, comissões, pauta; funções da Presidência.'],
+    ['transparencia', 'Portal da Transparência', 'Publicar documentos no Portal da Transparência.'],
     ['financeiro', 'Painel Financeiro', 'Empenhos, pagamentos, dotações, contratos e vencimentos.'],
+    ['site', 'Publicação de matérias', 'Notícias, fotos, vereadores e menus do site.'],
   ];
+  const PERFIS = {
+    adm: { nome: 'Administrador do sistema', areas: { legislativo: 'edicao', vereador: 'edicao', transparencia: 'edicao', financeiro: 'edicao', site: 'edicao' } },
+    procurador: { nome: 'Procurador(a)', areas: { legislativo: 'edicao' } },
+    secretaria: { nome: 'Secretaria', areas: { legislativo: 'edicao' } },
+    financeiro: { nome: 'Financeiro e Transparência', areas: { financeiro: 'edicao', transparencia: 'edicao' } },
+    vereador: { nome: 'Vereador(a)', areas: { vereador: 'edicao' } },
+    servidor: { nome: 'Servidor(a)', areas: { legislativo: 'consulta' } },
+  };
+  const loginDe = u => String((u && (u.usuario || u.email)) || '').toLowerCase();
+  function perfilDe(u) {
+    u = u || usuario(); if (!u) return null;
+    if (u.orgao === 'ambos' || u.perfil === 'admin' || ACESSO_TOTAL_PADRAO.includes(loginDe(u))) return 'adm';
+    if (window.lgVereadorDoUsuario && lgVereadorDoUsuario(u)) return 'vereador';
+    if (PERFIS[u.perfil] && u.perfil !== 'adm' && u.perfil !== 'vereador') return u.perfil;
+    const t = `${u.cargo || ''} ${u.setor || ''}`;
+    if (/procurad/i.test(t)) return 'procurador';
+    if (/tesour|contab|financ/i.test(t)) return 'financeiro';
+    if (/secret/i.test(t)) return 'secretaria';
+    return 'servidor';
+  }
+  window.lgPerfil = perfilDe; window.lgPerfis = PERFIS;
   function mapaAreas() {
     const m = ler(AREAS_KEY, null);
     if (m) return m;
@@ -42,25 +66,23 @@
     return ini;
   }
   function publicadores() { return ler(TRANSP_PERM_CHAVE, []); }
+  function nivelPadrao(area, u) { const p = perfilDe(u); return ((PERFIS[p] || PERFIS.servidor).areas[area]) || 'nenhum'; }
   function nivelArea(area, u) {
     u = u || usuario(); if (!u) return 'nenhum';
-    if (u.orgao === 'ambos') return 'edicao';
-    const em = String(u.email || '').toLowerCase();
-    const r = (mapaAreas()[em] || {})[area];
+    const p = perfilDe(u); if (p === 'adm') return 'edicao';
+    const r = (mapaAreas()[loginDe(u)] || {})[area];
     if (r) return r;
-    if (ACESSO_TOTAL_PADRAO.includes(em)) return 'edicao';
-    // vereadores (definidos pelo procurador em Usuários): Portal do Vereador liberado;
-    // o Presidente da Câmara também acompanha o Administrativo e o Financeiro em consulta
-    const ver = window.lgVereadorDoUsuario ? lgVereadorDoUsuario(u) : null;
-    if (ver) { const pres = window.lgEhPresidente && lgEhPresidente(u); if (area === 'vereador') return 'edicao'; if (pres && (area === 'legislativo' || area === 'financeiro')) return 'consulta'; return 'nenhum'; }
-    if (area === 'vereador') return 'nenhum';
-    return area === 'legislativo' ? 'edicao' : 'nenhum';
+    return nivelPadrao(area, u);
   }
   window.lgNivelArea = nivelArea;
   window.lgtAreasPermitidas = () => AREAS_INFO.map(a => a[0]).filter(a => nivelArea(a) !== 'nenhum');
+  window.lgtAreasInfo = AREAS_INFO;
+  window.lgtDefinirNivel = (login, area, nivel) => { const m = mapaAreas(); m[login] = { ...(m[login] || {}), [area]: nivel }; gravar(AREAS_KEY, m); log('Áreas e acessos', `${login}: ${area} = ${nivel}`); };
+  window.lgtUsuariosLista = () => (typeof lgUsers === 'function' ? lgUsers() : []).filter(u => u.ativo !== false && u.orgao !== 'exec' && !/vistaalegre/i.test(u.usuario || ''));
   function podePublicar(u) { return nivelArea('transparencia', u) === 'edicao'; }
   function podeVerTransp(u) { return nivelArea('transparencia', u) !== 'nenhum'; }
-  function ehAdmin() { const u = usuario(); return !!(u && u.orgao === 'ambos'); }
+  function ehAdmin() { return perfilDe() === 'adm'; }
+  const ehGestorP = () => ['adm', 'procurador'].includes(perfilDe());
   function aplicarPermissoes() {
     if (window.lgv33Render) lgv33Render();
     const wm = document.querySelectorAll('.lgv31-item[data-v31="webmail"]'); wm.forEach(a => a.href = (ler(CFG_KEY, {}).webmail || WEBMAIL_PADRAO));
@@ -93,45 +115,41 @@
       </div>
     </section>
     <section class="view lgt" id="view-lgt-noticias" style="display:none">
-      <div class="letterhead"><div><h1>Notícias do site</h1><div class="date">Notícias publicadas aqui aparecem no portal da Câmara, no início e em Notícias.</div></div>
-        <div class="lgt-acoes"><a class="lgt-btn" href="../noticias.html" target="_blank" rel="noopener">${ic('externo')} Ver no site</a><button class="lgt-btn primario" type="button" onclick="lgtFormNoticia()">+ Nova notícia</button></div></div>
+      <div class="letterhead"><div><h1>Matérias e notícias</h1><div class="date">Matérias publicadas aqui aparecem no site da Câmara, no início e em Notícias. Use “Pré-visualizar” para ver como vai ficar antes de publicar.</div></div>
+        <div class="lgt-acoes"><a class="lgt-btn" href="../noticias.html" target="_blank" rel="noopener">${ic('externo')} Ver no site</a><button class="lgt-btn primario" type="button" onclick="lgtFormNoticia()">+ Nova matéria</button></div></div>
       <div class="lgt-tabela-wrap"><table class="lgt-tabela"><thead><tr><th>Data</th><th>Notícia</th><th>Categoria</th><th>Situação</th><th class="acoes-col">Ações</th></tr></thead><tbody id="lgt-not-corpo"></tbody></table></div>
       <div class="lgt-grade2">
-        <div class="lgt-card"><h3>Endereços usados no site e no painel</h3>
-          <form id="lgt-cfg" class="lgt-form-mini">
-            <label><span>Webmail da Câmara</span><input name="webmail" type="url" placeholder="${WEBMAIL_PADRAO}"></label>
-            <label><span>Canal no YouTube</span><input name="youtube" type="url" placeholder="https://www.youtube.com/@camaramunicipalnevespaulista"></label>
-            <button class="lgt-btn primario" type="submit">Salvar endereços</button>
-          </form></div>
         <div class="lgt-card"><h3>Dicas</h3><ul class="lgt-lista"><li>Marque <b>Destaque na capa</b> para a notícia aparecer no carrossel da página inicial.</li><li>Fotos são reduzidas automaticamente para carregar rápido no celular.</li><li>O arquivo de notícias antigas é importado do site anterior pelo <b>ATUALIZAR_CONTEUDO.bat</b>.</li></ul></div>
       </div>
     </section>
     <section class="view lgt" id="view-lgt-acessos" style="display:none">
-      <div class="letterhead"><div><h1>Áreas e acessos</h1><div class="date">Defina, para cada usuário, o que ele pode fazer em cada área do sistema. O login e a senha são os mesmos.</div></div></div>
+      <div class="letterhead"><div><h1>Áreas e acessos</h1><div class="date">O <b>perfil</b> define os painéis de cada pessoa. Ajuste exceções em cada painel quando precisar (por exemplo, quem cuida do site). Exceções ficam marcadas em dourado.</div></div></div>
       <div class="lgt-areas-info">${AREAS_INFO.map(([a, n, d]) => `<div><b>${n}</b><span>${d}</span></div>`).join('')}</div>
-      <div class="lgt-tabela-wrap"><table class="lgt-tabela lgt-acessos"><thead><tr><th>Usuário</th>${AREAS_INFO.map(([, n]) => `<th>${n}</th>`).join('')}</tr></thead><tbody id="lgt-acessos-corpo"></tbody></table></div>
-      <div class="lgt-grade2"><div class="lgt-card"><h3>Níveis</h3><ul class="lgt-lista"><li><b>Sem acesso</b>: a área nem aparece para o usuário.</li><li><b>Consulta</b>: vê as informações, mas não altera nada.</li><li><b>Edição</b>: cadastra, publica e altera.</li></ul></div>
+      <div class="lgt-tabela-wrap"><table class="lgt-tabela lgt-acessos"><thead><tr><th>Usuário</th><th>Perfil (cargo)</th>${AREAS_INFO.map(([, n]) => `<th>${n}</th>`).join('')}</tr></thead><tbody id="lgt-acessos-corpo"></tbody></table></div>
+      <div class="lgt-grade2"><div class="lgt-card"><h3>Níveis</h3><ul class="lgt-lista"><li><b>Sem acesso</b>: o painel aparece com cadeado e não abre.</li><li><b>Consulta</b>: vê as informações, mas não altera nada.</li><li><b>Edição</b>: cadastra, publica e altera.</li></ul></div>
       <div class="lgt-card"><h3>Boas práticas</h3><ul class="lgt-lista"><li>Separe funções: quem <b>empenha</b> não deveria ser quem <b>paga</b>.</li><li>Revise os acessos quando alguém mudar de setor.</li><li>Toda alteração de acesso fica na auditoria.</li></ul></div></div>
     </section>
+    <section class="view lgt" id="view-lgt-uproto" style="display:none"></section>
     <div class="lgt-modal" id="lgt-modal" role="dialog" aria-modal="true" aria-labelledby="lgt-modal-t" hidden><div class="lgt-modal-box" id="lgt-modal-box"></div></div>`);
     // itens ocultos no menu antigo, para gotoShared funcionar
     const antigo = document.querySelector('aside.sidebar nav.primary-nav') || document.querySelector('aside.sidebar');
-    ['lgt-transp', 'lgt-noticias', 'lgt-acessos'].forEach(k => { if (!document.querySelector(`.nav-item[data-nav="${k}"]`)) { const b = document.createElement('button'); b.className = 'nav-item'; b.dataset.nav = k; b.hidden = true; b.style.display = 'none'; antigo.appendChild(b); } });
+    ['lgt-transp', 'lgt-noticias', 'lgt-acessos', 'lgt-uproto'].forEach(k => { if (!document.querySelector(`.nav-item[data-nav="${k}"]`)) { const b = document.createElement('button'); b.className = 'nav-item'; b.dataset.nav = k; b.hidden = true; b.style.display = 'none'; antigo.appendChild(b); } });
     ['lgt-f-cat', 'lgt-f-st', 'lgt-f-q'].forEach(id => $('#' + id).addEventListener('input', desenharTransp));
-    $('#lgt-cfg').addEventListener('submit', e => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); const c = { ...ler(CFG_KEY, {}), webmail: d.webmail.trim(), youtube: d.youtube.trim() }; if (gravar(CFG_KEY, c)) { aviso('Endereços salvos.'); aplicarPermissoes(); log('Configurações do site', 'Endereços de Webmail/YouTube atualizados'); } });
+    $('#lgt-cfg')?.addEventListener('submit', e => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); const c = { ...ler(CFG_KEY, {}), webmail: d.webmail.trim(), youtube: d.youtube.trim() }; if (gravar(CFG_KEY, c)) { aviso('Endereços salvos.'); aplicarPermissoes(); log('Configurações do site', 'Endereços de Webmail/YouTube atualizados'); } });
     $('#lgt-modal').addEventListener('click', e => { if (e.target.id === 'lgt-modal') fecharModal(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#lgt-modal').hidden) fecharModal(); });
+    document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const pv = $('#lgt-previa'); if (pv) { e.stopImmediatePropagation(); $('#lgt-previa-volta').click(); return; } if (!$('#lgt-modal').hidden) fecharModal(); }, true);
   }
 
   window.lgtAbrir = function (qual) {
     criarTelas();
-    if (qual === 'acessos') { if (!ehAdmin() && !(window.lgEhGestor && lgEhGestor())) { aviso('Somente o administrador ou a Procuradoria gerenciam os acessos.', 'erro'); return; } gotoShared('lgt-acessos'); if (window.lgv31Mark) lgv31Mark('acessos'); desenharAcessos(); scrollTo(0, 0); return; }
-    if (!podeVerTransp()) { aviso('Seu usuário não tem acesso à área de Transparência.', 'erro'); return; }
+    if (qual === 'uproto') { if (!['adm', 'procurador', 'secretaria'].includes(perfilDe())) { aviso('Sem permissão.', 'erro'); return; } gotoShared('lgt-uproto'); if (window.lgv31Mark) lgv31Mark('usuariosProto'); desenharUsuariosProto(); scrollTo(0, 0); return; }
+    if (qual === 'acessos') { if (!ehGestorP()) { aviso('Somente o administrador ou a Procuradoria gerenciam os acessos.', 'erro'); return; } gotoShared('lgt-acessos'); if (window.lgv31Mark) lgv31Mark('acessos'); desenharAcessos(); scrollTo(0, 0); return; }
+    if (qual === 'noticias' ? nivelArea('site') === 'nenhum' : !podeVerTransp()) { aviso('Este usuário não tem permissão para esta área.', 'erro'); return; }
     const id = qual === 'noticias' ? 'lgt-noticias' : 'lgt-transp';
     if (typeof gotoShared === 'function') gotoShared(id);
-    if (window.lgv31Mark) lgv31Mark(qual === 'noticias' ? 'noticiasSite' : 'transp');
-    if (qual === 'noticias') { desenharNoticias(); const c = ler(CFG_KEY, {}); $('#lgt-cfg').webmail.value = c.webmail || ''; $('#lgt-cfg').youtube.value = c.youtube || ''; }
-    else desenharTransp();
+    if (window.lgv31Mark) lgv31Mark(qual === 'noticias' ? 'siteNoticias' : 'transp');
+    if (qual === 'noticias') { desenharNoticias(); document.documentElement.classList.toggle('lgt-somente-leitura', nivelArea('site') !== 'edicao'); }
+    else { desenharTransp(); document.documentElement.classList.toggle('lgt-somente-leitura', !podePublicar()); }
     scrollTo(0, 0);
   };
 
@@ -161,21 +179,38 @@
   /* ---------------- áreas e acessos (somente administrador) ---------------- */
   const NIVEIS = [['nenhum', 'Sem acesso'], ['consulta', 'Consulta'], ['edicao', 'Edição']];
   function desenharAcessos() {
-    // usuários do login da Câmara (lgUsers: campo "usuario"); o e-mail da sessão é o próprio usuário
-    const base = typeof lgUsers === 'function' ? lgUsers().map(u => ({ ...u, email: u.usuario })) : (typeof getUsers === 'function' ? getUsers() : []);
-    const users = base.filter(u => u.orgao !== 'exec' && u.email && u.ativo !== false && !/vistaalegre/i.test(u.email)).sort((a, b) => (b.orgao === 'ambos') - (a.orgao === 'ambos') || String(a.nome).localeCompare(String(b.nome)));
-    const mapa = mapaAreas();
+    const users = lgtUsuariosLista().map(u => ({ ...u, email: u.usuario })).sort((a, b) => (perfilDe(b) === 'adm') - (perfilDe(a) === 'adm') || String(a.nome).localeCompare(String(b.nome)));
+    const souAdm = ehAdmin();
     $('#lgt-acessos-corpo').innerHTML = users.map(u => {
-      const em = String(u.email).toLowerCase(), adm = u.orgao === 'ambos';
-      return `<tr><td><b>${esc(u.nome)}</b><small>${esc(u.cargo || '')}${adm ? ' · administrador' : ''}</small></td>${AREAS_INFO.map(([a]) => {
-        const v = adm ? 'edicao' : ((mapa[em] || {})[a] || (a === 'legislativo' ? 'edicao' : 'nenhum'));
-        return `<td><select class="lgt-nivel n-${v}" data-email="${esc(em)}" data-area="${a}" ${adm ? 'disabled' : ''} aria-label="${esc(u.nome)} — ${a}">${NIVEIS.map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>`; }).join('')}</tr>`;
-    }).join('') || '<tr><td colspan="4" class="lgt-vazio">Nenhum usuário cadastrado além do administrador. Cadastre em Usuários e permissões.</td></tr>';
-    document.querySelectorAll('#lgt-acessos-corpo select').forEach(sel => sel.onchange = () => {
-      const m = mapaAreas(); const em = sel.dataset.email; m[em] = { ...(m[em] || {}), [sel.dataset.area]: sel.value };
-      gravar(AREAS_KEY, m); sel.className = 'lgt-nivel n-' + sel.value;
-      log('Áreas e acessos', `${em}: ${sel.dataset.area} = ${sel.value}`); aviso('Acesso atualizado.');
+      const em = loginDe(u), p = perfilDe(u), adm = p === 'adm', ver = p === 'vereador', trava = adm && !souAdm;
+      const selPerfil = ver ? `<span class="lgt-perfil-fixo">Vereador(a)<small>vínculo em Vereadores e usuários</small></span>`
+        : `<select class="lgt-perfil" data-login="${esc(em)}" ${trava || em === loginDe(usuario()) ? 'disabled' : ''} aria-label="Perfil de ${esc(u.nome)}">${Object.entries(PERFIS).filter(([k]) => k !== 'vereador' && (k !== 'adm' || souAdm || adm)).map(([k, x]) => `<option value="${k}"${k === p ? ' selected' : ''}>${x.nome}</option>`).join('')}</select>`;
+      return `<tr><td><b>${esc(u.nome)}</b><small>${esc(u.usuario)} · ${esc(u.cargo || '')}</small></td><td>${selPerfil}</td>${AREAS_INFO.map(([a]) => {
+        const v = nivelArea(a, u), padrao = nivelPadrao(a, u), exc = !adm && v !== padrao;
+        return `<td><select class="lgt-nivel n-${v}${exc ? ' excecao' : ''}" data-email="${esc(em)}" data-area="${a}" ${adm ? 'disabled' : ''} title="${exc ? 'Exceção ao perfil' : 'Padrão do perfil'}" aria-label="${esc(u.nome)} — ${a}">${NIVEIS.map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>`; }).join('')}</tr>`;
+    }).join('') || '<tr><td colspan="7" class="lgt-vazio">Nenhum usuário cadastrado.</td></tr>';
+    document.querySelectorAll('#lgt-acessos-corpo select.lgt-nivel').forEach(sel => sel.onchange = () => {
+      lgtDefinirNivel(sel.dataset.email, sel.dataset.area, sel.value); aviso('Acesso atualizado.'); desenharAcessos();
     });
+    document.querySelectorAll('#lgt-acessos-corpo select.lgt-perfil').forEach(sel => sel.onchange = () => {
+      if (sel.value === 'adm' && !ehAdmin()) { aviso('Só o administrador pode criar outro administrador.', 'erro'); return desenharAcessos(); }
+      const us = lgUsers(); const u = us.find(x => loginDe(x) === sel.dataset.login); if (!u) return;
+      u.perfil = sel.value === 'adm' ? 'admin' : sel.value; lgSaveUsers(us);
+      const m = mapaAreas(); delete m[sel.dataset.login]; gravar(AREAS_KEY, m); // volta ao padrão do novo perfil
+      log('Áreas e acessos', `${u.usuario}: perfil = ${PERFIS[sel.value].nome}`); aviso(`${u.nome}: perfil ${PERFIS[sel.value].nome}. Os painéis foram ajustados ao novo perfil.`); desenharAcessos();
+    });
+  }
+
+  /* ---------------- Secretaria: usuários para encaminhar protocolos (somente consulta) ---------------- */
+  function desenharUsuariosProto() {
+    const el = $('#view-lgt-uproto'); if (!el) return;
+    const us = lgtUsuariosLista().sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+    el.innerHTML = `<div class="letterhead"><div><h1>Usuários para protocolos</h1><div class="date">Consulte quem é quem para encaminhar protocolos e expedientes. Para criar ou alterar usuários, fale com a Procuradoria.</div></div></div>
+      <div class="lgt-filtros"><label class="cresce"><span>Buscar</span><input id="lgt-up-q" placeholder="Nome, cargo ou setor…"></label></div>
+      <div class="lgt-tabela-wrap"><table class="lgt-tabela"><thead><tr><th>Nome</th><th>Cargo</th><th>Setor</th><th>Perfil</th></tr></thead><tbody id="lgt-up-corpo"></tbody></table></div>`;
+    const go = () => { const q = ($('#lgt-up-q').value || '').toLowerCase();
+      $('#lgt-up-corpo').innerHTML = us.filter(u => !q || [u.nome, u.cargo, u.setor].join(' ').toLowerCase().includes(q)).map(u => `<tr><td><b>${esc(u.nome)}</b></td><td>${esc(u.cargo || '—')}</td><td>${esc(u.setor || '—')}</td><td>${esc((PERFIS[perfilDe(u)] || {}).nome || '')}</td></tr>`).join('') || '<tr><td colspan="4" class="lgt-vazio">Ninguém encontrado.</td></tr>'; };
+    $('#lgt-up-q').oninput = go; go();
   }
 
   /* ---------------- transparência: formulário ---------------- */
@@ -203,9 +238,17 @@
         <label class="cheio checkbox"><input type="checkbox" name="publicado" ${it.publicado !== false ? 'checked' : ''}> Publicar no site agora (desmarque para salvar como rascunho)</label>
       </div>
       <p class="lgt-erro" id="lgt-erro" role="alert"></p>
-      <div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">${item ? 'Salvar alterações' : 'Publicar'}</button></div>
+      <div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="button" class="lgt-btn" id="lgt-prev-t">👁 Pré-visualizar</button><button type="submit" class="lgt-btn primario">${item ? 'Salvar alterações' : 'Publicar'}</button></div>
     </form>`);
     const f = $('#lgt-form');
+    $('#lgt-prev-t').onclick = () => {
+      const d = Object.fromEntries(new FormData(f)); const erro = $('#lgt-erro'); erro.textContent = '';
+      if (!d.cat || !d.sub || !d.titulo.trim()) { erro.textContent = 'Para pré-visualizar, preencha ao menos seção, tipo e título.'; return; }
+      const file = f.arquivo.files[0]; const valor = d.valor && d.valor.trim() ? Number(d.valor.replace(/\./g, '').replace(',', '.')) : '';
+      const prev = { id: '__previa__', previa: true, cat: d.cat, sub: d.sub, titulo: d.titulo.trim(), descricao: (d.descricao || '').trim(), data: d.data || hojeISO(), competencia: d.competencia || '', numero: (d.numero || '').trim(), valor: isNaN(valor) ? '' : valor, fornecedor: (d.fornecedor || '').trim(),
+        arquivo: d.origem === 'arquivo' ? (file ? { nome: file.name, tamanho: file.size, dados: '' } : (item && item.arquivo ? { ...item.arquivo, dados: '' } : null)) : null, link: d.origem === 'link' ? (d.link || '').trim() : '', publicado: true };
+      previa('transp', prev, `../transparencia.html?c=${encodeURIComponent(d.cat)}&previa=1#it-__previa__`, () => f.requestSubmit());
+    };
     const atualizarCat = () => {
       const c = transpCategoria(f.cat.value); f.sub.innerHTML = c ? c.subs.map(s => `<option${s === it.sub ? ' selected' : ''}>${esc(s)}</option>`).join('') : '<option value="">Escolha a seção</option>';
       f.querySelector('[data-campo="valor"]').hidden = !(c && c.valor); f.querySelector('[data-campo="fornecedor"]').hidden = !(c && c.fornecedor);
@@ -241,7 +284,7 @@
       : `<tr><td colspan="5" class="lgt-vazio"><b>Nenhuma notícia publicada pelo painel.</b><span>As notícias importadas do site anterior já aparecem no portal. Clique em “+ Nova notícia” para publicar uma nova.</span></td></tr>`;
   }
   window.lgtFormNoticia = function (id) {
-    if (!podePublicar()) { aviso('Seu acesso a esta área é somente para consulta.', 'erro'); return; }
+    if (nivelArea('site') !== 'edicao') { aviso('Seu acesso a esta área é somente para consulta.', 'erro'); return; }
     const n = id ? ler(NOT_KEY, []).find(x => x.id === id) : null; const it = n || { data: hojeISO(), categoria: 'Notícias da Câmara', publicado: true };
     abrirModal(`<form id="lgt-fn" class="lgt-form" novalidate>
       <div class="lgt-modal-cab"><h2 id="lgt-modal-t">${n ? 'Editar notícia' : 'Nova notícia'}</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
@@ -252,23 +295,51 @@
         <label class="cheio"><span>Resumo (aparece nas listas)</span><textarea name="resumo" rows="2" maxlength="300">${esc(it.resumo || '')}</textarea></label>
         <label class="cheio"><span>Texto da notícia</span><textarea name="corpo" rows="8" placeholder="Separe os parágrafos com uma linha em branco.">${esc(it.corpo || '')}</textarea></label>
         <label class="cheio"><span>Foto de capa</span><input name="foto" type="file" accept="image/*"><small class="lgt-ajuda">${it.capa ? 'Já existe uma foto; envie outra para substituir. ' : ''}A foto é reduzida automaticamente.</small></label>
+        <div class="cheio lgt-galeria-ed"><span class="lgt-rot">Galeria de fotos da matéria</span><div id="lgt-gal">${(it.fotos || []).map((f, i) => `<figure data-i="${i}"><img src="${f}" alt=""><button type="button" class="lgt-mini perigo" onclick="this.closest('figure').remove()" aria-label="Remover foto ${i + 1}">Remover</button></figure>`).join('')}</div>
+          <input name="galeria" type="file" accept="image/*" multiple><small class="lgt-ajuda">Escolha uma ou várias fotos para aparecerem no fim da matéria.</small></div>
         <label class="cheio checkbox"><input type="checkbox" name="destaque" ${it.destaque ? 'checked' : ''}> Destaque no carrossel da página inicial</label>
         <label class="cheio checkbox"><input type="checkbox" name="publicado" ${it.publicado !== false ? 'checked' : ''}> Publicar no site agora</label>
       </div>
       <p class="lgt-erro" id="lgt-erro" role="alert"></p>
-      <div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">${n ? 'Salvar' : 'Publicar notícia'}</button></div></form>`);
+      <div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="button" class="lgt-btn" id="lgt-prev-n">👁 Pré-visualizar</button><button type="submit" class="lgt-btn primario">${n ? 'Salvar' : 'Publicar notícia'}</button></div></form>`);
     const f = $('#lgt-fn');
+    const montar = async () => {
+      const d = Object.fromEntries(new FormData(f));
+      if (!d.titulo.trim() || !d.data) { $('#lgt-erro').textContent = 'Preencha o título e a data.'; return null; }
+      let capa = n && n.capa || ''; const file = f.foto.files[0]; if (file) { try { capa = await reduzirImagem(file, 1400); } catch (x) { $('#lgt-erro').textContent = 'Não foi possível ler a imagem.'; return null; } }
+      const fotos = [...f.querySelectorAll('#lgt-gal img')].map(i => i.getAttribute('src'));
+      for (const g of f.galeria.files) { try { fotos.push(await reduzirImagem(g, 1200)); } catch (x) { } }
+      return { ...(n || {}), id: n ? n.id : uid('p'), titulo: d.titulo.trim(), categoria: d.categoria, data: d.data, resumo: (d.resumo || '').trim(), corpo: (d.corpo || '').trim(), capa, fotos, destaque: !!f.destaque.checked, publicado: !!f.publicado.checked, autor: (usuario() || {}).nome || '', atualizadoEm: new Date().toISOString() };
+    };
+    $('#lgt-prev-n').onclick = async () => { const x = await montar(); if (!x) return; previa('noticia', { ...x, id: '__previa__', publicado: true }, '../noticia.html?id=__previa__&previa=1', () => f.requestSubmit()); };
     f.onsubmit = async e => {
-      e.preventDefault(); const d = Object.fromEntries(new FormData(f));
-      if (!d.titulo.trim() || !d.data) { $('#lgt-erro').textContent = 'Preencha o título e a data.'; return; }
-      let capa = n && n.capa || ''; const file = f.foto.files[0]; if (file) { try { capa = await reduzirImagem(file, 1400); } catch (x) { $('#lgt-erro').textContent = 'Não foi possível ler a imagem.'; return; } }
-      const novo = { ...(n || {}), id: n ? n.id : uid('p'), titulo: d.titulo.trim(), categoria: d.categoria, data: d.data, resumo: (d.resumo || '').trim(), corpo: (d.corpo || '').trim(), capa, destaque: !!f.destaque.checked, publicado: !!f.publicado.checked, autor: (usuario() || {}).nome || '', atualizadoEm: new Date().toISOString() };
+      e.preventDefault(); const novo = await montar(); if (!novo) return;
       const l = ler(NOT_KEY, []).filter(x => x.id !== novo.id); l.push(novo);
       if (!gravar(NOT_KEY, l)) return;
       log('Notícias do site', `${n ? 'Editou' : 'Publicou'}: ${novo.titulo}`); fecharModal(); desenharNoticias(); aviso(novo.publicado ? 'Notícia publicada no site.' : 'Rascunho salvo.');
     };
   };
-  window.lgtExcluirNoticia = id => { const l = ler(NOT_KEY, []); const n = l.find(x => x.id === id); if (!n) return; confirmar(`Excluir a notícia “${n.titulo}”?`, () => { gravar(NOT_KEY, l.filter(x => x.id !== id)); log('Notícias do site', 'Excluiu: ' + n.titulo); desenharNoticias(); aviso('Notícia excluída.'); }); };
+  window.lgtExcluirNoticia = id => { if (nivelArea('site') !== 'edicao') return aviso('Sem permissão.', 'erro'); const l = ler(NOT_KEY, []); const n = l.find(x => x.id === id); if (!n) return; confirmar(`Excluir a notícia “${n.titulo}”?`, () => { gravar(NOT_KEY, l.filter(x => x.id !== id)); log('Notícias do site', 'Excluiu: ' + n.titulo); desenharNoticias(); aviso('Notícia excluída.'); }); };
+
+  /* ---------------- pré-visualização: abre o site real com o item marcado como prévia ---------------- */
+  const PREVIA_KEYS = { transp: 'lg_previa_transp', noticia: 'lg_previa_noticia' };
+  function previa(tipo, item, url, publicar) {
+    try { localStorage.setItem(PREVIA_KEYS[tipo], JSON.stringify(item)); } catch (x) { alertaArmazenamento(); return; }
+    let el = $('#lgt-previa'); if (el) el.remove();
+    document.body.insertAdjacentHTML('beforeend', `<div id="lgt-previa" role="dialog" aria-modal="true" aria-labelledby="lgt-previa-t"><div class="lgt-previa-barra">
+      <span class="lgt-previa-selo">PRÉ-VISUALIZAÇÃO</span><b id="lgt-previa-t">Assim vai aparecer no site. Ainda não foi publicado.</b>
+      <span class="lgt-previa-esp"></span>
+      <button type="button" class="lgt-btn" id="lgt-previa-cel" aria-pressed="false">📱 Ver no celular</button>
+      <button type="button" class="lgt-btn" id="lgt-previa-volta">← Voltar e editar</button>
+      <button type="button" class="lgt-btn primario" id="lgt-previa-pub">Publicar</button></div>
+      <div class="lgt-previa-palco"><iframe id="lgt-previa-f" title="Pré-visualização no site" src="${url}"></iframe></div></div>`);
+    const fechar = () => { try { localStorage.removeItem(PREVIA_KEYS[tipo]); } catch (x) { } $('#lgt-previa')?.remove(); };
+    $('#lgt-previa-volta').onclick = fechar;
+    $('#lgt-previa-pub').onclick = () => { fechar(); publicar && publicar(); };
+    $('#lgt-previa-cel').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); $('#lgt-previa').classList.toggle('cel', on); };
+    $('#lgt-previa-volta').focus();
+  }
+  window.lgtPrevia = previa;
 
   /* ---------------- utilitários de arquivo e janela ---------------- */
   function lerArquivo(file) { return new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = erro; r.readAsDataURL(file); }); }
@@ -284,7 +355,7 @@
     $('#lgt-sim').onclick = () => { fecharModal(); sim(); };
   }
 
-  window.lgtUI = { abrirModal, fecharModal, aviso, confirmar, esc, ler, gravar, usuario, log, dataBR, hojeISO, uid };
+  window.lgtUI = { abrirModal, fecharModal, aviso, confirmar, esc, ler, gravar, usuario, log, dataBR, hojeISO, uid, reduzirImagem, previa };
 
   /* ---------------- estilos (seguem o layout escolhido: Moderno ou Simples) ---------------- */
   const css = document.createElement('style'); css.id = 'lgt-style'; css.textContent = `
@@ -367,12 +438,23 @@
   .lgt-toast.erro{background:#3a1215;border-color:#7a2228}
   .lgt-toast.saindo{opacity:0}
   html.lgt-somente-leitura #view-lgt-transp .lgt-acoes .primario,html.lgt-somente-leitura #view-lgt-noticias .lgt-acoes .primario,html.lgt-somente-leitura #view-lgt-transp .acoes-col button,html.lgt-somente-leitura #view-lgt-noticias .acoes-col button,html.lgt-somente-leitura #lgt-cfg button{display:none}
-  .lgt-areas-info{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .lgt-areas-info{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
   .lgt-areas-info div{background:var(--lg28-panel);border:1px solid var(--lg28-stroke);border-radius:12px;padding:14px 16px}
   .lgt-areas-info b{display:block;color:var(--lg28-ink)}.lgt-areas-info span{font-size:13px;color:var(--lg28-muted)}
-  .lgt-acessos{min-width:620px}
+  .lgt-acessos{min-width:980px}
+  #lgt-previa{position:fixed;inset:0;z-index:2147482500;background:#0b0d11;display:flex;flex-direction:column}
+  .lgt-previa-barra{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:#16181d;border-bottom:3px solid #e2aa1c;color:#f4f5f7}
+  .lgt-previa-selo{background:#e2aa1c;color:#1a1300;font:800 11px/1 inherit;letter-spacing:.1em;padding:6px 9px;border-radius:6px}
+  .lgt-previa-barra b{font-size:14px;font-weight:600}.lgt-previa-esp{flex:1}
+  .lgt-previa-barra .lgt-btn{min-height:40px}
+  .lgt-previa-palco{flex:1;display:flex;justify-content:center;overflow:auto;background:#2a2d33}
+  #lgt-previa-f{width:100%;height:100%;border:0;background:#fff}
+  #lgt-previa.cel .lgt-previa-palco{padding:18px 0}#lgt-previa.cel #lgt-previa-f{width:390px;height:780px;border-radius:24px;box-shadow:0 0 0 10px #111,0 20px 50px rgba(0,0,0,.5)}
+  @media(max-width:700px){.lgt-previa-barra b{flex-basis:100%;order:3;font-size:13px}#lgt-previa-cel{display:none}}
+  .lgt-galeria-ed #lgt-gal{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}.lgt-galeria-ed figure{margin:0;display:grid;gap:4px;width:110px}.lgt-galeria-ed img{width:110px;height:76px;object-fit:cover;border-radius:8px}
+  .lgt-rot{display:block;font-size:13px;font-weight:600;color:var(--lg28-muted);margin-bottom:4px}
   .lgt-nivel{height:36px;border-radius:8px;border:1px solid var(--lg28-stroke)!important;background:var(--lg28-inset)!important;color:var(--lg28-ink)!important;padding:0 8px;font:600 13px var(--v32-font,inherit)}
-  .lgt-nivel.n-edicao{border-color:rgba(47,191,113,.6)!important}.lgt-nivel.n-consulta{border-color:rgba(226,170,28,.6)!important}
+  .lgt-nivel.n-edicao{border-color:rgba(47,191,113,.6)!important}.lgt-nivel.excecao{box-shadow:0 0 0 2px rgba(226,170,28,.55)}.lgt-perfil{height:36px;border-radius:8px;border:1px solid var(--lg28-stroke);background:var(--lg28-inset);color:var(--lg28-ink);padding:0 8px;font:600 13px var(--v32-font,inherit);min-width:200px;max-width:230px}.lgt-perfil-fixo{font-weight:600;font-size:13px}.lgt-perfil-fixo small{display:block;font-weight:400;color:var(--lg28-muted)}.lgt-nivel.n-consulta{border-color:rgba(226,170,28,.6)!important}
   @media(max-width:900px){.lgt-areas-info{grid-template-columns:1fr}.lgt-kpis{grid-template-columns:1fr 1fr}.lgt-grade2,.lgt-campos{grid-template-columns:1fr}.lgt .letterhead{align-items:flex-start}}`;
   document.head.appendChild(css);
 
@@ -383,12 +465,15 @@
   const PAINEIS = [
     ['legislativo', 'Painel Administrativo', 'Secretaria e Procuradoria: matérias, sessões, protocolo, expedientes e gestão.', 'materias'],
     ['vereador', 'Portal do Vereador', 'Suas proposituras, assinatura gov.br, pauta das sessões e andamento das matérias.', 'vereador'],
-    ['transparencia', 'Portal da Transparência', 'Publicar documentos e notícias que aparecem no site da Câmara.', 'transp'],
+    ['transparencia', 'Portal da Transparência', 'Publicar documentos no Portal da Transparência do site.', 'transp'],
     ['financeiro', 'Painel Financeiro', 'Empenhos, liquidação, pagamentos, dotações, contratos e vencimentos.', 'moeda'],
+    ['site', 'Publicação de matérias', 'Notícias, fotos, vereadores e menus do site da Câmara.', 'site'],
   ];
   const nivelTxt = { edicao: 'Acesso liberado', consulta: 'Somente consulta', nenhum: 'Sem permissão' };
-  function escolherPainel() {
+  function escolherPainel(auto) {
     const u = usuario(); if (!u) return;
+    const livres = PAINEIS.filter(p => nivelArea(p[0], u) !== 'nenhum');
+    if (auto === true && livres.length === 1) { if (window.lgv33TrocarArea) lgv33TrocarArea(livres[0][0]); log('Entrou no painel', livres[0][1]); setTimeout(() => window.lgpAposEntrar && lgpAposEntrar(livres[0][0]), 0); return; }
     let el = $('#lgp-escolha');
     if (!el) { el = document.createElement('div'); el.id = 'lgp-escolha'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'lgp-t'); document.body.appendChild(el); }
     const primeiro = String(u.nome || '').split(' ')[0];
@@ -398,17 +483,18 @@
       <p class="lgp-sub">Câmara Municipal de Neves Paulista · ${esc(u.cargo || '')}</p>
       <p class="lgp-msg" id="lgp-msg" role="alert"></p>
       <div class="lgp-cards">${PAINEIS.slice().sort((a, b) => (nivelArea(a[0], u) === 'nenhum') - (nivelArea(b[0], u) === 'nenhum')).map(([k, n, d, i]) => { const nv = nivelArea(k, u); return `<button type="button" class="lgp-card ${nv === 'nenhum' ? 'bloq' : ''}" data-painel="${k}" onclick="lgpEntrar('${k}')"><span class="lgp-ic">${ic(i)}</span><span class="lgp-tx"><b>${n}</b><small>${d}</small></span><span class="lgp-st n-${nv}">${nv === 'nenhum' ? ic('cadeado') : ''}${nivelTxt[nv]}${nv !== 'nenhum' ? ic('seta') : ''}</span></button>`; }).join('')}</div>
-      <p class="lgp-rodape">O usuário e a senha são os mesmos para todos os painéis. Quem libera cada painel é o administrador, em Administrativo › Áreas e acessos.</p></div>`;
+      <p class="lgp-rodape">Cada usuário abre os painéis do seu cargo. Os demais aparecem com cadeado. Quem libera é o administrador ou a Procuradoria, em Administrativo › Áreas e acessos.</p></div>`;
     if (!$('#lgt-modal').hidden) fecharModal();
     el.hidden = false; document.documentElement.classList.add('lgp-aberto');
     setTimeout(() => el.querySelector('.lgp-card:not(.bloq)')?.focus(), 40);
   }
-  window.lgpEscolherPainel = escolherPainel;
+  window.lgpEscolherPainel = () => escolherPainel(false);
   window.lgpEntrar = function (k) {
     const u = usuario(); const nome = (PAINEIS.find(p => p[0] === k) || [])[1];
     if (nivelArea(k, u) === 'nenhum') { const m = $('#lgp-msg'); m.textContent = `Este usuário não tem permissão para acessar o ${nome}. Peça a liberação ao administrador.`; m.classList.remove('pisca'); void m.offsetWidth; m.classList.add('pisca'); m.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); log('Acesso negado', nome); return; }
     $('#lgp-escolha').hidden = true; document.documentElement.classList.remove('lgp-aberto');
     if (window.lgv33TrocarArea) lgv33TrocarArea(k); log('Entrou no painel', nome);
+    setTimeout(() => window.lgpAposEntrar && lgpAposEntrar(k), 0);
   };
   window.lgpSair = function () { $('#lgp-escolha').hidden = true; document.documentElement.classList.remove('lgp-aberto'); if (typeof fazerLogout === 'function') fazerLogout(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#lgp-escolha') && !$('#lgp-escolha').hidden) e.stopImmediatePropagation(); }, true);
@@ -511,7 +597,7 @@
     const io = window.iniciarSessao;
     // login: depois de usuário e senha, abre a escolha do painel
     const fl = window.fazerLogin;
-    if (typeof fl === 'function' && !fl.__lgp) { const w = async function (...a) { try { sessionStorage.setItem('lgp_escolher', '1'); } catch (e) { } const r = await fl.apply(this, a); if (usuario() && sessionStorage.getItem('lgp_escolher')) { sessionStorage.removeItem('lgp_escolher'); setTimeout(escolherPainel, 30); } return r; }; w.__lgp = true; window.fazerLogin = w; }
+    if (typeof fl === 'function' && !fl.__lgp) { const w = async function (...a) { try { sessionStorage.setItem('lgp_escolher', '1'); } catch (e) { } const r = await fl.apply(this, a); if (usuario() && sessionStorage.getItem('lgp_escolher')) { sessionStorage.removeItem('lgp_escolher'); setTimeout(() => escolherPainel(true), 30); } return r; }; w.__lgp = true; window.fazerLogin = w; }
     const fo = window.fazerLogout;
     if (typeof fo === 'function' && !fo.__lgp) { const w = function (...a) { try { sessionStorage.removeItem('lg_area'); sessionStorage.removeItem('lgvr_como'); } catch (e) { } if ($('#lgt-modal') && !$('#lgt-modal').hidden) fecharModal(); const x = $('#lgp-escolha'); if (x) { x.hidden = true; document.documentElement.classList.remove('lgp-aberto'); } return fo.apply(this, a); }; w.__lgp = true; window.fazerLogout = w; }
     if (typeof io === 'function' && !io.__lgt) { const w = function (...a) { const r = io.apply(this, a); setTimeout(aplicarPermissoes, 0); return r; }; w.__lgt = true; w.__v31 = io.__v31; w.__v32 = io.__v32; window.iniciarSessao = w; }

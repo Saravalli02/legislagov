@@ -59,7 +59,7 @@
   }
   const verPorId = id => comp().vereadores.find(v => v.id === id);
   function vereadorDoUsuario(u) { const l = loginDe(u); if (!l) return null; return comp().vereadores.find(v => v.usuario && v.usuario.toLowerCase() === l) || null; }
-  function ehGestor(u) { u = u || usuario(); if (!u) return false; if (u.orgao === 'ambos' || u.perfil === 'admin' || u.perfil === 'procurador') return true; return /procurad/i.test(`${u.cargo || ''} ${u.setor || ''}`); }
+  function ehGestor(u) { u = u || usuario(); if (!u) return false; const p = window.lgPerfil ? lgPerfil(u) : (u.orgao === 'ambos' ? 'adm' : ''); return p === 'adm' || p === 'procurador'; }
   window.lgVereadorDoUsuario = vereadorDoUsuario;
   window.lgEhPresidente = u => { const v = vereadorDoUsuario(u || usuario()); return !!v && v.id === comp().presidente; };
   window.lgEhGestor = () => ehGestor();
@@ -683,25 +683,43 @@
   @media(max-width:600px){.lgvr-tipos{grid-template-columns:1fr}.lgvr-hero{padding:16px}.lgvr-hero h1{font-size:20px!important}.lgvr-det{padding:12px 16px}.lgvr-gov-c{padding:12px 16px}.lgvr-desps{grid-template-columns:1fr}.lgvr-comp-acoes .lgt-btn{flex:1 1 100%;justify-content:center}}`;
   document.head.appendChild(css);
 
-  /* ================= cadastros de teste (pedido do Ricardo, 10/11/2026) =================
-     · vinicius — vereador de teste e Presidente da Câmara de teste
-     · erika    — Secretária (Painel Administrativo)
-     Criados uma única vez em cada navegador; a Procuradoria pode trocar o Presidente ou desativar depois. */
+  /* ================= usuários de teste (pedido do Ricardo, 11/11/2026) =================
+     Ricardo  — Administrador (todos os painéis)          · Vinicius — Procurador (Administrativo + usuários)
+     Erika    — Secretaria (Administrativo, protocolos)    · Ednilson — Presidente da Câmara (Portal do Vereador)
+     André    — Tesoureiro (Financeiro + Transparência)
+     Aplicado uma vez por navegador; depois, quem manda é a Procuradoria (Usuários / Áreas e acessos). */
   function cadastrosTeste() {
     if (typeof lgUsers !== 'function' || typeof lgSaveUsers !== 'function') return;
+    let flag = false; try { flag = localStorage.getItem('lg_seed_perfis_v2') === '1'; } catch (e) { }
     const us = lgUsers(); let mudou = false;
-    const novo = (login, dados) => { if (us.some(u => String(u.usuario).toLowerCase() === login)) return; us.push({ id: 'usr-' + login, usuario: login, senha: '123456', municipio: 'Neves Paulista — SP', orgao: 'cam', perfil: 'usuario', ativo: true, teste: true, ...dados }); mudou = true; };
-    novo('vinicius', { nome: 'Vinicius (teste)', cargo: 'Vereador', setor: 'Gabinete' });
-    novo('erika', { nome: 'Erika', cargo: 'Secretária', setor: 'Secretaria Legislativa' });
+    const achar = l => us.find(u => String(u.usuario).toLowerCase() === l);
+    const garantir = (login, dados, forcar) => { const u = achar(login);
+      if (!u) { us.push({ id: 'usr-' + login, usuario: login, senha: '123456', municipio: 'Neves Paulista — SP', orgao: 'cam', ativo: true, teste: true, ...dados }); mudou = true; }
+      else if (forcar) { Object.assign(u, dados, { ativo: true }); mudou = true; } };
+    garantir('vinicius', { nome: 'Vinicius', cargo: 'Procurador Jurídico', setor: 'Procuradoria Legislativa', perfil: 'procurador' }, !flag);
+    garantir('erika', { nome: 'Erika', cargo: 'Secretária', setor: 'Secretaria Legislativa', perfil: 'secretaria' }, !flag);
+    garantir('ednilson', { nome: 'Edenilson Roselli', cargo: 'Presidente da Câmara', setor: 'Gabinete da Presidência', perfil: 'vereador' }, !flag);
+    garantir('andre', { nome: 'André', cargo: 'Tesoureiro', setor: 'Tesouraria e Transparência', perfil: 'financeiro' }, !flag);
     if (mudou) lgSaveUsers(us);
+    if (flag) return;
     const c = comp();
-    if (!c.seedTeste1) {
-      if (!c.vereadores.some(v => v.id === 'vteste')) c.vereadores.push({ id: 'vteste', nome: 'Vinicius (teste)', completo: 'Vinicius — vereador de teste', partido: 'Teste', usuario: 'vinicius', teste: true });
-      const de = verPorId(c.presidente)?.nome || '—'; c.presidente = 'vteste'; c.seedTeste1 = true;
-      c.historico.push({ data: new Date().toISOString(), texto: `Presidente de teste: ${de} → Vinicius (teste). Para voltar, marque o Presidente real em Usuários.`, por: 'Sistema' });
-      gravar(COMP_KEY, c);
-    }
+    // Vinicius deixa de ser vereador de teste; Presidente volta a ser o Edenilson, com o login "ednilson"
+    const antes = c.vereadores.find(v => v.id === 'vteste');
+    c.vereadores = c.vereadores.filter(v => v.id !== 'vteste' && v.usuario !== 'vinicius');
+    const ed = c.vereadores.find(v => v.id === 'v56'); if (ed) ed.usuario = 'ednilson';
+    if (c.presidente === 'vteste' || antes) c.presidente = 'v56';
+    c.historico.push({ data: new Date().toISOString(), texto: 'Usuários de teste por cargo: Edenilson Roselli (login ednilson) é o Presidente; Vinicius passa a ser o Procurador.', por: 'Sistema' });
+    gravar(COMP_KEY, c);
+    // login antigo do Presidente fica desativado para não sobrar sem vínculo
+    const rs = achar('roselli'); if (rs && rs.ativo !== false) { rs.ativo = false; lgSaveUsers(us); }
+    try { localStorage.setItem('lg_seed_perfis_v2', '1'); } catch (e) { }
   }
+
+  /* Acompanhar matérias também em outros painéis (ex.: Financeiro), só consulta */
+  window.lgvrMateriasConsulta = function (marca) {
+    criarTelas(); tela = 'materias'; gotoShared('lgvr-materias'); if (window.lgv31Mark) lgv31Mark(marca || 'verMaterias');
+    tMaterias({ v: {}, demo: false }); scrollTo(0, 0);
+  };
 
   /* ================= ganchos ================= */
   function iniciar() {

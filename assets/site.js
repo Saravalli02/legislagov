@@ -70,7 +70,7 @@ function img(src, alt = '', cls = '', ph = '') {
   return `<img src="${esc(o.local)}"${o.remoto ? ` data-remoto="${esc(o.remoto)}"` : ''}${ph ? ` data-ph="${esc(ph)}"` : ''} alt="${esc(alt)}"${cls ? ` class="${cls}"` : ''} loading="lazy" decoding="async" onerror="imgFallback(this)">`;
 }
 const marcaAgua = () => `<div class="marca-agua">${img('brasao', '')}</div>`;
-function fotoVer(v) { return { local: `assets/img/vereadores/${v.arq}.jpg`, remoto: `${ORIGEM}/Arquivos/Vereadores/${encodeURIComponent(v.foto)}?quality=82&w=600` }; }
+function fotoVer(v) { if (v.fotoData) return { local: v.fotoData }; return { local: `assets/img/vereadores/${v.arq}.jpg`, remoto: `${ORIGEM}/Arquivos/Vereadores/${encodeURIComponent(v.foto)}?quality=82&w=600` }; }
 const iniciais = n => String(n).split(' ').filter(p => p.length > 2).map(p => p[0]).slice(0, 2).join('').toUpperCase();
 const verPorId = id => VEREADORES.find(v => v.id === +id);
 const cargoMesa = id => (MESA.membros.find(x => x[1] === id) || [])[0] || '';
@@ -78,7 +78,8 @@ const cargoVer = v => { const c = cargoMesa(v.id); return c ? (v.f ? c.replace('
 
 /* ---------------- notícias: arquivo importado + publicações do painel ---------------- */
 function noticias() {
-  const painel = ls.json('lgt_site_noticias_v1', []).filter(n => n && n.publicado !== false).map(n => ({
+  const prev = param('previa') === '1' ? ls.json('lg_previa_noticia', null) : null;
+  const painel = [...(prev ? [prev] : []), ...ls.json('lgt_site_noticias_v1', [])].filter(n => n && n.publicado !== false).map(n => ({
     id: n.id, data: n.data, titulo: n.titulo, categoria: n.categoria || 'Notícias da Câmara', resumo: n.resumo || '', corpo: n.corpo || '',
     capa: n.capa ? { local: n.capa } : null, fotos: n.fotos || [], destaque: !!n.destaque, origem: 'painel',
   }));
@@ -91,47 +92,7 @@ function noticias() {
 const linkNoticia = n => `noticia.html?id=${encodeURIComponent(n.id)}`;
 const capaNot = (n, cls = '') => n.capa ? img(n.capa, '', cls, 'brasao') : marcaAgua();
 
-/* ---------------- menu principal ---------------- */
-const MENU = [
-  ['A Câmara', [
-    ['predio', 'Conheça a Câmara', 'Funções, composição e funcionamento', 'pagina.html?p=a-camara'],
-    ['grupo', 'Vereadores', 'Os nove representantes da legislatura', 'vereadores.html'],
-    ['escudo', 'Mesa Diretora', 'Biênio 2025–2026', 'vereadores.html#mesa'],
-    ['balanca', 'Comissões permanentes', 'Composição e atribuições', 'vereadores.html#comissoes'],
-    ['estrela', 'Galeria de presidentes', 'Desde 1948', 'pagina.html?p=presidentes'],
-    ['livro', 'Regimento Interno', 'Regras de funcionamento', CONFIG.regimento],
-    ['livro', 'Lei Orgânica', 'A “constituição” do município', CONFIG.leiOrganica],
-    ['mapa', 'O município', 'História, dados e símbolos', 'pagina.html?p=historico'],
-  ]],
-  ['Legislativo', [
-    ['cal', 'Sessões e pautas', 'Calendário e sessões realizadas', 'sessoes.html'],
-    ['doc', 'Proposituras', 'Projetos, indicações e requerimentos', CONFIG.proposituras],
-    ['balanca', 'Leis municipais', 'Legislação em vigor', CONFIG.legislacao],
-    ['ata', 'Atas das sessões', 'Registros oficiais', CONFIG.atas],
-    ['jornal', 'Diário Oficial', 'Publicações oficiais', CONFIG.diarioOficial],
-    ['video', 'TV Câmara', 'Sessões gravadas e ao vivo', 'pagina.html?p=tv'],
-  ]],
-  ['Transparência', [
-    ['grafico', 'Portal da Transparência', 'Receitas, despesas, pessoal e contratos', 'transparencia.html'],
-    ['contrato', 'Licitações', 'Editais, dispensas, contratos e aditivos', 'transparencia.html?c=licitacoes'],
-    ['moeda', 'Receitas e despesas', 'Duodécimos, empenhos e pagamentos', 'transparencia.html?c=despesas'],
-    ['pessoa', 'Pessoal e remuneração', 'Quadro de servidores e folha', 'transparencia.html?c=pessoal'],
-    ['info', 'Acesso à Informação (e-SIC)', 'Peça informações públicas', CONFIG.esic],
-    ['escudo', 'Proteção de dados (LGPD)', 'Como tratamos seus dados', 'pagina.html?p=lgpd'],
-  ]],
-  ['Imprensa', [
-    ['jornal', 'Notícias', 'Tudo o que a Câmara aprovou', 'noticias.html'],
-    ['cal', 'Agenda', 'Próximas sessões e eventos', 'sessoes.html'],
-    ['video', 'Canal no YouTube', 'Gravações das sessões', CONFIG.redes.youtube],
-  ], true],
-  ['Atendimento', [
-    ['email', 'Fale conosco', 'Envie sua mensagem', 'fale-conosco.html'],
-    ['ouvido', 'Ouvidoria', 'Sugestões, elogios e reclamações', 'pagina.html?p=ouvidoria'],
-    ['info', 'Perguntas frequentes', 'Dúvidas mais comuns', 'pagina.html?p=perguntas'],
-    ['local', 'Endereço e horário', 'Como chegar', 'pagina.html?p=localizacao'],
-    ['mao', 'Acessibilidade', 'Recursos deste portal', 'pagina.html?p=acessibilidade'],
-  ], true],
-];
+/* ---------------- menu principal: definido em assets/site-conteudo.js (editável no painel) ---------------- */
 
 function montarCabecalho() {
   const el = $('#cabecalho'); if (!el) return;
@@ -340,12 +301,12 @@ function montarFicha() {
   const mesa = cargoMesa(v.id);
   const nots = noticias().filter(n => norm(n.titulo).includes(norm(v.nome.split(' ')[0])) || norm(n.titulo).includes(norm(v.completo.split(' ').slice(-1)[0]))).slice(0, 5);
   el.innerHTML = `<div class="foto">${img(fotoVer(v), 'Foto de ' + v.completo, '', iniciais(v.completo))}</div>
-  <div>${mesa ? `<span class="chip ouro">${cargoVer(v)} · Mesa Diretora</span>` : `<span class="chip">${v.f ? 'Vereadora' : 'Vereador'}</span>`}<h2>${esc(v.completo)}</h2><p class="sub">Nome parlamentar: <b>${esc(v.nome)}</b> · ${esc(v.partido)} · Legislatura 2025–2028</p>
+  <div>${mesa ? `<span class="chip ouro">${cargoVer(v)} · Mesa Diretora</span>` : `<span class="chip">${v.f ? 'Vereadora' : 'Vereador'}</span>`}<h2>${esc(v.completo)}</h2><p class="sub">Nome parlamentar: <b>${esc(v.nome)}</b> · ${esc(v.partido)} · Legislatura ${esc(window.LEGISLATURA || '2025–2028')}</p>
   <table class="tabela"><tbody>
     <tr><th>Partido</th><td>${esc(v.partido)}</td></tr>
-    <tr><th>Cargo</th><td>${mesa ? cargoVer(v) + ' da Câmara (biênio 2025–2026)' : (v.f ? 'Vereadora' : 'Vereador')}</td></tr>
+    <tr><th>Cargo</th><td>${mesa ? cargoVer(v) + ' da Câmara (' + esc(MESA.periodo.split('(')[0].trim().toLowerCase()) + ')' : (v.f ? 'Vereadora' : 'Vereador')}</td></tr>
     <tr><th>Comissões</th><td>${com.length ? com.join('<br>') : 'Não integra comissão permanente no biênio atual'}</td></tr>
-    <tr><th>Contato</th><td>Gabinete na Câmara · <a href="tel:${CONFIG.telefoneLink}">${CONFIG.telefone}</a></td></tr>
+    <tr><th>Contato</th><td>${v.email ? `<a href="mailto:${esc(v.email)}">${esc(v.email)}</a> · ` : ''}${v.telefone ? `<a href="tel:${esc(v.telefone.replace(/\D/g, ''))}">${esc(v.telefone)}</a>` : `Gabinete na Câmara · <a href="tel:${CONFIG.telefoneLink}">${CONFIG.telefone}</a>`}</td></tr>
   </tbody></table>
   ${nots.length ? `<h3 style="margin:26px 0 8px">Notícias recentes</h3><div class="not-lista">${nots.map(n => `<a class="not-item" href="${linkNoticia(n)}"><div class="mini">${capaNot(n)}</div><div><div class="meta"><time>${dataLonga(n.data)}</time></div><h3>${esc(n.titulo)}</h3></div></a>`).join('')}</div>` : ''}
   <div class="acoes"><a class="btn" href="proposituras.html?autor=${v.id}">${ic('doc')} Proposituras</a><a class="btn btn-claro" href="fale-conosco.html?assunto=${encodeURIComponent('Mensagem ao vereador ' + v.nome)}">${ic('email')} Enviar mensagem</a></div></div>`;
@@ -457,6 +418,7 @@ function montarBusca() {
 
 /* ---------------- inicialização ---------------- */
 document.addEventListener('DOMContentLoaded', () => {
+  if (param('previa') === '1') document.body.insertAdjacentHTML('afterbegin', '<div class="faixa-previa" role="status"><b>PRÉ-VISUALIZAÇÃO</b> Este conteúdo ainda não foi publicado. Só você está vendo.</div>');
   montarCabecalho(); montarRodape();
   montarCapa(); montarServicos(); montarNoticiasHome(); montarVerHome(); montarAgendaHome(); montarTV($('#tv-home')); montarTranspHome();
   montarVereadores(); montarFicha(); montarListaNoticias(); montarNoticia(); montarCalendario(); montarSessoes(); montarPagina(); montarFale(); montarBusca();

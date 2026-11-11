@@ -80,8 +80,8 @@ function iniciarTransparencia() {
   function linhaDoc(i, comCat) {
     const c = transpCategoria(i.cat);
     const acao = i.arquivo ? `<button class="btn btn-claro t-abrir" type="button" onclick="transpAbrirId('${esc(i.id)}')">${ic('doc')} Abrir</button>` : (i.link ? `<a class="btn btn-claro t-abrir" href="${esc(i.link)}" target="_blank" rel="noopener">${ic('ext')} Acessar</a>` : '');
-    return `<tr id="it-${esc(i.id)}"><td class="t-data">${i.data ? new Date(i.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
-      <td><b>${esc(i.titulo)}</b>${i.descricao ? `<small>${esc(i.descricao)}</small>` : ''}<span class="t-tags">${comCat ? `<span class="chip">${esc(c?.nome || '')}</span>` : ''}<span class="chip ouro">${esc(i.sub || '')}</span>${i.numero ? `<span class="t-num">Nº ${esc(i.numero)}</span>` : ''}${i.fornecedor ? `<span class="t-num">${esc(i.fornecedor)}</span>` : ''}</span></td>
+    return `<tr id="it-${esc(i.id)}"${i.previa ? ' class="t-previa"' : ''}><td class="t-data">${i.data ? new Date(i.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+      <td>${i.previa ? '<span class="t-previa-selo">Prévia — ainda não publicado</span>' : ''}<b>${esc(i.titulo)}</b>${i.descricao ? `<small>${esc(i.descricao)}</small>` : ''}<span class="t-tags">${comCat ? `<span class="chip">${esc(c?.nome || '')}</span>` : ''}<span class="chip ouro">${esc(i.sub || '')}</span>${i.numero ? `<span class="t-num">Nº ${esc(i.numero)}</span>` : ''}${i.fornecedor ? `<span class="t-num">${esc(i.fornecedor)}</span>` : ''}</span></td>
       <td>${i.competencia ? transpCompetencia(i.competencia) : '—'}</td>${(c?.valor || comCat) ? `<td class="num">${transpMoeda(i.valor) || '—'}</td>` : ''}<td>${acao}</td></tr>`;
   }
   window.transpAbrirId = id => transpAbrirArquivo(itens.find(x => x.id === id));

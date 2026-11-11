@@ -459,3 +459,7 @@ select.sel{height:48px;border:1px solid var(--linha-2);border-radius:12px;paddin
 .ficha .foto{aspect-ratio:1;border-radius:50%;max-width:320px;margin-inline:auto;border:5px solid var(--branco);box-shadow:0 0 0 2px var(--linha-2),var(--sombra)}
 .ficha .foto .ph{border-radius:50%}
 @media(max-width:680px){.ver-card .foto{width:74%;margin-top:16px}.ficha .foto{max-width:220px}}
+
+/* pré-visualização vinda do painel */
+.faixa-previa{position:sticky;top:0;z-index:999;background:#e2aa1c;color:#1a1300;text-align:center;padding:8px 14px;font-size:.92rem}
+.faixa-previa b{letter-spacing:.08em;margin-right:8px}

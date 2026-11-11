@@ -61,3 +61,6 @@
 .t-grupo{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:start;padding-top:10px;border-top:1px solid var(--linha)}
 .t-grupo-rot{font:700 .7rem var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--suave);padding-top:9px}
 @media (max-width:640px){.t-grupo{grid-template-columns:1fr;gap:6px}.t-grupo-rot{padding-top:0}}
+
+.t-tabela tr.t-previa td{background:#fff7e0}
+.t-previa-selo{display:inline-block;margin-bottom:4px;padding:2px 8px;border-radius:20px;background:#e2aa1c;color:#1a1300;font:700 .7rem var(--sans);text-transform:uppercase;letter-spacing:.06em}

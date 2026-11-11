@@ -20,8 +20,10 @@
   const salvarMeu = m => { const d = ler(); d[quem()] = m; gravar(d); };
   const areasOk = () => (window.lgtAreasPermitidas ? lgtAreasPermitidas() : ['legislativo']);
   const areaAtual = () => document.documentElement.getAttribute('data-lg-area') || 'legislativo';
-  const ehGestor = () => !!(window.lgEhGestor && lgEhGestor());
-  const ehPres = () => !!(window.lgEhPresidente && lgEhPresidente());
+  const perfil = () => (window.lgPerfil ? lgPerfil() : null);
+  const ehAdm = () => perfil() === 'adm';
+  const ehGestor = () => ['adm', 'procurador'].includes(perfil());
+  const ehPres = () => ehAdm() || !!(window.lgEhPresidente && lgEhPresidente());
   const ehVereador = () => !!(window.lgVereadorDoUsuario && lgVereadorDoUsuario(usuario()));
   const M = k => `.lgv31-item[data-v31="${k}"]`;
 
@@ -29,11 +31,13 @@
   const TRILHAS = [
     { id: 'inicio', titulo: 'Primeiros passos', icone: 'home', desc: 'Como navegar: trocar de painel, menu, busca, avisos, aparência e sair com segurança.', para: () => true, passos: [
       { titulo: 'Bem-vindo ao LegislaGov', texto: 'Este treinamento mostra o sistema parte por parte, na tela de verdade. Leia cada explicação e clique em “OK, entendi” para seguir. Pode sair quando quiser: o sistema guarda onde você parou.', como: ['Use “Voltar” para rever o passo anterior.', 'Ligue “Ouvir” se preferir que o sistema leia em voz alta.'] },
-      { alvo: '#lgv33-area-btn', titulo: 'Escolher o painel', texto: 'Aqui você troca de painel: Administrativo, Portal do Vereador, Transparência e Financeiro. Só aparecem os painéis liberados para o seu usuário.', como: ['Clique no nome do painel.', 'Escolha outro painel na lista.'] },
+      { alvo: '#lgv33-area-btn', titulo: 'Seu painel', texto: 'Mostra o painel em que você está. Cada usuário trabalha nos painéis do seu cargo: os outros aparecem com cadeado e não abrem.', como: ['Se você tem mais de um painel, clique aqui para trocar.', 'Precisa de outro acesso? Peça à Procuradoria.'], se: () => areasOk().length > 1 },
+      { alvo: '#lgv33-area-btn', titulo: 'Seu painel', texto: 'Mostra o painel do seu cargo. Os outros painéis aparecem com cadeado e não abrem para o seu usuário.', se: () => areasOk().length <= 1 },
       { alvo: 'nav.lgv31-nav', menu: true, titulo: 'Menu do painel', texto: 'Todas as funções do painel em que você está, organizadas por assunto. A função aberta fica destacada.' },
       { alvo: '.lg28-search', titulo: 'Buscar no sistema', texto: 'Procure matérias, documentos e pessoas digitando uma palavra ou número.', como: ['Atalho no teclado: Ctrl + K.'] },
       { alvo: '#lgv31-tools button[onclick*="notifications"]', titulo: 'Avisos', texto: 'Notificações de prazos, despachos, assinaturas pendentes e mensagens. O número mostra quantos avisos ainda não foram lidos.' },
       { alvo: '#lgv31-look', titulo: 'Aparência', texto: 'Deixe o sistema do seu jeito: visual Moderno ou Simples e texto maior para ler melhor. A escolha fica salva neste aparelho.' },
+      { alvo: '#lgv35-site', titulo: 'Abrir o site', texto: 'Abre o site da Câmara em uma nova aba, sem sair do sistema. Útil para conferir o que foi publicado.' },
       { alvo: '#lgv32-me', titulo: 'Seu usuário', texto: 'Mostra quem está conectado. Por aqui você troca de painel e sai do sistema.', como: ['Ao terminar, clique em Sair — principalmente em computador compartilhado.'] },
       { alvo: M('treinamento'), menu: true, titulo: 'Ajuda e treinamento', texto: 'Volte aqui quando quiser: rever um treinamento, fazer o de outro painel ou consultar o que cada função faz.' },
     ] },
@@ -58,7 +62,7 @@
       { abrir: 'verComissoes', alvo: '#view-lgvr-comissoes', titulo: 'Depois da comissão', texto: 'A matéria segue sozinha para a próxima comissão ou, concluídas todas, para o Plenário. O parecer orienta, mas quem decide é o Plenário. Tudo aparece no site, em Proposituras.' },
     ] },
 
-    { id: 'presidencia', titulo: 'Presidência da Câmara', icone: 'despacho', area: 'vereador', desc: 'Despachar, conduzir a votação, assinar autógrafos, registrar sanção ou veto e promulgar.', para: () => areasOk().includes('vereador') && (ehPres() || ehGestor()), passos: [
+    { id: 'presidencia', titulo: 'Presidência da Câmara', icone: 'despacho', area: 'vereador', desc: 'Despachar, conduzir a votação, assinar autógrafos, registrar sanção ou veto e promulgar.', para: () => areasOk().includes('vereador') && ehPres(), passos: [
       { abrir: 'presDespacho', alvo: '#view-lgvr-despacho', titulo: 'Despachar proposições', texto: 'Toda proposição protocolada passa pelo Presidente, que decide o caminho.', como: ['Procuradoria (parecer jurídico) e depois as comissões.', 'Marque as comissões: Justiça e Redação é obrigatória; Finanças quando houver despesa; Assuntos Gerais conforme o tema.', 'Indicações, requerimentos e moções podem ir direto à Ordem do Dia.', 'Ou devolva ao autor, com o motivo.'] },
       { abrir: 'presPauta', alvo: '#view-lgvr-pauta', titulo: 'Ordem do Dia e votação', texto: 'As matérias prontas para votar. Depois da votação em plenário, registre o resultado.', como: ['Botão “Registrar votação”: informe os votos.', 'O Presidente vota para desempatar e quando o quórum exigir.', '“Retirar de pauta” devolve a matéria.'] },
       { abrir: 'presPauta', alvo: '#view-lgvr-pauta', titulo: 'Apreciação de veto', texto: 'Quando o Prefeito veta, o veto entra na Ordem do Dia. Para derrubar o veto é preciso a maioria absoluta dos vereadores; derrubado, a lei vai à promulgação.' },
@@ -75,6 +79,7 @@
       { alvo: M('protocolo'), menu: true, titulo: 'Protocolo e numeração', texto: 'Protocola documentos que chegam à Câmara e controla a numeração oficial de cada tipo.' },
       { alvo: M('editor'), menu: true, titulo: 'Editor de documentos', texto: 'Escreva ofícios, pareceres e atos a partir de modelos, já com o cabeçalho da Câmara.' },
       { alvo: M('mensagens'), menu: true, titulo: 'Mensagens e notificações', texto: 'Comunicação interna entre setores e os avisos do sistema, tudo registrado.' },
+      { alvo: M('usuariosProto'), menu: true, titulo: 'Usuários (protocolo)', texto: 'Consulta de quem é quem (nome, cargo e setor) para encaminhar protocolos e expedientes. Criar ou alterar usuários é com a Procuradoria.', se: () => perfil() === 'secretaria' },
       { alvo: M('ia'), menu: true, titulo: 'LegislaIA', texto: 'Assistente para tirar dúvidas de procedimento e ajudar a redigir documentos. Sempre confira o resultado antes de usar.' },
     ] },
 
@@ -82,14 +87,14 @@
       { abrir: 'usuarios', alvo: ['#lgvr-comp .lgt-tabela', '#lgvr-comp'], titulo: 'Vereadores e Presidente', texto: 'A lista dos vereadores da legislatura. Marque quem é o Presidente da Câmara; para trocar, marque outro e salve. O sistema pede confirmação e guarda o histórico.', como: ['As funções da Presidência passam na hora para o novo Presidente.'] },
       { abrir: 'usuarios', alvo: ['#lgvr-comp button[onclick*="lgvrCriarTodos"]', '#lgvr-comp'], titulo: 'Usuários dos vereadores', texto: 'Crie o acesso de cada vereador. Ele recebe uma senha provisória e já entra direto no Portal do Vereador.' },
       { abrir: 'usuarios', alvo: ['#lgcm-comp', '#view-usuarios'], titulo: 'Comissões permanentes', texto: 'Defina Presidente, Vice-Presidente e Relator de cada comissão. Cada vereador só vê e só age nas comissões em que estiver aqui.', como: ['Após a eleição das comissões, atualize e clique em “Salvar comissões”.'] },
-      { abrir: 'acessos', alvo: ['#view-lgt-acessos .lgt-acessos', '#view-lgt-acessos'], titulo: 'Áreas e acessos', texto: 'Para cada pessoa e cada painel: sem acesso, somente consulta ou edição.', como: ['Libere só o necessário para o trabalho de cada um.', 'Quando alguém sair da Câmara, retire os acessos no mesmo dia.'] },
+      { abrir: 'acessos', alvo: ['#view-lgt-acessos .lgt-perfil', '#view-lgt-acessos'], titulo: 'Perfil de cada pessoa', texto: 'O perfil (cargo) define os painéis: Procurador e Secretaria → Administrativo; Financeiro → Financeiro e Transparência; Vereador → Portal do Vereador. Ao trocar o perfil, os painéis se ajustam sozinhos.' },
+      { abrir: 'acessos', alvo: ['#view-lgt-acessos .lgt-acessos', '#view-lgt-acessos'], titulo: 'Exceções por painel', texto: 'Quando precisar, libere um painel além do perfil: sem acesso, somente consulta ou edição. Exceções ficam marcadas em dourado (ex.: quem cuida do site).', como: ['Libere só o necessário para o trabalho de cada um.', 'Quando alguém sair da Câmara, retire os acessos no mesmo dia.'] },
     ] },
 
-    { id: 'transparencia', titulo: 'Portal da Transparência', icone: 'transp', area: 'transparencia', desc: 'Publicar documentos por seção e notícias no site da Câmara.', para: () => areasOk().includes('transparencia'), passos: [
-      { abrir: 'transp', alvo: ['#view-lgt-transp button[onclick="lgtForm()"]', '#view-lgt-transp'], titulo: 'Nova publicação', texto: 'Publique documentos no Portal da Transparência.', como: ['Escolha a seção e o tipo (por exemplo: Licitações › Contratos).', 'Preencha título, data e, se houver, valor e fornecedor.', 'Anexe o PDF e publique: aparece no site na hora.'] },
+    { id: 'transparencia', titulo: 'Portal da Transparência', icone: 'transp', area: 'transparencia', desc: 'Publicar documentos por seção, com pré-visualização antes de publicar.', para: () => areasOk().includes('transparencia'), passos: [
+      { abrir: 'transp', alvo: ['#view-lgt-transp button[onclick="lgtForm()"]', '#view-lgt-transp'], titulo: 'Nova publicação', texto: 'Publique documentos no Portal da Transparência.', como: ['Escolha a seção e o tipo (por exemplo: Licitações › Contratos).', 'Preencha título, data e, se houver, valor e fornecedor.', 'Anexe o PDF.', 'Clique em “Pré-visualizar” para ver como vai ficar no site.', 'Se estiver certo, publique: aparece no site na hora.'] },
       { abrir: 'transp', alvo: ['#view-lgt-transp .lgt-tabela', '#view-lgt-transp'], titulo: 'Publicações', texto: 'Tudo o que já foi publicado, para conferir, corrigir ou retirar do ar. O Financeiro também publica aqui sozinho os contratos e empenhos.' },
       { abrir: 'transp', alvo: ['#view-lgt-transp a.lgt-btn', '#view-lgt-transp'], titulo: 'Ver no site', texto: 'Abre o Portal da Transparência como o cidadão vê. Confira sempre depois de publicar.' },
-      { abrir: 'noticiasSite', alvo: ['#view-lgt-noticias button[onclick="lgtFormNoticia()"]', '#view-lgt-noticias'], titulo: 'Notícias do site', texto: 'Escreva as notícias da página inicial do site: título, resumo, foto e texto.' },
     ] },
 
     { id: 'financeiro', titulo: 'Painel Financeiro', icone: 'moeda', area: 'financeiro', desc: 'Dotações, empenhos, liquidação e pagamento em ordem cronológica, contratos e credores.', para: () => areasOk().includes('financeiro'), passos: [
@@ -99,9 +104,20 @@
       { abrir: 'finPagamentos', alvo: ['#view-lgf-pagamentos .lgf-abas', '#view-lgf-pagamentos'], titulo: 'Liquidação e pagamento', texto: 'Liquide quando o serviço ou material for entregue e atestado. Pague respeitando a ordem cronológica (Lei 14.133, art. 141).' },
       { abrir: 'finContratos', alvo: ['#view-lgf-contratos button[onclick="lgfFormContrato()"]', '#view-lgf-contratos'], titulo: 'Contratos', texto: 'Contratos com vigência, aditivos e fiscal designado. O sistema avisa antes de vencer e publica na Transparência, em Licitações.' },
       { abrir: 'finCredores', alvo: ['#view-lgf-credores button[onclick="lgfFormCredor()"]', '#view-lgf-credores'], titulo: 'Credores', texto: 'Cadastro de fornecedores e prestadores, com CNPJ/CPF e contato, usado nos empenhos e contratos.' },
+      { abrir: 'finMaterias', alvo: ['#view-lgvr-materias .lgt-tabela', '#view-lgvr-materias'], titulo: 'Acompanhar matérias', texto: 'Consulte os projetos e o andamento de cada matéria da Câmara, sem sair do Financeiro. Somente leitura.' },
       { abrir: 'finParametros', alvo: ['#view-lgf-parametros button[onclick="lgfBackup()"]', '#view-lgf-parametros'], titulo: 'Parâmetros e cópia de segurança', texto: 'Dados do órgão e do ordenador de despesa. Baixe uma cópia dos dados com frequência.' },
     ] },
+    { id: 'site', titulo: 'Publicação de matérias (site)', icone: 'site', area: 'site', desc: 'Publicar matérias com fotos, trocar fotos da capa, atualizar vereadores e Mesa e editar os menus do site.', para: () => areasOk().includes('site'), passos: [
+      { abrir: 'siteNoticias', alvo: ['#view-lgt-noticias button[onclick="lgtFormNoticia()"]', '#view-lgt-noticias'], titulo: 'Nova matéria', texto: 'Escreva as matérias que aparecem no início do site e em Notícias.', como: ['Título, categoria, resumo e texto.', 'Foto de capa e, se quiser, uma galeria de fotos.', 'Marque “Destaque” para entrar no carrossel da capa.', 'Clique em “Pré-visualizar” para ver como vai ficar e depois publique.'] },
+      { abrir: 'siteFotos', alvo: ['#view-lgsc-fotos .lgsc-dest', '#view-lgsc-fotos'], titulo: 'Destaques da capa', texto: 'As fotos grandes que passam na página inicial. Troque a foto, o título e o botão; mude a ordem, oculte ou crie um novo destaque.' },
+      { abrir: 'siteFotos', alvo: ['#view-lgsc-fotos .lgsc-fixas', '#view-lgsc-fotos'], titulo: 'Imagens fixas', texto: 'Brasão e bandeira usados no site. Dá para trocar e voltar à original.' },
+      { abrir: 'siteVereadores', alvo: ['#view-lgsc-vereadores .lgsc-vgrade', '#view-lgsc-vereadores'], titulo: 'Vereadores', texto: 'Troque a foto, o nome, o partido e o contato de cada vereador. Quando alguém sair (licença, renúncia ou fim dos 4 anos), use “Tirar do mandato” e cadastre o novo.' },
+      { abrir: 'siteVereadores', alvo: ['#lgsc-mesa', '#view-lgsc-vereadores'], titulo: 'Mesa Diretora', texto: 'Escolha quem é Presidente, Vice e Secretários. O site mostra os cargos na página dos vereadores.' },
+      { abrir: 'siteMenus', alvo: ['#view-lgsc-menus .lgsc-menus', '#view-lgsc-menus'], titulo: 'Menus do site', texto: 'Mude os textos, os links e a ordem do menu do site, oculte itens ou crie novos. Dá para restaurar o menu original.' },
+      { abrir: 'siteConfig', alvo: ['#view-lgsc-config .lgt-card', '#view-lgsc-config'], titulo: 'Responsáveis pelo site', texto: 'Quem pode publicar e alterar o site. O administrador ou a Procuradoria define.' },
+    ] },
   ];
+  const passosDe = t => t.passos.filter(s => { try { return !s.se || s.se(); } catch (e) { return false; } });
 
   /* ================= O QUE CADA FUNÇÃO FAZ ================= */
   const FUNCOES = {
@@ -123,7 +139,13 @@
     acessos: 'Define quem acessa cada painel e com que nível (Procuradoria).',
     transp: 'Publicações do Portal da Transparência por seção.',
     verTransp: 'Abre o Portal da Transparência público.',
-    noticiasSite: 'Notícias da página inicial do site.',
+    usuariosProto: 'Secretaria: consulta de usuários para encaminhar protocolos.',
+    finMaterias: 'Consulta dos projetos e do andamento das matérias.',
+    siteNoticias: 'Matérias e notícias do site, com galeria e pré-visualização.',
+    siteFotos: 'Fotos e destaques da capa do site; brasão e bandeira.',
+    siteVereadores: 'Fotos, nomes, partido e contato dos vereadores; Mesa Diretora.',
+    siteMenus: 'Textos, links e ordem dos menus do site.',
+    siteConfig: 'Responsáveis pelo site, webmail e YouTube.',
     verInicio: 'Resumo do gabinete: proposituras, assinaturas e próxima sessão.',
     verProposituras: 'Criar, acompanhar e retirar suas proposituras.',
     verAssinar: 'Documentos que esperam a sua assinatura digital.',
@@ -152,7 +174,7 @@
 
   /* ================= CENTRAL ================= */
   function trilhasPara() { return TRILHAS.filter(t => { try { return t.para(); } catch (e) { return false; } }); }
-  function progresso(t) { const r = (meu().trilhas || {})[t.id] || {}; const vistos = (r.vistos || []).length; return { vistos, total: t.passos.length, concluida: r.concluida, parou: r.parou || 0 }; }
+  function progresso(t) { const r = (meu().trilhas || {})[t.id] || {}; const total = passosDe(t).length; const vistos = (r.vistos || []).filter(i => i < total).length; return { vistos, total, concluida: r.concluida, parou: r.parou || 0 }; }
 
   function criarTela() {
     const main = document.querySelector('#app main') || document.querySelector('main'); if (!main || $('#view-lgtr')) return;
@@ -196,7 +218,7 @@
     const vistos = new Set();
     const html = areasOk().map(ak => { const A = LG_AREAS[ak]; if (!A) return '';
       const itens = A.menu.flatMap(([g, it]) => it.map(i => ({ g, key: i[0], nome: i[1], icone: i[2], flag: i[4] || '' })))
-        .filter(i => i.key !== 'treinamento' && (i.flag !== 'pres' || ehPres() || ehGestor()) && (i.flag !== 'gestor' || ehGestor()) && (i.flag !== 'admin' || (usuario() || {}).orgao === 'ambos'))
+        .filter(i => i.key !== 'treinamento' && (i.flag !== 'pres' || ehPres()) && (i.flag !== 'gestor' || ehGestor()) && (i.flag !== 'admin' || ehAdm()) && (i.flag !== 'secretaria' || perfil() === 'secretaria'))
         .filter(i => !q || norm(i.nome + ' ' + (FUNCOES[i.key] || '') + ' ' + i.g).includes(q));
       if (!itens.length) return '';
       return `<details class="lgtr-area" ${q || ak === areaAtual() ? 'open' : ''}><summary>${ic(A.icone)} ${esc(A.nome === 'Administrativo' ? 'Painel Administrativo' : A.nome)} <small>${itens.length} funções</small></summary>
@@ -225,7 +247,7 @@
   window.lgtrIniciar = function (id, desde) {
     const t = TRILHAS.find(x => x.id === id); if (!t) return;
     const p = progresso(t); montarOverlay();
-    T = { trilha: t, i: desde != null ? desde : (p.concluida ? 0 : Math.min(p.parou || 0, t.passos.length - 1)), unico: false };
+    const ps = passosDe(t); T = { trilha: { ...t, passos: ps }, i: desde != null ? desde : (p.concluida ? 0 : Math.min(p.parou || 0, ps.length - 1)), unico: false };
     if (window.lgtFechar) try { lgtFechar(); } catch (e) { }
     $('#lgtr-tour').hidden = false; document.documentElement.classList.add('lgtr-ativo');
     mostrar();
@@ -307,6 +329,7 @@
   function concluir(t) {
     alvoEl = null; try { speechSynthesis.cancel(); } catch (e) { }
     const prox = trilhasPara().find(x => x.id !== t.id && !progresso(x).concluida);
+    t = { ...t, passos: T && T.trilha ? T.trilha.passos : passosDe(t) };
     $('#lgtr-trilha').textContent = 'Treinamento concluído'; $('#lgtr-passo').textContent = ''; $('#lgtr-pbar').style.width = '100%';
     $('#lgtr-t').textContent = `🎉 Você concluiu “${t.titulo}”!`; $('#lgtr-x').textContent = `Você viu e confirmou os ${t.passos.length} passos. ${prox ? `Próximo sugerido: ${prox.titulo}.` : 'Você concluiu todos os treinamentos indicados para você.'}`;
     $('#lgtr-como').hidden = true; $('#lgtr-volta').hidden = true;
@@ -328,12 +351,12 @@
     if (!t) return; const m = meu(); if (m.convites[t.id]) return; m.convites[t.id] = new Date().toISOString(); salvarMeu(m);
     let c = $('#lgtr-convite'); if (c) c.remove();
     document.body.insertAdjacentHTML('beforeend', `<aside id="lgtr-convite" role="dialog" aria-labelledby="lgtr-cv-t"><button type="button" class="lgtr-fechar" aria-label="Fechar" onclick="this.parentNode.remove()">×</button>
-      <b id="lgtr-cv-t">Novo por aqui?</b><p>Faça o treinamento “${esc(t.titulo)}”: o sistema mostra cada parte da tela, em ${t.passos.length} passos rápidos.</p>
+      <b id="lgtr-cv-t">Novo por aqui?</b><p>Faça o treinamento “${esc(t.titulo)}”: o sistema mostra cada parte da tela, em ${passosDe(t).length} passos rápidos.</p>
       <div><button type="button" class="lgt-btn primario" onclick="document.getElementById('lgtr-convite').remove();lgtrIniciar('${t.id}')">▶ Começar agora</button><button type="button" class="lgt-btn" onclick="this.closest('aside').remove()">Depois</button></div></aside>`);
   }
   function ganchos() {
-    const orig = window.lgpEntrar;
-    if (typeof orig === 'function' && !orig.__lgtr) { const w = function (k) { const r = orig.apply(this, arguments); setTimeout(() => { if ($('#lgp-escolha') && $('#lgp-escolha').hidden) convidar(k); }, 900); return r; }; w.__lgtr = true; window.lgpEntrar = w; }
+    // chamado ao entrar num painel (pela escolha ou direto, quando o usuário só tem um)
+    window.lgpAposEntrar = k => setTimeout(() => { const e = $('#lgp-escolha'); if (!e || e.hidden) convidar(k); }, 900);
     // botões de ajuda do topo abrem a central
     document.querySelectorAll('.lg28-help, #lgv31-tools button[title="Ajuda"]').forEach(b => { if (b.__lgtr) return; b.__lgtr = true; b.removeAttribute('onclick'); b.onclick = e => { e.preventDefault(); lgtrAbrir(); }; b.title = 'Ajuda e treinamento'; });
     const orf = window.fazerLogout; if (typeof orf === 'function' && !orf.__lgtr) { const w = function () { if (T) fechar(); const c = $('#lgtr-convite'); if (c) c.remove(); return orf.apply(this, arguments); }; w.__lgtr = true; window.fazerLogout = w; }

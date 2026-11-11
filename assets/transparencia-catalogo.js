@@ -80,7 +80,8 @@
     if (ALIAS_SUB[i.sub]) i.sub = /inexig/i.test(i.titulo || '') ? 'Inexigibilidades' : ALIAS_SUB[i.sub];
     return i;
   }
-  g.transpLer = function () { try { return (JSON.parse(localStorage.getItem(g.TRANSP_CHAVE)) || []).map(ajustar); } catch (e) { return []; } };
+  const ehPrevia = () => /[?&]previa=1/.test(location.search) && !/\/painel\//.test(location.pathname);
+  g.transpLer = function () { try { const l = (JSON.parse(localStorage.getItem(g.TRANSP_CHAVE)) || []).map(ajustar); if (ehPrevia()) { const pv = JSON.parse(localStorage.getItem('lg_previa_transp') || 'null'); if (pv) l.unshift(ajustar({ ...pv, publicado: true, previa: true })); } return l; } catch (e) { return []; } };
   g.transpSalvar = function (lista) { localStorage.setItem(g.TRANSP_CHAVE, JSON.stringify(lista)); };
   g.transpCategoria = function (id) { id = ALIAS_CAT[id] || id; return g.TRANSP_CATALOGO.find(c => c.id === id); };
   g.transpMoeda = function (v) { const n = Number(v); return v === '' || v == null || isNaN(n) ? '' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); };
