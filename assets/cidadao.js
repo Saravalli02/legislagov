@@ -56,7 +56,7 @@
         <div>
           <div class="ouv-abas" role="tablist">${[['ouvidoria', 'Ouvidoria'], ['esic', 'Pedido de informação (e-SIC)'], ['consulta', 'Consultar protocolo']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${abaOuv === k}" onclick="lgcAbaOuv('${k}')">${n}</button>`).join('')}</div>
           <div id="ouv-corpo"></div>
-          <div class="aviso" style="margin-top:18px">Versão de demonstração: o pedido fica registrado neste navegador e aparece no painel da Câmara aberto neste mesmo computador. Na versão definitiva, chega à Câmara pela internet e a resposta vai por e-mail.</div>
+          ${window.LG_SYNC && LG_SYNC.ativo ? '' : '<div class="aviso" style="margin-top:18px">Versão de demonstração: o pedido fica registrado neste navegador e aparece no painel da Câmara aberto neste mesmo computador. Na versão definitiva, chega à Câmara pela internet e a resposta vai por e-mail.</div>'}
         </div></div></div>`;
     corpoOuv();
   }

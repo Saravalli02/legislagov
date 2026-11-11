@@ -28,10 +28,14 @@ import os
 import re
 import threading
 import time
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.cookies import SimpleCookie
+
+import lgapi
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
 PORTA = int(os.environ.get("PORT", "8000"))
@@ -274,6 +278,28 @@ def iniciar_youtube():
     threading.Thread(target=_laco_youtube, daemon=True).start()
 
 
+# ------------------------------------------------------------------ câmaras (um servidor, várias câmaras)
+ARQ_DOMINIOS = os.path.join(PASTA, "ferramentas", "aws", "dominios.txt")
+_dominios = {"lido": 0.0, "mapa": {}}
+
+
+def camara_do_host(host):
+    """dominios.txt: 'dominio  camara  modo' (modo = site ou sistema). Endereço desconhecido -> LG_CAMARA_PADRAO."""
+    if time.time() - _dominios["lido"] > 60:
+        mapa = {}
+        try:
+            with open(ARQ_DOMINIOS, encoding="utf-8") as f:
+                for linha in f:
+                    p = linha.split("#", 1)[0].split()
+                    if len(p) >= 2:
+                        mapa[p[0].lower()] = (p[1], p[2] if len(p) > 2 else "site")
+        except OSError:
+            pass
+        _dominios.update(lido=time.time(), mapa=mapa)
+    h = (host or "").split(":")[0].lower()
+    return _dominios["mapa"].get(h) or (os.environ.get("LG_CAMARA_PADRAO", "teste"), "site")
+
+
 class Handler(SimpleHTTPRequestHandler):
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
                       ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -292,8 +318,130 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
+    # ---------------------------------------------------------------- banco de dados (LG_BANCO=1)
+    def _json(self, cod, dados, cookie=None):
+        corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
+        self.send_response(cod)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(corpo)))
+        self.send_header("Cache-Control", "no-store")
+        if cookie is not None:
+            seguro = "; Secure" if self.headers.get("X-Forwarded-Proto") == "https" else ""
+            if cookie:
+                self.send_header("Set-Cookie", f"lg_sessao={cookie}; Path=/; HttpOnly; SameSite=Lax; Max-Age={lgapi.SESSAO_DIAS * 86400}{seguro}")
+            else:
+                self.send_header("Set-Cookie", f"lg_sessao=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0{seguro}")
+        self.end_headers()
+        self.wfile.write(corpo)
+        return True
+
+    def _corpo(self, limite=8_000_000):
+        tam = int(self.headers.get("Content-Length", "0") or 0)
+        if tam <= 0:
+            return {}
+        if tam > limite:
+            raise ValueError("Conteúdo grande demais.")
+        return json.loads(self.rfile.read(tam).decode("utf-8"))
+
+    def _ip(self):
+        return (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
+
+    def _api(self, metodo):
+        """Rotas do banco. Devolve True se respondeu."""
+        caminho = self.path.split("?", 1)[0]
+        if not caminho.startswith("/api/") or caminho.startswith(("/api/youtube", "/api/brasao")):
+            return False
+        if not lgapi.ativo():
+            return False
+        camara, modo = camara_do_host(self.headers.get("Host"))
+        try:
+            with lgapi._trava:
+                lgapi.semear(camara)
+            ck = SimpleCookie(self.headers.get("Cookie", ""))
+            token = ck["lg_sessao"].value if "lg_sessao" in ck else ""
+            u = lgapi.sessao(token, camara)
+            # gravações exigem o cabeçalho X-LG (bloqueia envio disfarçado vindo de outro site)
+            if metodo != "GET" and self.headers.get("X-LG") != "1":
+                return self._json(403, {"ok": False, "erro": "Requisição recusada."})
+            ip = self._ip()
+            if caminho == "/api/inicio" and metodo == "GET":
+                if "publico=1" in self.path:
+                    u = None
+                dados, seq = lgapi.carregar(camara, u)
+                eu = {k: v for k, v in u.items() if k != "senha"} if u else None
+                return self._json(200, {"ok": True, "camara": camara, "modo": modo, "eu": eu, "dados": dados, "seq": seq,
+                                        "ocupados": lgapi.cargos_ocupados(camara)})
+            if caminho == "/api/cargos" and metodo == "GET":
+                return self._json(200, {"ok": True, "ocupados": lgapi.cargos_ocupados(camara)})
+            if caminho == "/api/login" and metodo == "POST":
+                d = self._corpo(20_000)
+                usr, erro = lgapi.login(camara, d.get("usuario", ""), d.get("senha", ""), ip)
+                if not usr:
+                    return self._json(401, {"ok": False, "erro": erro})
+                return self._json(200, {"ok": True, "id": usr["id"], "provisoria": str(d.get("senha", "")) == lgapi.SENHA_PROVISORIA},
+                                  cookie=lgapi.criar_sessao(usr))
+            if caminho == "/api/logout" and metodo == "POST":
+                lgapi.encerrar(token)
+                return self._json(200, {"ok": True}, cookie="")
+            if caminho == "/api/cadastro" and metodo == "POST":
+                erro = lgapi.cadastro(camara, self._corpo(20_000), ip)
+                return self._json(400 if erro else 200, {"ok": not erro, "erro": erro})
+            if caminho == "/api/publico/enviar" and metodo == "POST":
+                d = self._corpo(300_000)
+                erro = lgapi.envio_publico(camara, str(d.get("chave", "")), d.get("itens"), ip)
+                return self._json(400 if erro else 200, {"ok": not erro, "erro": erro})
+            if not u:
+                return self._json(401, {"ok": False, "erro": "Sua sessão terminou. Entre de novo."})
+            if caminho == "/api/senha" and metodo == "POST":
+                d = self._corpo(20_000)
+                erro = lgapi.trocar_senha(u, d.get("atual", ""), d.get("nova", ""))
+                return self._json(400 if erro else 200, {"ok": not erro, "erro": erro}, cookie=None if erro else "")
+            if caminho == "/api/mudancas" and metodo == "GET":
+                desde = int((re.search(r"desde=(\d+)", self.path) or [0, "0"])[1])
+                dados, seq = lgapi.mudancas(camara, desde, u)
+                return self._json(200, {"ok": True, "dados": dados, "seq": seq})
+            if caminho.startswith("/api/dados/"):
+                chave = urllib.parse.unquote(caminho[len("/api/dados/"):])
+                if not re.fullmatch(r"[\w.\-]{1,120}", chave) or not lgapi.pode_gravar(chave, u):
+                    return self._json(403, {"ok": False, "erro": "Sem permissão para esta informação."})
+                if metodo == "DELETE":
+                    lgapi.remover(camara, chave, u["usuario"])
+                    return self._json(200, {"ok": True})
+                if metodo == "PUT":
+                    d = self._corpo()
+                    valor = d.get("valor")
+                    if not isinstance(valor, str):
+                        return self._json(400, {"ok": False, "erro": "Valor inválido."})
+                    if chave == lgapi.CHAVE_USUARIOS:
+                        with lgapi._trava:
+                            lgapi.gravar_usuarios(camara, json.loads(valor), u)
+                        return self._json(200, {"ok": True, "versao": 0, "valor": json.dumps(lgapi.usuarios(camara), ensure_ascii=False)})
+                    ok, atual, versao = lgapi.gravar(camara, chave, valor, d.get("versao"), u["usuario"])
+                    if not ok:
+                        return self._json(409, {"ok": False, "valor": atual, "versao": versao})
+                    return self._json(200, {"ok": True, "versao": versao})
+            return self._json(404, {"ok": False, "erro": "Rota não encontrada."})
+        except Exception as erro:
+            print("api:", caminho, repr(erro), flush=True)
+            return self._json(400, {"ok": False, "erro": "Não foi possível concluir: " + str(erro)[:160]})
+
+    def do_PUT(self):
+        if not self._api("PUT"):
+            self.send_error(404)
+
+    def do_DELETE(self):
+        if not self._api("DELETE"):
+            self.send_error(404)
+
     def do_GET(self):
+        if self._api("GET"):
+            return
         caminho = self.path.split("?", 1)[0].split("#", 1)[0]
+        if lgapi.ativo() and caminho in ("/", "/index.html") and camara_do_host(self.headers.get("Host"))[1] == "sistema":
+            self.send_response(302)
+            self.send_header("Location", "/painel/")
+            self.end_headers()
+            return
         nome = caminho.rsplit("/", 1)[-1]
         partes = [p for p in caminho.split("/") if p]
         # não expõe arquivos internos nem as ferramentas locais (.bat / .py)
@@ -336,6 +484,8 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        if self._api("POST"):
+            return
         caminho = self.path.split("?", 1)[0]
         if caminho != "/api/youtube/transcricao":
             self.send_error(404)

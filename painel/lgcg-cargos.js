@@ -35,12 +35,17 @@
     return '';
   }
   window.lgCargoDe = cargoDe;
-  const ocupante = (id, exceto) => users().find(u => u.ativo !== false && u.id !== exceto && cargoDe(u) === id);
+  const SYNC = () => window.LG_SYNC && LG_SYNC.ativo ? LG_SYNC : null;
+  const ocupante = (id, exceto) => {
+    const s = SYNC(); if (s && !s.eu) return (s.ocupados || []).includes(id) ? { id } : null;   // tela de cadastro: o servidor diz quais já existem
+    return users().find(u => (u.ativo !== false || u.pendente) && u.id !== exceto && cargoDe(u) === id);
+  };
   window.lgCargoOcupado = (id, exceto) => { const c = CARGOS.find(x => x.id === id); return !!(c && c.unico && ocupante(id, exceto)); };
 
   /* usuários que já existiam: grava o cargo novo uma vez */
   function migrar() {
     if (typeof lgUsers !== 'function') return;
+    if (SYNC() && !SYNC().eu) return;
     const a = lgUsers(); const vistos = {}; let mudou = false;
     a.forEach(u => { if (u.cargoId && u.ativo !== false) vistos[u.cargoId] = 1; });
     a.forEach(u => { if (u.cargoId) return; const id = cargoDe(u); if (!id) return; const c = CARGOS.find(x => x.id === id);
@@ -67,15 +72,18 @@
     const sel = document.getElementById('reg-cargo'); if (!sel) return; const c = CARGOS.find(x => x.id === sel.value);
     const aj = document.getElementById('lgcg-ajuda'); if (aj) aj.textContent = c ? `Funções: ${c.funcao}.` : '';
     const box = document.getElementById('lgcg-ver'); if (!box) return; box.hidden = !c || c.id !== 'vereador';
-    if (!box.hidden) { const vs = comp().vereadores || []; const livres = vs.filter(v => !v.usuario);
+    if (!box.hidden) { const vs = comp().vereadores || []; const livres = vs.filter(v => !v.usuario && !v.temUsuario);
       document.getElementById('reg-vereador').innerHTML = livres.length ? '<option value="">Escolha seu nome…</option>' + livres.map(v => `<option value="${esc(v.id)}">${esc(v.completo || v.nome)}${v.partido ? ' (' + esc(v.partido) + ')' : ''}</option>`).join('') : '<option value="">Todos os vereadores já têm usuário</option>'; }
   }
   window.atualizarCargos = function () {
     ajustarFormulario();
     const sel = document.getElementById('reg-cargo'); if (!sel) return;
+    const antes = sel.value, verAntes = (document.getElementById('reg-vereador') || {}).value;
     sel.innerHTML = '<option value="">Escolha o cargo…</option>' + CARGOS.map(c => { const ocup = c.unico && ocupante(c.id); return `<option value="${c.id}" ${ocup ? 'disabled' : ''}>${esc(c.nome)}${ocup ? ' — já cadastrado' : ''}</option>`; }).join('');
     const o = document.getElementById('reg-orgao'); if (o) o.value = 'cam';
+    if (antes && sel.querySelector(`option[value="${antes}"]:not([disabled])`)) sel.value = antes;
     mostrarAjuda();
+    const rv = document.getElementById('reg-vereador'); if (rv && verAntes && rv.querySelector(`option[value="${verAntes}"]`)) rv.value = verAntes;
   };
   window.fazerCadastro = async function (ev) {
     ev.preventDefault();
@@ -87,8 +95,17 @@
     const c = CARGOS.find(x => x.id === cargoId); if (!c) return erro('Escolha o cargo.');
     if (c.unico && ocupante(c.id)) { atualizarCargos(); return erro(`Já existe um usuário ativo como ${c.nome}. Cada um desses cargos é único; fale com o administrador.`); }
     if (c.id === 'vereador' && !verId) return erro('Escolha qual vereador você é. Se não estiver na lista, a Procuradoria precisa incluir seu nome primeiro.');
-    if (senha.length < 6) return erro('A senha precisa ter pelo menos 6 caracteres.');
+    if (senha.length < (SYNC() ? 8 : 6)) return erro(`A senha precisa ter pelo menos ${SYNC() ? 8 : 6} caracteres.`);
     if (senha !== senha2) return erro('As senhas não coincidem.');
+    if (SYNC()) {   // servidor: o cadastro fica aguardando a liberação do administrador
+      const r = await SYNC().api('/api/cadastro', { nome, usuario, senha, cargoId: c.id, cargo: c.nome, setor: c.setor, perfil: c.perfil === 'usuario' ? (c.id === 'vereador' ? 'vereador' : 'usuario') : c.perfil, vereadorId: verId });
+      if (!r.ok) return erro(r.erro || 'Não foi possível enviar o cadastro.');
+      if (c.unico) SYNC().ocupados = [...(SYNC().ocupados || []), c.id];
+      esconderErro('register-error'); setAuthTab('login'); document.getElementById('login-email').value = usuario;
+      const ok = document.getElementById('login-success'); ok.textContent = `Cadastro enviado como ${c.nome}. Você poderá entrar assim que o administrador liberar.`; ok.style.display = 'block';
+      document.getElementById('register-form').reset(); atualizarCargos();
+      return false;
+    }
     const a = lgUsers(); if (a.some(u => String(u.usuario).toLowerCase() === usuario.toLowerCase())) return erro('Este usuário já existe.');
     const novo = { id: 'usr-' + Date.now(), usuario, nome, senha, cargoId: c.id, cargo: c.nome, setor: c.setor, orgao: 'cam', municipio: 'Neves Paulista — SP', ativo: true, criadoEm: new Date().toISOString() };
     if (c.perfil !== 'usuario') novo.perfil = c.perfil; else novo.perfil = 'usuario';
@@ -101,6 +118,39 @@
     document.getElementById('register-form').reset(); atualizarCargos();
     return false;
   };
+
+  /* Áreas e acessos: cadastros aguardando liberação (só com o servidor) */
+  function pendentes() {
+    const tela = document.getElementById('view-lgt-acessos'); if (!tela || tela.style.display === 'none') return;
+    const gestor = window.lgPerfil && ['adm', 'procurador'].includes(lgPerfil());
+    const lista = users().filter(u => u.pendente);
+    let box = document.getElementById('lgcg-pend');
+    if (!gestor || !lista.length) { if (box) box.remove(); return; }
+    const assin = JSON.stringify(lista.map(u => u.id)); if (box && box.dataset.a === assin) return;
+    if (!box) { box = document.createElement('div'); box.id = 'lgcg-pend'; box.className = 'lgt-card'; const ref = tela.querySelector('.lgt-areas-info') || tela.firstElementChild; ref.insertAdjacentElement('afterend', box); }
+    box.dataset.a = assin;
+    const vs = comp().vereadores || [];
+    box.innerHTML = `<h3>Cadastros aguardando liberação (${lista.length})</h3><p class="lgt-p">Confira se a pessoa é mesmo do cargo antes de liberar. Depois de liberada, ela entra com a senha que criou.</p>
+      <div class="lgt-tabela-wrap"><table class="lgt-tabela"><thead><tr><th>Nome</th><th>Usuário</th><th>Cargo</th><th>Pedido em</th><th class="acoes-col">Ações</th></tr></thead><tbody>${lista.map(u => {
+        const v = u.vereadorPedido && vs.find(x => x.id === u.vereadorPedido);
+        return `<tr><td><b>${esc(u.nome)}</b>${v ? `<small>Diz ser: ${esc(v.completo || v.nome)}</small>` : ''}</td><td>${esc(u.usuario)}</td><td>${esc(u.cargo || '')}</td><td>${u.criadoEm ? esc(new Date(u.criadoEm).toLocaleDateString('pt-BR')) : '—'}</td>
+        <td class="acoes-col"><button class="lgt-mini" type="button" data-lib="${esc(u.id)}">Liberar</button><button class="lgt-mini perigo" type="button" data-rec="${esc(u.id)}">Recusar</button></td></tr>`; }).join('')}</tbody></table></div>`;
+    box.querySelectorAll('[data-lib]').forEach(b => b.onclick = () => decidir(b.dataset.lib, true));
+    box.querySelectorAll('[data-rec]').forEach(b => b.onclick = () => decidir(b.dataset.rec, false));
+  }
+  function decidir(id, liberar) {
+    const a = lgUsers(); const u = a.find(x => x.id === id); if (!u) return;
+    const c = CARGOS.find(x => x.id === u.cargoId);
+    if (liberar && c && c.unico && ocupante(c.id, u.id)) { alert(`Já existe outra pessoa como ${c.nome}. Desative a outra antes de liberar esta.`); return; }
+    if (!liberar && !confirm(`Recusar o cadastro de ${u.nome}? Ele não poderá entrar.`)) return;
+    u.pendente = false; u.ativo = !!liberar; if (!liberar) u.recusado = true;
+    lgSaveUsers(a);
+    if (liberar && u.vereadorPedido) { const cc = comp(); const vv = (cc.vereadores || []).find(x => x.id === u.vereadorPedido);
+      if (vv && !vv.usuario) { vv.usuario = u.usuario; (cc.historico = cc.historico || []).push({ data: new Date().toISOString(), texto: `Usuário "${u.usuario}" vinculado a ${vv.nome}`, por: (window.usuarioAtual || {}).nome || '' }); localStorage.setItem('lgv_camara_v1', JSON.stringify(cc)); } }
+    try { registrarLog(liberar ? 'Cadastro liberado' : 'Cadastro recusado', `${u.usuario} — ${u.cargo || ''}`); } catch (e) { }
+    const b = document.getElementById('lgcg-pend'); if (b) b.dataset.a = '';
+    pendentes(); if (window.lgtAbrir) lgtAbrir('acessos');
+  }
 
   /* no menu lateral: "Vereador · Presidente da Câmara" para quem a Procuradoria marcou */
   function rotuloCargo() {
@@ -121,7 +171,7 @@
     migrar(); atualizarCargos(); rotuloCargo(); setTimeout(() => { migrar(); atualizarCargos(); rotuloCargo(); }, 1500);
     const tab = window.setAuthTab; if (typeof tab === 'function' && !tab.__lgcg) { const w = function (t) { const r = tab.apply(this, arguments); if (t === 'register') atualizarCargos(); return r; }; w.__lgcg = true; window.setAuthTab = w; }
     const io = window.iniciarSessao; if (typeof io === 'function' && !io.__lgcg) { const w = function () { const r = io.apply(this, arguments); setTimeout(rotuloCargo, 50); return r; }; w.__lgcg = true; Object.keys(io).forEach(k => { w[k] = io[k]; }); window.iniciarSessao = w; }
-    setInterval(rotuloCargo, 3000);
+    setInterval(() => { rotuloCargo(); pendentes(); }, 1500);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(iniciar, 250)); else setTimeout(iniciar, 250);
 })();

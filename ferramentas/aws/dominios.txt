@@ -1,0 +1,7 @@
+# Endereços atendidos por este servidor (um por linha)
+# dominio                      camara              modo
+#   camara: identificador dos dados (cada câmara tem os seus, separados)
+#   modo:   site    = abre o site da câmara (painel em /painel)
+#           sistema = câmara que comprou só o sistema: abre direto no painel
+teste.legislagov.com.br        teste               site
+neves.legislagov.com.br        neves-paulista-sp   site
