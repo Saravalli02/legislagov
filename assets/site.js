@@ -24,6 +24,8 @@ const dataLonga = s => s ? new Date(s + (s.length === 10 ? 'T12:00:00' : '')).to
 
 /* ---------------- ícones ---------------- */
 const ICONES = {
+  lua: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
   sino: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
   busca: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', chev: '<path d="m6 9 6 6 6-6"/>', esq: '<path d="m15 18-6-6 6-6"/>', dir: '<path d="m9 18 6-6-6-6"/>',
   seta: '<path d="M5 12h14M13 6l6 6-6 6"/>', ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
@@ -108,7 +110,8 @@ function montarCabecalho() {
       <span class="a11y" role="group" aria-label="Acessibilidade">
         <button type="button" onclick="fonte(-1)" aria-label="Diminuir texto" accesskey="5">A−</button>
         <button type="button" onclick="fonte(1)" aria-label="Aumentar texto" accesskey="4">A+</button>
-        <button type="button" onclick="contraste()" aria-label="Alto contraste" accesskey="6">${ic('contraste')}</button>
+        <button type="button" id="btn-tema" onclick="tema()" aria-pressed="${document.documentElement.dataset.tema === 'escuro'}" aria-label="Modo escuro" title="Modo escuro">${ic(document.documentElement.dataset.tema === 'escuro' ? 'sol' : 'lua')}</button>
+        <button type="button" id="btn-contraste" onclick="contraste()" aria-pressed="${document.documentElement.dataset.contraste === 'alto'}" aria-label="Alto contraste" title="Alto contraste" accesskey="6">${ic('contraste')}</button>
         <a href="pagina.html?p=acessibilidade" aria-label="Recursos de acessibilidade" accesskey="7">${ic('mao')}</a>
       </span>
     </nav>
@@ -197,8 +200,10 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); abrirBusca(); }
 });
 function fonte(d) { const r = document.documentElement; const v = Math.max(0, Math.min(2, (+r.dataset.fonte || 0) + d)); r.dataset.fonte = v; ls.set('site_fonte', v); }
-function contraste() { const r = document.documentElement; const on = r.dataset.contraste === 'alto'; if (on) delete r.dataset.contraste; else r.dataset.contraste = 'alto'; ls.set('site_contraste', on ? '' : 'alto'); }
-(() => { const f = ls.get('site_fonte', ''); if (f) document.documentElement.dataset.fonte = f; if (ls.get('site_contraste', '') === 'alto') document.documentElement.dataset.contraste = 'alto'; })();
+function contraste() { const r = document.documentElement; const on = r.dataset.contraste === 'alto'; if (on) delete r.dataset.contraste; else r.dataset.contraste = 'alto'; ls.set('site_contraste', on ? '' : 'alto'); const b = $('#btn-contraste'); if (b) b.setAttribute('aria-pressed', String(!on)); }
+function tema(forcar) { const r = document.documentElement; const escuro = forcar !== undefined ? forcar === 'escuro' : r.dataset.tema !== 'escuro'; r.dataset.tema = escuro ? 'escuro' : 'claro'; if (forcar === undefined) ls.set('site_tema', r.dataset.tema); const b = $('#btn-tema'); if (b) { b.setAttribute('aria-pressed', String(escuro)); b.setAttribute('aria-label', escuro ? 'Modo claro' : 'Modo escuro'); b.title = escuro ? 'Modo claro' : 'Modo escuro'; b.innerHTML = ic(escuro ? 'sol' : 'lua'); } const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = escuro ? '#07120e' : '#0f2a22'; }
+(() => { const r = document.documentElement; const f = ls.get('site_fonte', ''); if (f) r.dataset.fonte = f; if (ls.get('site_contraste', '') === 'alto') r.dataset.contraste = 'alto';
+  const t = ls.get('site_tema', ''); r.dataset.tema = t || (matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'); })();
 function inscrever(e) {
   e.preventDefault(); const em = $('#news-email').value.trim(); const l = ls.json('site_inscricoes', []); if (!l.includes(em)) l.push(em); ls.set('site_inscricoes', JSON.stringify(l));
   $('#news-msg').textContent = 'Pronto! Você receberá as próximas notícias.'; e.target.reset(); return false;
