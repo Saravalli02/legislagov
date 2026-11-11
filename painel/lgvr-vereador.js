@@ -683,9 +683,29 @@
   @media(max-width:600px){.lgvr-tipos{grid-template-columns:1fr}.lgvr-hero{padding:16px}.lgvr-hero h1{font-size:20px!important}.lgvr-det{padding:12px 16px}.lgvr-gov-c{padding:12px 16px}.lgvr-desps{grid-template-columns:1fr}.lgvr-comp-acoes .lgt-btn{flex:1 1 100%;justify-content:center}}`;
   document.head.appendChild(css);
 
+  /* ================= cadastros de teste (pedido do Ricardo, 10/11/2026) =================
+     · vinicius — vereador de teste e Presidente da Câmara de teste
+     · erika    — Secretária (Painel Administrativo)
+     Criados uma única vez em cada navegador; a Procuradoria pode trocar o Presidente ou desativar depois. */
+  function cadastrosTeste() {
+    if (typeof lgUsers !== 'function' || typeof lgSaveUsers !== 'function') return;
+    const us = lgUsers(); let mudou = false;
+    const novo = (login, dados) => { if (us.some(u => String(u.usuario).toLowerCase() === login)) return; us.push({ id: 'usr-' + login, usuario: login, senha: '123456', municipio: 'Neves Paulista — SP', orgao: 'cam', perfil: 'usuario', ativo: true, teste: true, ...dados }); mudou = true; };
+    novo('vinicius', { nome: 'Vinicius (teste)', cargo: 'Vereador', setor: 'Gabinete' });
+    novo('erika', { nome: 'Erika', cargo: 'Secretária', setor: 'Secretaria Legislativa' });
+    if (mudou) lgSaveUsers(us);
+    const c = comp();
+    if (!c.seedTeste1) {
+      if (!c.vereadores.some(v => v.id === 'vteste')) c.vereadores.push({ id: 'vteste', nome: 'Vinicius (teste)', completo: 'Vinicius — vereador de teste', partido: 'Teste', usuario: 'vinicius', teste: true });
+      const de = verPorId(c.presidente)?.nome || '—'; c.presidente = 'vteste'; c.seedTeste1 = true;
+      c.historico.push({ data: new Date().toISOString(), texto: `Presidente de teste: ${de} → Vinicius (teste). Para voltar, marque o Presidente real em Usuários.`, por: 'Sistema' });
+      gravar(COMP_KEY, c);
+    }
+  }
+
   /* ================= ganchos ================= */
   function iniciar() {
-    comp(); criarTelas(); integrarAdministrativo();
+    comp(); cadastrosTeste(); criarTelas(); integrarAdministrativo();
     const gs = window.gotoShared;
     if (typeof gs === 'function' && !gs.__lgvr) {
       const w = function (v, ...r) {
