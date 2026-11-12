@@ -140,6 +140,7 @@
     });
     try { (A().dados().rascunhos || []).forEach(r => add(['v:' + r.autorId], { chave: `rasc:${r.id}`, titulo: `Rascunho a assinar: ${A().TIPOS[r.tipo]?.nome || ''}`, texto: r.ementa, acao: "lgvrAbrir('assinar')", area: 'vereador' })); } catch (e) { }
     try { if (window.lgfxPendencias) lgfxPendencias().forEach(x => add(x.dest, x)); } catch (e) { }
+    try { if (window.lgsPendencias) lgsPendencias().forEach(x => add(x.dest, x)); } catch (e) { }
     return out;
   }
   function minhas() {

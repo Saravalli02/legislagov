@@ -264,7 +264,7 @@
     assinarDoc({ titulo: `${T.nome}: ${r.ementa}`, arquivo: arq(T.nome + ' ' + r.ementa.slice(0, 40)), docId: pid, doc: { tipo: T.nome, numero: '', ementa: r.ementa, texto: r.texto, justificativa: r.justificativa }, signatarios: signs }, a.v, ass => {
       const ano = new Date().getFullYear(), n = proximoNumero(r.tipo, ano), v = a.v;
       const p = { id: pid, numero: `${r.tipo} ${n}/${ano}`, full: `${r.tipo}-${ano}-${n.padStart(5, '0')}`, autor: 'Ver. ' + v.nome + ((r.coautores || []).length ? ' e outros' : ''), ementa: r.ementa, unidade: 'Gabinete do Vereador ' + v.nome, comissao: '', status: 'protocolado', data: hojeBR(), docs: [T.nome + '.pdf'],
-        timeline: [{ date: agoraTL(), label: `${T.nome} assinado(a) digitalmente por ${v.nome} (${ass.metodo})` }, { date: agoraTL(), label: `Protocolado automaticamente: ${r.tipo} ${n}/${ano}` }, { date: agoraTL(), label: 'Encaminhado ao Presidente para despacho' }],
+        timeline: [{ date: agoraTL(), label: `${T.nome} ${ass.manual ? 'assinado(a) à mão' : 'assinado(a) digitalmente'} por ${v.nome} (${ass.manual ? 'motivo: ' + ass.motivo : ass.metodo})` }, { date: agoraTL(), label: `Protocolado automaticamente: ${r.tipo} ${n}/${ano}` }, { date: agoraTL(), label: 'Encaminhado ao Presidente para despacho' }],
         origem: 'portal-vereador', tipo: r.tipo, tipoNome: T.nome, texto: r.texto, justificativa: r.justificativa, autorId: v.id, coautores: r.coautores || [], assinaturas: [ass] };
       listaProt().unshift(p); const d = dados(); d.rascunhos = d.rascunhos.filter(x => x.id !== id); salvarDados(d);
       persistirProt('Propositura protocolada pelo Portal do Vereador', p); UI().log('Portal do Vereador', `Protocolou ${p.numero}`);
@@ -291,7 +291,7 @@
     const a = atual(); const p = listaProt().find(x => x.id === id); if (!a || !p) return;
     const base = window.lgsLerPDF ? lgsLerPDF(p.id) : null;
     assinarDoc({ titulo: `${p.numero}: ${p.ementa}`, arquivo: arq(p.numero + ' assinar'), docId: p.id, base, doc: { tipo: p.tipoNome || 'Projeto de Lei', numero: (p.numero || '').split(' ')[1], ementa: p.ementa, texto: p.texto, justificativa: p.justificativa } }, a.v, ass => {
-      p.assinaturas = [...(p.assinaturas || []), ass]; p.timeline.push({ date: agoraTL(), label: `Coautoria assinada digitalmente por ${a.v.nome} (${ass.metodo})` });
+      p.assinaturas = [...(p.assinaturas || []), ass]; p.timeline.push({ date: agoraTL(), label: `Coautoria ${ass.manual ? 'assinada à mão' : 'assinada digitalmente'} por ${a.v.nome} (${ass.manual ? 'motivo: ' + ass.motivo : ass.metodo})` });
       persistirProt('Coautoria assinada', p); UI().aviso('Assinatura registrada.'); desenhar(); lgvrVer(p.id);
     });
   };
@@ -303,8 +303,8 @@
       <div class="cab"><b>CÂMARA MUNICIPAL DE NEVES PAULISTA</b><small>Estado de São Paulo</small></div><h1>${esc(titulo)}</h1>
       <p class="em">${esc(p.ementa)}</p><div class="tx">${esc(p.texto || '')}</div>${p.justificativa ? `<h2>JUSTIFICATIVA</h2><div class="tx">${esc(p.justificativa)}</div>` : ''}
       <p class="data">Neves Paulista, ${esc(p.data || hojeBR())}.</p>
-      <div class="ass"><b>Documento assinado eletronicamente</b>${(p.assinaturas || (p.assinatura ? [p.assinatura] : [])).map(s => `<div>${esc(s.nome)} — ${new Date(s.data).toLocaleString('pt-BR')} — ${esc(s.metodo)}<br><code>SHA-256 ${esc(s.hash)}</code></div>`).join('') || '<div>Sem assinaturas.</div>'}
-      <div style="color:#666;font-size:11px">Assinatura eletrônica avançada nos termos da Lei 14.063/2020 (na versão oficial, validável em validar.iti.gov.br).</div></div></body></html>`);
+      <div class="ass"><b>${(p.assinaturas || []).some(s => s.manual) ? 'Assinaturas do documento' : 'Documento assinado eletronicamente'}</b>${(p.assinaturas || (p.assinatura ? [p.assinatura] : [])).map(s => `<div>${esc(s.nome)} — ${new Date(s.data).toLocaleString('pt-BR')} — ${esc(s.metodo)}${s.manual ? `<br><b>ASSINADO À MÃO</b> — motivo: ${esc(s.motivo || '')}. Original em papel arquivado na Câmara.` : ''}<br><code>SHA-256 ${esc(s.hash)}</code></div>`).join('') || '<div>Sem assinaturas.</div>'}
+      <div style="color:#666;font-size:11px">${(p.assinaturas || []).some(s => s.manual) ? 'Assinaturas digitais: Lei 14.063/2020 (validáveis em validar.iti.gov.br). Assinaturas à mão: documento em papel digitalizado.' : 'Assinatura eletrônica avançada nos termos da Lei 14.063/2020 (na versão oficial, validável em validar.iti.gov.br).'}</div></div></body></html>`);
     w.document.close();
   };
 

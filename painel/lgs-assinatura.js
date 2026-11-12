@@ -136,7 +136,8 @@
   const deB64 = t => { const s = atob(t); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
   function guardarPDF(id, bytes) { try { localStorage.setItem(PDF_PREFIX + id, b64(bytes)); return true; } catch (e) { return false; } }
   function lerPDF(id) { try { const t = localStorage.getItem(PDF_PREFIX + id); return t ? deB64(t) : null; } catch (e) { return null; } }
-  function baixar(bytes, nome) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+  function tipoDe(bytes) { return bytes[0] === 0xFF && bytes[1] === 0xD8 ? ['image/jpeg', '.jpg'] : bytes[0] === 0x89 && bytes[1] === 0x50 ? ['image/png', '.png'] : ['application/pdf', '.pdf']; }
+  function baixar(bytes, nome) { const [mime, ext] = tipoDe(bytes); if (ext !== '.pdf') nome = String(nome).replace(/\.pdf$/i, '') + ext; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], { type: mime })); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
   window.lgsBaixarPDF = (id, nome) => { const b = lerPDF(id); if (!b) return UI().aviso('PDF não encontrado neste navegador.', 'erro'); baixar(b, nome || id + '.pdf'); };
   window.lgsTemPDF = id => { try { return !!localStorage.getItem(PDF_PREFIX + id); } catch (e) { return false; } };
 
@@ -157,6 +158,19 @@
           <li><span class="lgs-n">3</span><div><b>Envie o PDF assinado</b><small>O sistema confere se é o mesmo documento e se a assinatura é sua.</small><label class="lgs-up"><input type="file" id="lgs-arq" accept="application/pdf,.pdf"><span>${ic('materias')} Escolher o PDF assinado</span></label></div></li>
         </ol>
         <div id="lgs-res" aria-live="polite"></div>
+        <button type="button" class="lgs-mao-bt" id="lgs-mao-bt" aria-expanded="false" aria-controls="lgs-mao">Não consegue assinar pelo gov.br ou com certificado? <b>Assinar à mão</b></button>
+        <div class="lgs-mao" id="lgs-mao" hidden>
+          <p class="lgs-mao-av">Use só quando a assinatura digital não for possível. O documento fica marcado como <b>assinado à mão</b> e o <b>Presidente</b> e a <b>Procuradoria</b> são avisados. O original em papel deve ficar arquivado na Câmara.</p>
+          <ol class="lgs-passos">
+            <li><span class="lgs-n">1</span><div><b>Imprima e assine à mão</b><small>Baixe o PDF do passo 1 acima, imprima e assine com caneta.</small></div></li>
+            <li><span class="lgs-n">2</span><div><b>Envie a digitalização</b><small>PDF escaneado ou foto nítida da página assinada (PDF, JPG ou PNG, até 8 MB).</small><label class="lgs-up"><input type="file" id="lgs-mao-arq" accept="application/pdf,.pdf,image/jpeg,image/png"><span>${ic('materias')} Escolher o arquivo</span></label><small id="lgs-mao-nome"></small></div></li>
+            <li><span class="lgs-n">3</span><div><b>Por que não foi possível assinar digitalmente?</b>
+              <select id="lgs-mao-motivo" class="lgt-input"><option value="">Escolha o motivo…</option><option>gov.br fora do ar ou com erro</option><option>Conta gov.br sem nível prata ou ouro</option><option>Sem certificado digital ou token</option><option>Sem internet ou celular no momento</option><option>Outro motivo</option></select>
+              <input type="text" id="lgs-mao-det" class="lgt-input" maxlength="200" placeholder="Detalhe (opcional)"></div></li>
+          </ol>
+          <label class="lgs-confirma"><input type="checkbox" id="lgs-mao-conf"> Declaro que ${esc(nomePessoa)} assinou este documento à mão e que o original em papel será entregue à Câmara.</label>
+          <div class="lgs-mao-rod"><button type="button" class="lgt-btn primario" id="lgs-mao-ok" disabled>Registrar assinatura à mão</button></div>
+        </div>
       </div>
       <p class="lgt-erro" role="alert"></p>
       <div class="lgt-modal-rod lgs-rod">${op.simular ? '<button type="button" class="lgt-btn" id="lgs-sim" title="Somente para testes do administrador">Simular (teste)</button>' : ''}<button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="button" class="lgt-btn primario" id="lgs-ok" disabled>Concluir assinatura</button></div></div>`);
@@ -187,11 +201,57 @@
       UI().fecharModal(); if (!guardado) UI().aviso('Assinatura registrada, mas o PDF não coube no armazenamento do navegador.', 'erro');
       aoAssinar(ass);
     };
+    /* assinatura à mão (documento em papel digitalizado) */
+    let maoArq = null;
+    const maoPode = () => !!maoArq && !!$('#lgs-mao-motivo').value && $('#lgs-mao-conf').checked;
+    const maoAtual = () => { $('#lgs-mao-ok').disabled = !maoPode(); };
+    $('#lgs-mao-bt').onclick = () => { const box = $('#lgs-mao'); box.hidden = !box.hidden; $('#lgs-mao-bt').setAttribute('aria-expanded', String(!box.hidden)); if (!box.hidden) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); };
+    $('#lgs-mao-arq').onchange = async e => {
+      const f = e.target.files[0]; maoArq = null; $('.lgs .lgt-erro').textContent = ''; $('#lgs-mao-nome').textContent = '';
+      if (f) { if (f.size > 8 * 1024 * 1024) $('.lgs .lgt-erro').textContent = 'Arquivo maior que 8 MB.'; else { maoArq = new Uint8Array(await f.arrayBuffer()); $('#lgs-mao-nome').textContent = 'Arquivo: ' + f.name; } }
+      maoAtual();
+    };
+    $('#lgs-mao-motivo').onchange = maoAtual; $('#lgs-mao-conf').onchange = maoAtual;
+    $('#lgs-mao-ok').onclick = async () => {
+      if (!maoPode()) return;
+      const motivo = $('#lgs-mao-motivo').value + ($('#lgs-mao-det').value.trim() ? ' — ' + $('#lgs-mao-det').value.trim() : '');
+      const guardado = guardarPDF(op.docId, maoArq);
+      const ext = tipoDe(maoArq)[1];
+      const ass = { vereadorId: op.signatario.id, nome: nomePessoa, data: new Date().toISOString(), hash: await sha256(maoArq), metodo: 'Assinado à mão (documento em papel digitalizado)', manual: true, motivo, certificado: '', emissor: '', qualificada: false, conferencia: { manual: true }, arquivo: { nome: op.arquivo.replace(/\.pdf$/i, '') + '-assinado-a-mao' + ext, bytes: maoArq.length, guardado }, por: (UI().usuario() || {}).nome || '' };
+      avisarManual({ titulo: op.titulo, nome: nomePessoa, motivo, docId: op.docId, por: ass.por });
+      UI().fecharModal(); if (!guardado) UI().aviso('Assinatura registrada, mas o arquivo não coube no armazenamento.', 'erro');
+      aoAssinar(ass);
+      UI().aviso('Assinatura à mão registrada. O Presidente e a Procuradoria foram avisados.', 'ok');
+    };
     if (op.simular) $('#lgs-sim').onclick = async () => {
       const ass = { vereadorId: op.signatario.id, nome: nomePessoa, data: new Date().toISOString(), hash: esperado.hash, metodo: 'Simulação (teste do administrador)', certificado: '', emissor: '', qualificada: false, simulada: true, conferencia: {}, arquivo: { nome: op.arquivo, bytes: pdf.length, guardado: guardarPDF(op.docId, pdf) }, por: (UI().usuario() || {}).nome || '' };
       UI().fecharModal(); aoAssinar(ass);
     };
   }
+
+  const MANUAIS = 'lgs_manuais_v1';
+  function avisarManual(r) {
+    let l = []; try { l = JSON.parse(localStorage.getItem(MANUAIS) || '[]'); } catch (e) { }
+    l.unshift({ id: 'm' + Date.now().toString(36), data: new Date().toISOString(), ...r }); l = l.slice(0, 200);
+    try { localStorage.setItem(MANUAIS, JSON.stringify(l)); } catch (e) { }
+    try { registrarLog && registrarLog('Assinatura à mão', `${r.nome} — ${r.titulo} (${r.motivo})`); } catch (e) { }
+    try { window.lgavAtualizar && lgavAtualizar(); } catch (e) { }
+  }
+  // usado pelo sino de avisos: aparece para o Presidente e para a Procuradoria por 30 dias
+  window.lgsPendencias = function () {
+    let l = []; try { l = JSON.parse(localStorage.getItem(MANUAIS) || '[]'); } catch (e) { }
+    const limite = Date.now() - 30 * 864e5;
+    return l.filter(x => new Date(x.data).getTime() > limite).map(x => ({ dest: ['pres', 'perfil:procurador'], chave: 'mao:' + x.id, urgente: true,
+      titulo: `Documento assinado à mão: ${x.titulo}`, texto: `${x.nome} não assinou digitalmente. Motivo: ${x.motivo}. Confira o original em papel.`, acao: 'lgsVerManuais()', area: '' }));
+  };
+  window.lgsVerManuais = function () {
+    const l = lgsManuais();
+    UI().abrirModal(`<div class="lgt-form lgs"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Documentos assinados à mão</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
+      <div class="lgs-c">${l.length ? `<ul class="lgs-conf">${l.map(x => `<li class="av"><i>!</i><span><b>${esc(x.titulo)}</b><br>${esc(x.nome)} · ${new Date(x.data).toLocaleString('pt-BR')}<br>Motivo: ${esc(x.motivo)}${x.por && x.por !== x.nome ? ' · registrado por ' + esc(x.por) : ''}${window.lgsTemPDF && lgsTemPDF(x.docId) ? `<br><button type="button" class="lgt-btn" style="margin-top:6px" onclick="lgsBaixarPDF('${esc(x.docId)}','${esc(x.docId)}-assinado-a-mao.pdf')">Baixar a digitalização</button>` : ''}</span></li>`).join('')}</ul>` : '<p>Nenhum documento foi assinado à mão.</p>'}
+      <p class="lgs-val">Confira se o original em papel foi entregue e arquivado na Câmara.</p></div>
+      <div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Fechar</button></div></div>`);
+  };
+  window.lgsManuais = () => { try { return JSON.parse(localStorage.getItem(MANUAIS) || '[]'); } catch (e) { return []; } };
 
   window.lgsAssinar = assinar;
   window.lgsDocumento = documentoCamara;
@@ -220,6 +280,13 @@
   .lgs-confirma{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;font-weight:600}
   .lgs-val{font-size:12px;color:var(--lg28-muted);margin:10px 0 0}.lgs-val a{color:inherit}
   .lgs-rod{flex-wrap:wrap}
+  .lgs-mao-bt{all:unset;cursor:pointer;display:block;margin:16px 0 0;font-size:13px;color:var(--lg28-muted)}
+  .lgs-mao-bt b{color:var(--lg28-ink);text-decoration:underline;text-underline-offset:3px}
+  .lgs-mao-bt:focus-visible{outline:2px solid #e2aa1c;outline-offset:3px;border-radius:4px}
+  .lgs-mao{margin-top:12px;padding:14px;border-radius:12px;border:1px solid #e2aa1c;background:rgba(226,170,28,.06)}
+  .lgs-mao-av{margin:0;font-size:13px;line-height:1.5}
+  .lgs-mao .lgt-input{width:100%;margin-top:6px}
+  .lgs-mao-rod{display:flex;justify-content:flex-end;margin-top:12px}
   @media(max-width:600px){.lgs-c{padding:12px 16px}}`;
   document.head.appendChild(css);
 })();
