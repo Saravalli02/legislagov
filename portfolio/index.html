@@ -215,9 +215,27 @@ p{margin:0}
 .rodape .cx{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;align-items:center}
 .rodape img{height:28px;width:auto;filter:brightness(.15)}
 
+/* infraestrutura */
+.infra{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.infra article{background:var(--navy-2);border:1px solid var(--linha-esc);border-radius:var(--raio);padding:24px}
+.infra b{display:block;font:600 18px var(--disp);color:#fff;margin-bottom:8px}
+.infra p{color:#b0bdd2;font-size:15px}
+/* planos */
+.planos{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;align-items:stretch}
+.plano{background:#fff;border:1px solid var(--linha);border-radius:var(--raio);padding:26px;position:relative;display:flex;flex-direction:column}
+.plano h3{font-size:19px}
+.plano>p{color:var(--suave);font-size:15px;margin-top:6px}
+.plano ul{list-style:none;margin:16px 0 0;padding:0;font-size:15px;color:var(--suave)}
+.plano li{padding-left:24px;position:relative;margin:8px 0;line-height:1.45}
+.plano li::before{content:"";position:absolute;left:2px;top:.5em;width:12px;height:7px;border-left:2px solid #22a06b;border-bottom:2px solid #22a06b;transform:rotate(-45deg)}
+.plano.destaque{background:var(--navy);border-color:var(--navy);color:#fff}
+.plano.destaque>p,.plano.destaque ul{color:#b0bdd2}
+.plano.destaque li::before{border-color:var(--ciano)}
+.selo{position:absolute;top:-12px;left:22px;background:linear-gradient(135deg,var(--ciano),var(--azul));color:#06101f;font:700 12px var(--sans);padding:4px 10px;border-radius:999px}
+
 @media (max-width:1000px){
   .capa .cx,.tour,.seg,.caso,.contato{grid-template-columns:1fr}
-  .porque,.modulos{grid-template-columns:1fr 1fr}
+  .porque,.modulos,.infra,.planos{grid-template-columns:1fr 1fr}
   .passos{grid-template-columns:1fr 1fr}
   .faixa ul{grid-template-columns:1fr 1fr}
   .abas{flex-direction:row;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
@@ -233,7 +251,7 @@ p{margin:0}
 @media (max-width:640px){
   .secao{padding:68px 0}
   .capa .cx{padding:52px 0 48px;gap:36px}
-  .porque,.modulos,.passos,.socios,.numeros,.faixa ul{grid-template-columns:1fr}
+  .porque,.modulos,.passos,.socios,.numeros,.faixa ul,.infra,.planos{grid-template-columns:1fr}
   .bancada{grid-template-columns:1fr 1fr}
   .comparar thead{display:none}
   .comparar,.comparar tbody,.comparar tr,.comparar td{display:block;width:100%}
@@ -280,7 +298,8 @@ p{margin:0}
     <nav class="nav" id="nav" aria-label="Principal">
       <a href="#sistema">O sistema</a>
       <a href="#modulos">Módulos</a>
-      <a href="#seguranca">Segurança</a>
+      <a href="#infra">Infraestrutura</a>
+      <a href="#planos">Planos</a>
       <a href="#neves">Câmara de Neves</a>
       <a href="#quem-somos">Quem somos</a>
       <a class="btn btn-pri" href="#contato">Agendar demonstração</a>
@@ -316,7 +335,7 @@ p{margin:0}
   </div>
   <div class="faixa">
     <ul class="cx">
-      <li><svg><use href="#i-nuvem"/></svg> Servidores no Brasil, cópia diária</li>
+      <li><svg><use href="#i-nuvem"/></svg> Amazon Web Services, em São Paulo</li>
       <li><svg><use href="#i-assina"/></svg> Assinatura gov.br e ICP-Brasil</li>
       <li><svg><use href="#i-transp"/></svg> Transparência no padrão do PNTP</li>
       <li><svg><use href="#i-escudo"/></svg> LGPD e acesso por cargo</li>
@@ -465,6 +484,24 @@ p{margin:0}
   </div>
 </section>
 
+<section class="secao escura" id="infra">
+  <div class="cx">
+    <div class="cab-sec">
+      <span class="marcador">Infraestrutura</span>
+      <h2>Hospedado na Amazon Web Services, no data center de São Paulo.</h2>
+      <p>O sistema roda na AWS, a nuvem da Amazon, a mesma infraestrutura usada por bancos, governos e grandes empresas no mundo todo. A Câmara recebe esse padrão sem comprar servidor nem contratar técnico.</p>
+    </div>
+    <div class="infra">
+      <article><b>Dados no Brasil</b><p>Os servidores ficam em São Paulo. As informações da Câmara não saem do país e o sistema responde rápido de qualquer cidade.</p></article>
+      <article><b>99,99% de disponibilidade</b><p>É o compromisso de funcionamento que a Amazon assume para a região, com reembolso quando não cumpre.</p></article>
+      <article><b>Cópia todos os dias</b><p>O servidor inteiro é copiado diariamente, além da cópia do banco de dados e do histórico de cada alteração.</p></article>
+      <article><b>Proteção de rede</b><p>Conexão sempre criptografada (HTTPS), firewall da Amazon e acesso administrativo restrito.</p></article>
+      <article><b>Cresce junto</b><p>Mais câmaras, mais usuários, mais documentos: o servidor aumenta de tamanho em minutos, sem parar o sistema.</p></article>
+      <article><b>Cada câmara separada</b><p>Os dados de cada Câmara ficam isolados. Um cliente nunca enxerga as informações de outro.</p></article>
+    </div>
+  </div>
+</section>
+
 <section class="secao branca" id="seguranca">
   <div class="cx seg">
     <div class="cab-sec" style="margin:0">
@@ -473,7 +510,7 @@ p{margin:0}
       <p>Cada câmara tem seus dados separados, guardados no Brasil e com cópia todos os dias.</p>
     </div>
     <ul>
-      <li><svg><use href="#i-check"/></svg><div><b>Servidores no Brasil</b>Infraestrutura da Amazon em São Paulo, com conexão segura (HTTPS).</div></li>
+      <li><svg><use href="#i-check"/></svg><div><b>Servidores no Brasil</b>Amazon Web Services em São Paulo, com conexão segura (HTTPS).</div></li>
       <li><svg><use href="#i-check"/></svg><div><b>Cópia diária</b>Backup automático todos os dias e histórico das últimas alterações de cada informação.</div></li>
       <li><svg><use href="#i-check"/></svg><div><b>Acesso por cargo</b>Cadastro liberado pelo administrador, senhas protegidas e registro de quem fez cada ação.</div></li>
       <li><svg><use href="#i-check"/></svg><div><b>Validade jurídica</b>Assinatura gov.br e ICP-Brasil, conforme a Lei 14.063/2020.</div></li>
@@ -514,6 +551,23 @@ p{margin:0}
   </div>
 </section>
 
+<section class="secao" id="planos">
+  <div class="cx">
+    <div class="cab-sec">
+      <span class="marcador">Planos</span>
+      <h2>Contrate só o que a sua Câmara precisa.</h2>
+      <p>Os módulos funcionam juntos ou separados. Dá para começar pelo sistema, pelo site ou pelo e-mail e somar o resto depois.</p>
+    </div>
+    <div class="planos">
+      <article class="plano"><h3>Sistema Legislativo</h3><p>Para o trabalho interno da Câmara.</p><ul><li>Processo legislativo e protocolo</li><li>Sessão plenária com voto nominal e telão</li><li>Assinatura digital</li><li>Portal do Vereador e Presidência</li><li>Avisos, prazos e expedientes</li></ul></article>
+      <article class="plano"><h3>Site e Transparência</h3><p>Para o cidadão acompanhar a Câmara.</p><ul><li>Site institucional completo</li><li>Portal da Transparência (PNTP)</li><li>Ouvidoria e e-SIC</li><li>TV Câmara com os vídeos do YouTube</li><li>Endereço próprio da Câmara (.gov.br)</li></ul></article>
+      <article class="plano"><h3>E-mail institucional</h3><p>Caixas de e-mail com o domínio da Câmara.</p><ul><li>nome@camara.sp.gov.br para cada servidor</li><li>Webmail e uso no celular</li><li>Configuração e proteção contra spam</li><li>Migração das mensagens atuais</li><li>Suporte para criar e remover contas</li></ul></article>
+      <article class="plano destaque"><span class="selo">Mais completo</span><h3>Câmara Digital</h3><p>Tudo junto, com um único atendimento.</p><ul><li>Sistema Legislativo</li><li>Site e Transparência</li><li>E-mail institucional (opcional)</li><li>Migração do sistema e do site anteriores</li><li>Implantação e treinamento de todos os cargos</li></ul></article>
+    </div>
+    <p class="fonte" style="color:var(--suave)">Valores conforme o tamanho da Câmara e os módulos escolhidos. Peça uma proposta.</p>
+  </div>
+</section>
+
 <section class="secao" id="perguntas">
   <div class="cx">
     <div class="cab-sec">
@@ -523,6 +577,7 @@ p{margin:0}
     <div class="faq">
       <details><summary>Precisa instalar alguma coisa na Câmara?</summary><p>Não. O sistema funciona no navegador do computador e do celular. Não é preciso comprar servidor nem contratar técnico.</p></details>
       <details><summary>Dá para usar só o sistema, sem o site?</summary><p>Sim. A Câmara pode contratar só o sistema interno, só o site e a Transparência, ou tudo junto. Quem já tem site pode manter o endereço atual.</p></details>
+      <details><summary>Vocês também cuidam do e-mail da Câmara?</summary><p>Sim, como módulo à parte. Criamos as caixas com o domínio da Câmara, configuramos tudo e trazemos as mensagens do provedor atual.</p></details>
       <details><summary>O domínio .gov.br da Câmara continua?</summary><p>Continua. Basta apontar o domínio da Câmara para o nosso servidor. Enquanto isso, a Câmara usa um endereço provisório.</p></details>
       <details><summary>O que acontece com os dados do sistema antigo?</summary><p>Trazemos proposituras, leis, notícias e documentos que estiverem disponíveis no sistema e no site anteriores.</p></details>
       <details><summary>A assinatura digital tem validade jurídica?</summary><p>Sim. O sistema aceita assinatura gov.br e certificado ICP-Brasil, como prevê a Lei 14.063/2020, e confere o documento assinado.</p></details>
