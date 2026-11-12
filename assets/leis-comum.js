@@ -19,9 +19,7 @@
       alteracoes: [
         { id: 'ex-alt-1', porLei: 'Lei nº 0002/2026 (exemplo)', dispositivo: 'Art. 2º', acao: 'redacao', texto: 'Art. 2º As áreas serão cedidas por prazo de até 4 (quatro) anos, prorrogável uma vez, mediante termo de permissão de uso.', data: '2026-06-02' },
         { id: 'ex-alt-2', porLei: 'Lei nº 0002/2026 (exemplo)', dispositivo: 'Art. 2º-A', acao: 'acrescimo', texto: 'Art. 2º-A Terão prioridade as associações de moradores do bairro onde está a área.', data: '2026-06-02' },
-      ] },
-    { id: 'ex-lei-b', exemplo: true, tipo: 'Lei', numero: '0002', ano: 2026, data: '2026-06-02', ementa: 'Altera a Lei nº 0001/2026, que institui o Programa Horta Comunitária. (EXEMPLO para demonstração)',
-      texto: 'Art. 1º O art. 2º da Lei nº 0001/2026 passa a vigorar com a seguinte redação:\n“Art. 2º As áreas serão cedidas por prazo de até 4 (quatro) anos, prorrogável uma vez, mediante termo de permissão de uso.”\nArt. 2º Fica acrescido o art. 2º-A à Lei nº 0001/2026, com a seguinte redação:\n“Art. 2º-A Terão prioridade as associações de moradores do bairro onde está a área.”\nArt. 3º Esta Lei entra em vigor na data de sua publicação.', alteracoes: [] },
+      ] }
   ];
 
   function livro() { const d = ler(KEY, {}) || {}; d.cfg = d.cfg || { ultimaLei: 0 }; d.leis = Array.isArray(d.leis) ? d.leis : []; return d; }
@@ -39,6 +37,15 @@
     if (MOSTRAR_EXEMPLOS) EXEMPLOS.forEach(e => { if (!out.some(x => x.id === e.id)) out.push(JSON.parse(JSON.stringify(e))); });
     out.forEach(x => { x.titulo = `${x.tipo} nº ${x.numero}/${x.ano}`; });
     // alterações registradas na lei alterada e "alterada por" na lei que altera
+    // legislação do sistema anterior (SISCAM), trazida pelo servidor em assets/siscam.js
+    ((g.SISCAM && g.SISCAM.leis) || []).forEach(r => {
+      const tipo = /ordin/i.test(r.tipo) ? 'Lei' : /complementar/i.test(r.tipo) ? 'Lei Complementar' : /^resolu/i.test(r.tipo) ? 'Resolução'
+        : /decreto legislativo/i.test(r.tipo) ? 'Decreto Legislativo' : /emenda/i.test(r.tipo) ? 'Emenda à Lei Orgânica' : /decreto/i.test(r.tipo) ? 'Decreto Municipal' : r.tipo;
+      const numero = String(r.numero).replace(/\D/g, '');
+      if (out.some(x => x.tipo === tipo && +x.numero === +numero && x.ano === r.ano)) return;
+      out.push({ id: `sc-${tipo}-${numero}-${r.ano}`.replace(/\W+/g, '-'), siscam: true, tipo, numero, ano: r.ano, data: r.data, ementa: r.ementa,
+        texto: 'O texto integral desta norma está no arquivo do sistema anterior da Câmara (SISCAM): https://nevespaulista.siscam.com.br/index/81/8', alteracoes: [] });
+    });
     return out.sort((a, b) => (b.ano - a.ano) || (+b.numero - +a.numero));
   };
   g.lgLeisProximoNumero = function (tipo) {

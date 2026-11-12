@@ -70,7 +70,10 @@
   }
   function mostrarAjuda() {
     const sel = document.getElementById('reg-cargo'); if (!sel) return; const c = CARGOS.find(x => x.id === sel.value);
-    const aj = document.getElementById('lgcg-ajuda'); if (aj) aj.textContent = c ? `Funções: ${c.funcao}.` : '';
+    const aj = document.getElementById('lgcg-ajuda');
+    const ocup = c && c.unico && ocupante(c.id);
+    if (aj) { aj.textContent = ocup ? `Não é possível: já existe um usuário cadastrado como ${c.nome}. Esse cargo é único na Câmara.` : (c ? `Funções: ${c.funcao}.` : ''); aj.classList.toggle('lgcg-erro', !!ocup); }
+    sel.classList.toggle('lgcg-invalido', !!ocup); sel.setAttribute('aria-invalid', ocup ? 'true' : 'false');
     const box = document.getElementById('lgcg-ver'); if (!box) return; box.hidden = !c || c.id !== 'vereador';
     if (!box.hidden) { const vs = comp().vereadores || []; const livres = vs.filter(v => !v.usuario && !v.temUsuario);
       document.getElementById('reg-vereador').innerHTML = livres.length ? '<option value="">Escolha seu nome…</option>' + livres.map(v => `<option value="${esc(v.id)}">${esc(v.completo || v.nome)}${v.partido ? ' (' + esc(v.partido) + ')' : ''}</option>`).join('') : '<option value="">Todos os vereadores já têm usuário</option>'; }
@@ -79,9 +82,9 @@
     ajustarFormulario();
     const sel = document.getElementById('reg-cargo'); if (!sel) return;
     const antes = sel.value, verAntes = (document.getElementById('reg-vereador') || {}).value;
-    sel.innerHTML = '<option value="">Escolha o cargo…</option>' + CARGOS.map(c => { const ocup = c.unico && ocupante(c.id); return `<option value="${c.id}" ${ocup ? 'disabled' : ''}>${esc(c.nome)}${ocup ? ' — já cadastrado' : ''}</option>`; }).join('');
+    sel.innerHTML = '<option value="">Escolha o cargo…</option>' + CARGOS.map(c => { const ocup = c.unico && ocupante(c.id); return `<option value="${c.id}">${esc(c.nome)}${ocup ? ' — já tem usuário' : ''}</option>`; }).join('');
     const o = document.getElementById('reg-orgao'); if (o) o.value = 'cam';
-    if (antes && sel.querySelector(`option[value="${antes}"]:not([disabled])`)) sel.value = antes;
+    if (antes && sel.querySelector(`option[value="${antes}"]`)) sel.value = antes;
     mostrarAjuda();
     const rv = document.getElementById('reg-vereador'); if (rv && verAntes && rv.querySelector(`option[value="${verAntes}"]`)) rv.value = verAntes;
   };
@@ -93,7 +96,7 @@
     if (!nome || !usuario || !senha) return erro('Informe nome, usuário e senha.');
     if (!/^[\p{L}0-9._-]{3,30}$/u.test(usuario)) return erro('O usuário deve ter de 3 a 30 letras ou números, sem espaços.');
     const c = CARGOS.find(x => x.id === cargoId); if (!c) return erro('Escolha o cargo.');
-    if (c.unico && ocupante(c.id)) { atualizarCargos(); return erro(`Já existe um usuário ativo como ${c.nome}. Cada um desses cargos é único; fale com o administrador.`); }
+    if (c.unico && ocupante(c.id)) { atualizarCargos(); return erro(`Não é possível: já existe um usuário cadastrado como ${c.nome}. Esse cargo é único na Câmara.`); }
     if (c.id === 'vereador' && !verId) return erro('Escolha qual vereador você é. Se não estiver na lista, a Procuradoria precisa incluir seu nome primeiro.');
     if (senha.length < (SYNC() ? 8 : 6)) return erro(`A senha precisa ter pelo menos ${SYNC() ? 8 : 6} caracteres.`);
     if (senha !== senha2) return erro('As senhas não coincidem.');
@@ -164,7 +167,8 @@
   const css = document.createElement('style'); css.textContent = `
   .lgcg-fixo{padding:11px 12px;border-radius:9px;border:1px solid #2c2f34;background:#141517;color:#f3f4f6;font-size:14px}
   .lgcg-ajuda{display:block;margin-top:6px;font-size:12px;color:#9a9fa6;line-height:1.4}
-  #reg-cargo option:disabled{color:#6b6f76}`;
+  .lgcg-ajuda.lgcg-erro{color:#f87171;font-weight:600}
+  #reg-cargo.lgcg-invalido{border-color:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.18)!important}`;
   document.head.appendChild(css);
 
   function iniciar() {

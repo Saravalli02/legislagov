@@ -280,6 +280,7 @@ def iniciar_youtube():
 
 # ------------------------------------------------------------------ câmaras (um servidor, várias câmaras)
 ARQ_DOMINIOS = os.path.join(PASTA, "ferramentas", "aws", "dominios.txt")
+CONTEUDO = os.environ.get("LG_CONTEUDO", "")   # na Amazon: /var/lib/legislagov/conteudo
 _dominios = {"lido": 0.0, "mapa": {}}
 
 
@@ -378,7 +379,7 @@ class Handler(SimpleHTTPRequestHandler):
                 usr, erro = lgapi.login(camara, d.get("usuario", ""), d.get("senha", ""), ip)
                 if not usr:
                     return self._json(401, {"ok": False, "erro": erro})
-                return self._json(200, {"ok": True, "id": usr["id"], "provisoria": str(d.get("senha", "")) == lgapi.SENHA_PROVISORIA},
+                return self._json(200, {"ok": True, "id": usr["id"], "provisoria": str(d.get("senha", "")) in ("123456", "admin123")},
                                   cookie=lgapi.criar_sessao(usr))
             if caminho == "/api/logout" and metodo == "POST":
                 lgapi.encerrar(token)
@@ -476,6 +477,11 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(corpo)
             return
+        # conteúdo importado do site antigo e do SISCAM (gerado no servidor) tem preferência
+        if CONTEUDO and caminho.startswith("/assets/") and ".." not in caminho:
+            alt = os.path.join(CONTEUDO, caminho.lstrip("/"))
+            if os.path.isfile(alt):
+                self.directory = CONTEUDO
         if caminho == "/painel":
             self.send_response(301)
             self.send_header("Location", "/painel/")

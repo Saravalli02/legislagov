@@ -8,6 +8,32 @@ ENV=/etc/legislagov.env
 # banco de dados ligado
 grep -q '^LG_BANCO=' "$ENV" || echo 'LG_BANCO=1' >> "$ENV"
 
+# conteúdo importado (site antigo + SISCAM): pasta própria, refeito todo dia e quando importar.versao mudar
+grep -q '^LG_CONTEUDO=' "$ENV" || echo 'LG_CONTEUDO=/var/lib/legislagov/conteudo' >> "$ENV"
+mkdir -p /var/lib/legislagov/conteudo && chown legislagov:legislagov /var/lib/legislagov/conteudo
+cat > /usr/local/bin/legislagov-importar <<'EOS'
+#!/bin/bash
+# Traz notícias/fotos do site antigo e proposituras/leis do SISCAM para /var/lib/legislagov/conteudo
+cd /opt/legislagov/app
+export LG_CONTEUDO=/var/lib/legislagov/conteudo
+sudo -E -u legislagov python3 ferramentas/importar_siscam.py
+sudo -E -u legislagov python3 ferramentas/importar_site_antigo.py
+cp ferramentas/aws/importar.versao /var/lib/legislagov/conteudo/.versao
+EOS
+chmod 755 /usr/local/bin/legislagov-importar
+echo '10 4 * * * root /usr/local/bin/legislagov-importar > /var/log/legislagov-importar.log 2>&1' > /etc/cron.d/legislagov-importar
+if ! cmp -s "$APP/ferramentas/aws/importar.versao" /var/lib/legislagov/conteudo/.versao; then
+  systemd-run --unit="legislagov-importacao-$(date +%s)" --no-block /bin/bash -c '/usr/local/bin/legislagov-importar > /var/log/legislagov-importar.log 2>&1' || true
+fi
+
+# comando para definir senha de usuário direto no servidor
+cat > /usr/local/bin/legislagov-senha <<'EOS'
+#!/bin/bash
+set -a; . /etc/legislagov.env; set +a
+exec sudo -E -u legislagov python3 /opt/legislagov/app/ferramentas/aws/senha.py "$@"
+EOS
+chmod 755 /usr/local/bin/legislagov-senha
+
 # HTTPS para cada endereço listado em dominios.txt
 DOMS=$(grep -v '^\s*#' "$APP/ferramentas/aws/dominios.txt" | awk 'NF>=2{print $1}' | tr '\n' ' ')
 NOVO=$(mktemp)

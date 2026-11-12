@@ -28,6 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 ORIGEM = "https://www.camaranevespaulista.sp.gov.br"
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SAIDA = os.environ.get("LG_CONTEUDO") or RAIZ   # no servidor: /var/lib/legislagov/conteudo
 UA = {"User-Agent": "Mozilla/5.0 (PortalCamaraNevesPaulista/1.0; migracao de conteudo)"}
 MESES = {"janeiro": 1, "fevereiro": 2, "março": 3, "marco": 3, "abril": 4, "maio": 5, "junho": 6,
          "julho": 7, "agosto": 8, "setembro": 9, "outubro": 10, "novembro": 11, "dezembro": 12}
@@ -165,7 +166,7 @@ def imagens_institucionais():
         pares.append((f"assets/img/vereadores/{arq}.jpg", "/Arquivos/Vereadores/" + urllib.parse.quote(foto) + "?quality=85&w=600"))
     ok = 0
     for local, remoto in pares:
-        if salvar_arquivo(ORIGEM + remoto, os.path.join(RAIZ, *local.split("/"))):
+        if salvar_arquivo(ORIGEM + remoto, os.path.join(SAIDA, *local.split("/"))):
             ok += 1
     print(f"Imagens institucionais: {ok} de {len(pares)}")
 
@@ -201,7 +202,7 @@ def importar_noticias():
         for n, caminho in enumerate(d["imagens"][:8]):
             ext = os.path.splitext(caminho)[1].lower() or ".jpg"
             nome = f"{nid}{'' if n == 0 else '-' + str(n)}{ext}"
-            if salvar_arquivo(ORIGEM + urllib.parse.quote(caminho) + "?quality=82&w=1400", os.path.join(RAIZ, "assets", "img", "noticias", nome)):
+            if salvar_arquivo(ORIGEM + urllib.parse.quote(caminho) + "?quality=82&w=1400", os.path.join(SAIDA, "assets", "img", "noticias", nome)):
                 fotos.append("assets/img/noticias/" + nome)
         if fotos:
             capa = fotos[0]
@@ -213,7 +214,8 @@ def importar_noticias():
     with ThreadPoolExecutor(max_workers=6) as ex:
         noticias = list(ex.map(detalhe, lista))
     noticias.sort(key=lambda n: (n["data"], n["id"]), reverse=True)
-    destino = os.path.join(RAIZ, "assets", "noticias.js")
+    destino = os.path.join(SAIDA, "assets", "noticias.js")
+    os.makedirs(os.path.dirname(destino), exist_ok=True)
     with open(destino, "w", encoding="utf-8") as f:
         f.write("/* Gerado por ferramentas/importar_site_antigo.py em " + time.strftime("%d/%m/%Y %H:%M") + " */\n")
         f.write("window.NOTICIAS_ARQUIVO = " + json.dumps(noticias, ensure_ascii=False, indent=0) + ";\n")

@@ -40,19 +40,9 @@
   const T = (date, label) => ({ date, label });
   const com = (relator, conclusao, placar, voto) => ({ relator, parecer: { relator, conclusao, voto, data: '' }, votos: {}, resultado: placar ? { aprovado: true, placar } : null });
   const EXEMPLOS = [
-    { id: 'ex-pl024', numero: 'PL 024/2026', autor: 'Prefeito Municipal', ementa: 'Reforma administrativa da Secretaria Municipal de Obras', status: 'comissao', comissao: 'Justiça e Redação', comissoesRota: ['Justiça e Redação', 'Finanças e Orçamento'], data: '18/09/2026', docs: ['Projeto de Lei.pdf', 'Justificativa.pdf', 'Estimativa de impacto orçamentário.pdf'],
-      parecerJuridico: 'Favorável: iniciativa privativa do Prefeito respeitada.', comTrab: { 'Justiça e Redação': { relator: 'v44', votos: {} } },
-      timeline: [T('18/09 15:42', 'Enviado à Câmara pelo Poder Executivo'), T('18/09 16:03', 'Recebido e protocolado pela Secretaria Legislativa'), T('18/09 16:40', 'Despacho do Presidente: à Procuradoria Legislativa; depois às Comissões de Justiça e Redação, Finanças e Orçamento'), T('19/09 08:50', 'Parecer jurídico da Procuradoria Legislativa: favorável'), T('19/09 09:15', 'Encaminhado à Comissão de Justiça e Redação'), T('22/09 10:00', 'Comissão de Justiça e Redação: Lucão designado relator por Luis Pelacani')] },
-    { id: 'ex-pl026', numero: 'PL 026/2026', autor: 'Prefeito Municipal', ementa: 'Cria o cargo de Psicólogo no quadro da rede municipal de saúde', status: 'aguardando_exec', comissoesRota: ['Justiça e Redação', 'Finanças e Orçamento'], data: '10/09/2026', docs: ['Projeto de Lei.pdf', 'Justificativa.pdf', 'Estimativa de impacto orçamentário.pdf', 'Parecer Comissão de Justiça e Redação.pdf', 'Parecer Comissão de Finanças e Orçamento.pdf', 'Autógrafo.pdf'], votacao: { favor: 7, contra: 1, abst: 0, sessao: '17ª Sessão Ordinária' },
-      parecerJuridico: 'Favorável: matéria de iniciativa do Prefeito, com estimativa de impacto anexada.',
-      comTrab: { 'Justiça e Redação': com('v44', 'favoravel', '3 a 0', 'Iniciativa do Prefeito e texto de acordo com a Lei Orgânica.'), 'Finanças e Orçamento': com('v32', 'favoravel', '3 a 0', 'Despesa prevista na LOA e dentro do limite de pessoal.') },
-      timeline: [T('10/09 09:33', 'Enviado à Câmara pelo Poder Executivo'), T('10/09 15:58', 'Recebido e protocolado pela Secretaria Legislativa'), T('10/09 16:30', 'Despacho do Presidente: à Procuradoria Legislativa; depois às Comissões de Justiça e Redação, Finanças e Orçamento'), T('11/09 08:30', 'Parecer jurídico da Procuradoria Legislativa: favorável'), T('11/09 10:00', 'Encaminhado à Comissão de Justiça e Redação'), T('12/09 09:00', 'Comissão de Justiça e Redação: Lucão designado relator'), T('15/09 14:20', 'Parecer da Comissão de Justiça e Redação aprovado (3 a 0): favorável'), T('15/09 14:21', 'Encaminhado à Comissão de Finanças e Orçamento'), T('15/09 16:00', 'Comissão de Finanças e Orçamento: Sirlei Protetora designada relatora'), T('17/09 10:10', 'Parecer da Comissão de Finanças e Orçamento aprovado (3 a 0): favorável'), T('19/09 09:00', 'Pareceres das comissões concluídos — incluído na Ordem do Dia'), T('22/09 20:45', 'Aprovado em votação (7 a 1) — 17ª Sessão Ordinária'), T('23/09 09:10', 'Autógrafo assinado pelo Presidente e enviado ao Prefeito para sanção')] },
     { id: 'ex-pl027', numero: 'PL 027/2026', autor: 'Prefeito Municipal', ementa: 'Altera o quadro de cargos efetivos da Guarda Municipal', status: 'concluido', comissoesRota: ['Justiça e Redação', 'Finanças e Orçamento'], data: '02/09/2026', lei: 'Lei Municipal nº 1842/2026', publicacao: '12/09/2026', vigencia: 'Na data da publicação', docs: ['Projeto de Lei.pdf', 'Justificativa.pdf', 'Lei Municipal 1842-2026.pdf'], votacao: { favor: 8, contra: 0, abst: 0, sessao: '15ª Sessão Ordinária' },
       comTrab: { 'Justiça e Redação': com('v44', 'favoravel', '3 a 0', ''), 'Finanças e Orçamento': com('v32', 'emenda', '2 a 1', '') },
       timeline: [T('02/09 08:55', 'Enviado à Câmara pelo Poder Executivo'), T('02/09 13:10', 'Recebido e protocolado pela Secretaria Legislativa'), T('03/09 08:40', 'Parecer jurídico da Procuradoria Legislativa: favorável'), T('03/09 09:00', 'Encaminhado à Comissão de Justiça e Redação'), T('04/09 10:00', 'Parecer da Comissão de Justiça e Redação aprovado (3 a 0): favorável'), T('05/09 10:00', 'Parecer da Comissão de Finanças e Orçamento aprovado (2 a 1): favorável com emenda'), T('08/09 20:30', 'Aprovado em votação (8 a 0), com a emenda — 15ª Sessão Ordinária'), T('09/09 09:00', 'Autógrafo enviado ao Prefeito para sanção'), T('11/09 16:00', 'Sancionado pelo Prefeito'), T('12/09 09:00', 'Promulgada e publicada como Lei Municipal nº 1842/2026'), T('12/09 09:01', 'Vigência: na data da publicação')] },
-    { id: 'ex-pl031', numero: 'PL 031/2026', tipo: 'PL', autorId: 52, coautores: [48], ementa: 'Institui a Semana Municipal de Conscientização sobre o Autismo', status: 'comissao', comissao: 'Assuntos Gerais', comissoesRota: ['Justiça e Redação', 'Assuntos Gerais'], data: '06/10/2026', docs: ['Projeto de Lei.pdf', 'Parecer Comissão de Justiça e Redação.pdf'],
-      comTrab: { 'Justiça e Redação': com('v44', 'favoravel', '3 a 0', ''), 'Assuntos Gerais': { relator: 'v60', votos: {} } },
-      timeline: [T('06/10 10:12', 'Projeto de Lei assinado digitalmente pelos autores'), T('06/10 10:12', 'Protocolado: PL 031/2026'), T('07/10 09:30', 'Despacho do Presidente: à Procuradoria Legislativa; depois às Comissões de Justiça e Redação, Assuntos Gerais'), T('14/10 15:00', 'Parecer jurídico da Procuradoria Legislativa: favorável'), T('14/10 15:05', 'Encaminhado à Comissão de Justiça e Redação'), T('20/10 09:00', 'Parecer da Comissão de Justiça e Redação aprovado (3 a 0): favorável'), T('20/10 09:05', 'Encaminhado à Comissão de Assuntos Gerais'), T('21/10 14:00', 'Comissão de Assuntos Gerais: Tonho Cabeludo designado relator por Pastelão')] },
     { id: 'ex-req045', numero: 'REQ 045/2026', tipo: 'REQ', autorId: 48, ementa: 'Requer ao Executivo informações sobre o cronograma de manutenção das estradas rurais do município', status: 'votacao', data: '29/10/2026', docs: ['Requerimento.pdf'],
       timeline: [T('29/10 14:20', 'Requerimento assinado digitalmente pelo autor'), T('29/10 14:20', 'Protocolado: REQ 045/2026'), T('30/10 09:00', 'Despacho do Presidente: incluir na Ordem do Dia'), T('03/11 18:00', 'Incluído na Ordem do Dia da próxima sessão')] },
     { id: 'ex-ind112', numero: 'IND 112/2026', tipo: 'IND', autorId: 32, ementa: 'Indica ao Executivo a instalação de bebedouros para animais nas praças públicas', status: 'concluido', data: '08/10/2026', docs: ['Indicação.pdf', 'Ofício ao Prefeito.pdf'], votacao: { favor: 9, contra: 0, abst: 0, sessao: '19ª Sessão Ordinária' },
@@ -75,7 +65,28 @@
     const reais = lerPainel().filter(p => p && p.numero && p.status !== 'rascunho');
     const nums = new Set(reais.map(p => p.numero));
     const ex = MOSTRAR_EXEMPLOS ? EXEMPLOS.filter(p => !nums.has(p.numero)) : [];
-    return [...reais, ...ex].map(enriquecer).sort((a, b) => b.ultimaOrd - a.ultimaOrd);
+    const sc = doSiscam().filter(p => !nums.has(p.numero));
+    return [...reais, ...ex, ...sc].map(enriquecer).sort((a, b) => b.ultimaOrd - a.ultimaOrd);
+  }
+  /* proposituras do sistema anterior (SISCAM), trazidas pelo servidor em assets/siscam.js */
+  let _sc = null;
+  function doSiscam() {
+    if (_sc) return _sc;
+    const lista = (window.SISCAM && window.SISCAM.proposituras) || [];
+    const porNome = n => VEREADORES.find(v => norm(v.completo) === norm(n) || norm(v.nome) === norm(n));
+    const SIT = { 'aprovada': 'concluido', 'rejeitada': 'rejeitado', 'retirado': 'rejeitado', 'em andamento': 'comissao' };
+    _sc = lista.map(r => {
+      const sigla = TIPOS[r.sigla] ? r.sigla : (/^requer/i.test(r.tipo) ? 'REQ' : /^indica/i.test(r.tipo) ? 'IND' : /^mo[cç]/i.test(r.tipo) ? 'MOC' : 'PL');
+      const numero = `${sigla} ${String(r.numero).padStart(3, '0')}/${r.ano}`;
+      const nomes = String(r.autoria || '').split(/\s*[,;]\s*|\s+e\s+/).filter(Boolean);
+      const vs = nomes.map(porNome).filter(Boolean);
+      const [a, m, d] = String(r.data || '').split('-'); const dataBR = d ? `${d}/${m}/${a}` : '';
+      return { id: 'sc-' + numero.replace(/\W/g, ''), numero, tipo: sigla, ementa: r.ementa || r.tipo, data: dataBR, siscam: true,
+        autorId: vs[0] ? vs[0].id : null, coautores: vs.slice(1).map(v => v.id), autor: vs.length ? '' : (r.autoria || 'Não informado').replace(/\b\w+/g, w => w.charAt(0) + w.slice(1).toLowerCase()),
+        status: SIT[norm(r.situacao)] || 'concluido', situacaoOriginal: r.situacao,
+        timeline: [{ date: dataBR.slice(0, 5) + (a ? '/' + a : ''), label: 'Registrado no sistema anterior da Câmara (SISCAM)' + (r.situacao ? ' — situação: ' + r.situacao : '') }] };
+    });
+    return _sc;
   }
   const tipoDe = p => { const t = p.tipo || String(p.numero || '').split(/[\s-]/)[0].toUpperCase(); return TIPOS[t] ? t : 'PL'; };
   const anoDe = p => (String(p.data || '').match(/(\d{4})/) || [])[1] || String(new Date().getFullYear());

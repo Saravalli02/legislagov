@@ -32,7 +32,7 @@ PASTA = os.path.dirname(os.path.abspath(__file__))
 ATIVO = os.environ.get("LG_BANCO", "0") == "1"
 PASTA_DADOS = os.environ.get("LG_DADOS") or os.path.join(PASTA, "dados_servidor")
 ARQ = os.path.join(PASTA_DADOS, "legislagov.db")
-SENHA_PROVISORIA = os.environ.get("LG_SENHA_PROVISORIA", "123456")
+SENHA_PROVISORIA = os.environ.get("LG_SENHA_PROVISORIA", "")   # sem senha padrão: quem cria o usuário define
 SESSAO_DIAS = 7
 
 _trava = threading.RLock()
@@ -164,25 +164,67 @@ def _criar_usuario(camara, dados, senha):
     return uid
 
 
+ADMINS = [("usr-ricardo", "Ricardo", "Ricardo Saravalli"), ("usr-geraldo", "Geraldo", "Geraldo José de Almeida Neto")]
+
+
+def _sem_senha_valida():
+    """Senha impossível de acertar: a pessoa define a dela no servidor (legislagov-senha)."""
+    return "!" + secrets.token_hex(24)
+
+
 def semear(camara):
-    """Primeiro acesso de uma câmara: cria o administrador e os usuários de teste (senha provisória)."""
-    if _db().execute("SELECT 1 FROM usuarios WHERE camara=? LIMIT 1", (camara,)).fetchone():
+    """Primeiro acesso de uma câmara: só os administradores (Ricardo e Geraldo), sem cargo.
+    Os demais se cadastram pela tela e o administrador libera."""
+    c = _db()
+    if not c.execute("SELECT 1 FROM usuarios WHERE camara=? LIMIT 1", (camara,)).fetchone():
+        for uid, login_, nome in ADMINS:
+            _criar_usuario(camara, {"id": uid, "usuario": login_, "nome": nome, "cargo": "Administrador do sistema", "perfil": "admin",
+                                    "orgao": "ambos", "municipio": "Neves Paulista — SP", "ativo": True}, "")
+            c.execute("UPDATE usuarios SET senha=? WHERE id=?", (_sem_senha_valida(), uid))
+        gravar(camara, "lg_seed_perfis_v2", "1", None, "sistema")
+        registrar(camara, "sistema", "Câmara criada no banco", "administradores Ricardo e Geraldo")
+    _limpeza_v2(camara)
+
+
+def _limpeza_v2(camara):
+    """11/11/2026: tira os usuários de teste e a senha provisória; ficam só Ricardo e Geraldo."""
+    c = _db()
+    marca = "limpeza_v2:" + camara
+    if c.execute("SELECT 1 FROM contador WHERE nome=?", (marca,)).fetchone():
         return
-    base = {"orgao": "cam", "municipio": "Neves Paulista — SP", "ativo": True}
-    _criar_usuario(camara, {**base, "id": "usr-ricardo", "usuario": "Ricardo", "nome": "Ricardo Saravalli", "cargo": "Administrador do sistema",
-                            "perfil": "admin", "orgao": "ambos"}, SENHA_PROVISORIA)
-    for login, nome, cargoId, cargo, setor, perfil in [
-        ("vinicius", "Vinicius", "procurador", "Procurador(a) Legislativo", "Procuradoria Legislativa", "procurador"),
-        ("erika", "Erika", "diretora", "Diretor(a) de Secretaria", "Secretaria Legislativa", "secretaria"),
-        ("ednilson", "Edenilson Roselli", "vereador", "Vereador(a)", "Gabinete", "vereador"),
-        ("andre", "André", "tesoureira", "Tesoureiro(a)", "Tesouraria", "financeiro"),
-    ]:
-        _criar_usuario(camara, {**base, "id": "usr-" + login, "usuario": login, "nome": nome, "cargoId": cargoId, "cargo": cargo,
-                                "setor": setor, "perfil": perfil, "teste": True}, SENHA_PROVISORIA)
-    # flags dos módulos que criavam usuários de teste no navegador: já resolvido aqui
-    for chave in ("lg_seed_perfis_v2",):
-        gravar(camara, chave, "1", None, "sistema")
-    registrar(camara, "sistema", "Câmara criada no banco", "usuários iniciais com senha provisória")
+    manter = {a[0] for a in ADMINS}
+    c.execute("DELETE FROM usuarios WHERE camara=? AND id NOT IN (%s)" % ",".join("?" * len(manter)), (camara, *manter))
+    for uid, login_, nome in ADMINS:
+        if not c.execute("SELECT 1 FROM usuarios WHERE id=?", (uid,)).fetchone():
+            _criar_usuario(camara, {"id": uid, "usuario": login_, "nome": nome, "cargo": "Administrador do sistema", "perfil": "admin",
+                                    "orgao": "ambos", "municipio": "Neves Paulista — SP", "ativo": True}, "")
+        c.execute("UPDATE usuarios SET senha=? WHERE id=? AND senha NOT LIKE 'pbkdf2$%'", (_sem_senha_valida(), uid))
+        r = c.execute("SELECT senha FROM usuarios WHERE id=?", (uid,)).fetchone()
+        if r and confere_senha("123456", r["senha"]):
+            c.execute("UPDATE usuarios SET senha=? WHERE id=?", (_sem_senha_valida(), uid))
+    c.execute("DELETE FROM sessoes WHERE camara=?", (camara,))
+    # vereadores sem vínculo com os logins de teste
+    r = c.execute("SELECT valor FROM dados WHERE camara=? AND chave='lgv_camara_v1'", (camara,)).fetchone()
+    if r:
+        try:
+            comp = json.loads(r["valor"])
+            for v in comp.get("vereadores", []):
+                v.pop("usuario", None)
+            gravar(camara, "lgv_camara_v1", json.dumps(comp, ensure_ascii=False), None, "sistema")
+        except Exception:
+            pass
+    c.execute("INSERT INTO contador(nome, valor) VALUES(?, 1)", (marca,))
+    _marcar_usuarios(camara)
+    registrar(camara, "sistema", "Limpeza de usuários", "ficaram só os administradores")
+
+
+def definir_senha(login_, senha, camara=None):
+    """Usado pelo comando legislagov-senha no servidor (a pessoa digita a senha lá)."""
+    q = "UPDATE usuarios SET senha=? WHERE lower(usuario)=lower(?)" + (" AND camara=?" if camara else "")
+    args = (hash_senha(senha), login_) + ((camara,) if camara else ())
+    n = _db().execute(q, args).rowcount
+    _db().execute("DELETE FROM sessoes WHERE usuario_id IN (SELECT id FROM usuarios WHERE lower(usuario)=lower(?))", (login_,))
+    return n
 
 
 def gravar_usuarios(camara, lista, autor):
@@ -199,7 +241,7 @@ def gravar_usuarios(camara, lista, autor):
             # pela sincronia não nasce administrador nem usuário de teste (os módulos antigos criavam no navegador)
             if not gestor or novo.get("perfil") == "admin" or novo.get("orgao") == "ambos" or novo.get("teste"):
                 continue
-            senha = str(novo.get("senha") or SENHA_PROVISORIA)
+            senha = str(novo.get("senha") or "") or _sem_senha_valida()
             try:
                 _criar_usuario(camara, novo, senha)
                 registrar(camara, autor.get("usuario"), "Usuário criado", novo["usuario"])
