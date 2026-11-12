@@ -138,7 +138,7 @@
       (p.coautores || []).filter(id => !(p.assinaturas || []).some(s => s.vereadorId === id) && !['rejeitado', 'concluido', 'devolvido'].includes(p.status))
         .forEach(id => add(['v:' + id], { chave: `coaut:${p.id}:${id}`, titulo: `Assinar a coautoria de ${num}`, texto: p.ementa, acao: "lgvrAbrir('assinar')", area: 'vereador', pid: p.id }));
     });
-    try { (A().dados().rascunhos || []).forEach(r => add(['v:' + r.autorId], { chave: `rasc:${r.id}`, titulo: `Rascunho a assinar: ${A().TIPOS[r.tipo]?.nome || ''}`, texto: r.ementa, acao: "lgvrAbrir('assinar')", area: 'vereador' })); } catch (e) { }
+    try { (A().dados().rascunhos || []).filter(r => !r.pendenteMao).forEach(r => add(['v:' + r.autorId], { chave: `rasc:${r.id}`, titulo: `Rascunho a assinar: ${A().TIPOS[r.tipo]?.nome || ''}`, texto: r.ementa, acao: "lgvrAbrir('assinar')", area: 'vereador' })); } catch (e) { }
     try { if (window.lgfxPendencias) lgfxPendencias().forEach(x => add(x.dest, x)); } catch (e) { }
     try { if (window.lgsPendencias) lgsPendencias().forEach(x => add(x.dest, x)); } catch (e) { }
     return out;

@@ -131,7 +131,8 @@
   function assinarDoc(cfg, signatario, aoAssinar) {
     if (!window.lgsAssinar) return assinarGovBr(cfg.titulo, JSON.stringify(cfg.doc || {}), signatario, aoAssinar);
     const u = usuario(); const a = atual();
-    lgsAssinar({ titulo: cfg.titulo, arquivo: cfg.arquivo, docId: cfg.docId, base: cfg.base || null, qualificada: !!cfg.qualificada, signatario,
+    if (!window.lgsAssinar && cfg.acao) return assinarGovBr(cfg.titulo, JSON.stringify(cfg.doc || {}), signatario, ass => (window.LG_ACOES[cfg.acao.nome].fazer)(cfg.acao.args, ass, {}));
+    lgsAssinar({ titulo: cfg.titulo, arquivo: cfg.arquivo, docId: cfg.docId, base: cfg.base || null, qualificada: !!cfg.qualificada, signatario, acao: cfg.acao || null, chave: cfg.chave || null,
       simular: ehGestor(u) || !!(a && a.demo),
       gerar: codigo => lgsDocumento({ ...cfg.doc, codigo, signatarios: cfg.signatarios || [{ nome: signatario.completo || signatario.nome, cargo: cargoDe(signatario) }] }) }, aoAssinar);
   }
@@ -167,7 +168,7 @@
   }
   window.lgvrComo = id => { try { sessionStorage.setItem('lgvr_como', id); } catch (e) { } if (window.lgv33Render) lgv33Render(); lgvrAbrir(PRES.includes(tela) && id !== comp().presidente ? 'inicio' : tela); };
   function pendentesAssinatura(v) {
-    const d = dados(); const meus = d.rascunhos.filter(r => r.autorId === v.id);
+    const d = dados(); const meus = d.rascunhos.filter(r => r.autorId === v.id && !r.pendenteMao);
     const coaut = listaProt().filter(p => (p.coautores || []).includes(v.id) && !(p.assinaturas || []).some(s => s.vereadorId === v.id) && !['rejeitado', 'concluido', 'devolvido'].includes(p.status));
     let pres = [];
     if (v.id === comp().presidente) pres = listaProt().filter(p => p.status === 'votacao' && p.resultado === 'aprovado');
@@ -221,7 +222,7 @@
     const rasc = d.rascunhos.filter(r => r.autorId === v.id);
     const grupos = { rascunhos: rasc, tramitando: prot.filter(p => !['concluido', 'rejeitado', 'devolvido'].includes(p.status)), encerradas: prot.filter(p => ['concluido', 'rejeitado', 'devolvido'].includes(p.status)) };
     const linhas = abaProp === 'rascunhos'
-      ? rasc.map(r => `<tr class="lgvr-click" onclick="lgvrRascunho('${r.id}')"><td><b>${TIPOS[r.tipo].nome}</b><small>Rascunho</small></td><td><b>${esc(r.ementa)}</b><small>Criado em ${new Date(r.criadoEm).toLocaleDateString('pt-BR')}${(r.coautores || []).length ? ' · coautoria: ' + r.coautores.map(id => esc(verPorId(id)?.nome || '')).join(', ') : ''}</small></td><td><span class="lgvr-tag">Não assinado</span></td><td class="acoes-col"><button class="lgt-mini" type="button" data-edita onclick="event.stopPropagation();lgvrAssinarRascunho('${r.id}')">Assinar e protocolar</button></td></tr>`)
+      ? rasc.map(r => `<tr class="lgvr-click" onclick="lgvrRascunho('${r.id}')"><td><b>${TIPOS[r.tipo].nome}</b><small>Rascunho</small></td><td><b>${esc(r.ementa)}</b><small>Criado em ${new Date(r.criadoEm).toLocaleDateString('pt-BR')}${(r.coautores || []).length ? ' · coautoria: ' + r.coautores.map(id => esc(verPorId(id)?.nome || '')).join(', ') : ''}</small></td><td>${r.pendenteMao ? '<span class="lgvr-tag t-av">Assinado à mão · aguardando autorização</span>' : '<span class="lgvr-tag">Não assinado</span>'}</td><td class="acoes-col">${r.pendenteMao ? `<button class="lgt-mini" type="button" onclick="event.stopPropagation();lgsVerManuais('${r.pendenteMao}')">Ver situação</button>` : `<button class="lgt-mini" type="button" data-edita onclick="event.stopPropagation();lgvrAssinarRascunho('${r.id}')">Assinar e protocolar</button>`}</td></tr>`)
       : grupos[abaProp].map(p => `<tr class="lgvr-click" onclick="lgvrVer('${p.id}')"><td><b>${esc(p.numero)}</b><small>${esc(p.tipoNome || TIPOS[tipoDe(p)].nome)}${p.autorId !== v.id ? ' · coautor' : ''}</small></td><td><b>${esc(p.ementa)}</b><small>Protocolada em ${esc(p.data)}</small></td><td>${tag(p)}</td><td class="acoes-col"><button class="lgt-mini" type="button">Andamento</button></td></tr>`);
     $('#view-lgvr-proposituras').innerHTML = faixaDemo(a) + cab('Minhas proposituras', 'Projetos, indicações, requerimentos e moções de sua autoria ou coautoria', btn('+ Nova propositura', 'lgvrNova()')) +
       `<div class="lgf-abas" role="tablist">${[['tramitando', 'Em tramitação'], ['rascunhos', 'Rascunhos'], ['encerradas', 'Encerradas']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${abaProp === k}" onclick="lgvrAbaProp('${k}')">${n} <b>${grupos[k].length}</b></button>`).join('')}</div>
@@ -250,6 +251,7 @@
   };
   window.lgvrRascunho = function (id) {
     const r = dados().rascunhos.find(x => x.id === id); if (!r) return;
+    if (r.pendenteMao && window.lgsVerManuais) return lgsVerManuais(r.pendenteMao);
     UI().abrirModal(`<div class="lgt-form"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">${TIPOS[r.tipo].nome} · rascunho</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
       <div class="lgvr-det"><h3>${esc(r.ementa)}</h3><div class="lgvr-texto">${esc(r.texto).replace(/\n/g, '<br>')}</div>${r.justificativa ? `<h4>Justificativa</h4><div class="lgvr-texto">${esc(r.justificativa).replace(/\n/g, '<br>')}</div>` : ''}</div>
       <div class="lgt-modal-rod lgvr-rod"><button type="button" class="lgt-btn perigo" data-edita onclick="lgvrExcluirRascunho('${r.id}')">Excluir</button><button type="button" class="lgt-btn" data-edita onclick="lgvrNova('${r.id}')">Editar</button><button type="button" class="lgt-btn primario" data-edita onclick="lgvrAssinarRascunho('${r.id}')">Assinar e protocolar</button></div></div>`);
@@ -258,18 +260,42 @@
   window.lgvrAssinarRascunho = function (id) {
     const a = atual(); const r = dados().rascunhos.find(x => x.id === id); if (!a || !r) return;
     if (!podeEditar()) return UI().aviso('Seu acesso é somente consulta.', 'erro');
+    if (r.pendenteMao && window.lgsVerManuais) return lgsVerManuais(r.pendenteMao);
     const T = TIPOS[r.tipo];
     const pid = 'vp' + r.id;
     const signs = [a.v, ...(r.coautores || []).map(verPorId).filter(Boolean)].map(x => ({ nome: x.completo || x.nome, cargo: cargoDe(x) }));
-    assinarDoc({ titulo: `${T.nome}: ${r.ementa}`, arquivo: arq(T.nome + ' ' + r.ementa.slice(0, 40)), docId: pid, doc: { tipo: T.nome, numero: '', ementa: r.ementa, texto: r.texto, justificativa: r.justificativa }, signatarios: signs }, a.v, ass => {
-      const ano = new Date().getFullYear(), n = proximoNumero(r.tipo, ano), v = a.v;
-      const p = { id: pid, numero: `${r.tipo} ${n}/${ano}`, full: `${r.tipo}-${ano}-${n.padStart(5, '0')}`, autor: 'Ver. ' + v.nome + ((r.coautores || []).length ? ' e outros' : ''), ementa: r.ementa, unidade: 'Gabinete do Vereador ' + v.nome, comissao: '', status: 'protocolado', data: hojeBR(), docs: [T.nome + '.pdf'],
-        timeline: [{ date: agoraTL(), label: `${T.nome} ${ass.manual ? 'assinado(a) à mão' : 'assinado(a) digitalmente'} por ${v.nome} (${ass.manual ? 'motivo: ' + ass.motivo : ass.metodo})` }, { date: agoraTL(), label: `Protocolado automaticamente: ${r.tipo} ${n}/${ano}` }, { date: agoraTL(), label: 'Encaminhado ao Presidente para despacho' }],
-        origem: 'portal-vereador', tipo: r.tipo, tipoNome: T.nome, texto: r.texto, justificativa: r.justificativa, autorId: v.id, coautores: r.coautores || [], assinaturas: [ass] };
-      listaProt().unshift(p); const d = dados(); d.rascunhos = d.rascunhos.filter(x => x.id !== id); salvarDados(d);
-      persistirProt('Propositura protocolada pelo Portal do Vereador', p); UI().log('Portal do Vereador', `Protocolou ${p.numero}`);
+    const acao = { nome: 'lgvr.protocolar', args: { rid: r.id, vid: a.v.id, tipo: r.tipo, ementa: r.ementa, texto: r.texto, justificativa: r.justificativa, coautores: r.coautores || [] } };
+    assinarDoc({ titulo: `${T.nome}: ${r.ementa}`, arquivo: arq(T.nome + ' ' + r.ementa.slice(0, 40)), docId: pid, acao, doc: { tipo: T.nome, numero: '', ementa: r.ementa, texto: r.texto, justificativa: r.justificativa }, signatarios: signs }, a.v, null);
+  };
+  /* ações refeitas por quem autoriza uma assinatura à mão (lgs-assinatura.js): recebem tudo pelos argumentos */
+  const ACOES = window.LG_ACOES = window.LG_ACOES || {};
+  const achaP = id => { const p = listaProt().find(x => x.id === id); if (!p) throw new Error('matéria não encontrada'); return p; };
+  const achaV = id => { const v = verPorId(id); if (!v) throw new Error('vereador não encontrado'); return v; };
+  const notaAut = ass => ass && ass.autorizacao ? [{ date: agoraTL(), label: `Assinatura à mão conferida e autorizada por ${ass.autorizacao.por}` }] : [];
+  const comoAss = ass => ass.manual ? 'assinado(a) à mão' : 'assinado(a) digitalmente';
+  ACOES['lgvr.protocolar'] = {
+    fazer(g, ass, ctx) {
+      const v = achaV(g.vid), T = TIPOS[g.tipo], pid = 'vp' + g.rid;
+      if (listaProt().some(x => x.id === pid)) throw new Error('esta propositura já foi protocolada');
+      const ano = new Date().getFullYear(), n = proximoNumero(g.tipo, ano);
+      const p = { id: pid, numero: `${g.tipo} ${n}/${ano}`, full: `${g.tipo}-${ano}-${n.padStart(5, '0')}`, autor: 'Ver. ' + v.nome + ((g.coautores || []).length ? ' e outros' : ''), ementa: g.ementa, unidade: 'Gabinete do Vereador ' + v.nome, comissao: '', status: 'protocolado', data: hojeBR(), docs: [T.nome + '.pdf'],
+        timeline: [{ date: agoraTL(), label: `${T.nome} ${comoAss(ass)} por ${v.nome} (${ass.manual ? 'motivo: ' + ass.motivo : ass.metodo})` }, ...notaAut(ass), { date: agoraTL(), label: `Protocolado automaticamente: ${g.tipo} ${n}/${ano}` }, { date: agoraTL(), label: 'Encaminhado ao Presidente para despacho' }],
+        origem: 'portal-vereador', tipo: g.tipo, tipoNome: T.nome, texto: g.texto, justificativa: g.justificativa, autorId: v.id, coautores: g.coautores || [], assinaturas: [ass] };
+      listaProt().unshift(p); const d = dados(); d.rascunhos = d.rascunhos.filter(x => x.id !== g.rid); salvarDados(d);
+      persistirProt('Propositura protocolada pelo Portal do Vereador', p); UI().log('Portal do Vereador', `Protocolou ${p.numero}${ctx.autorizacao ? ' (assinatura à mão autorizada)' : ''}`);
+      if (ctx.autorizacao) return;
       { const pr = comp().vereadores.find(x => x.id === comp().presidente); UI().aviso(`${p.numero} assinado e protocolado. Já está com o Presidente${pr ? ' ' + pr.nome : ''} para despacho.`); } abaProp = 'tramitando'; if (tela === 'proposituras' || tela === 'assinar') desenhar(); lgvrVer(p.id);
-    });
+    },
+    pendente(g, reg) { const d = dados(); const r = d.rascunhos.find(x => x.id === g.rid); if (r) { r.pendenteMao = reg.id; salvarDados(d); } abaProp = 'rascunhos'; desenhar(); },
+    liberar(g) { const d = dados(); const r = d.rascunhos.find(x => x.id === g.rid); if (r) { delete r.pendenteMao; salvarDados(d); } }
+  };
+  ACOES['lgvr.coassinar'] = {
+    fazer(g, ass, ctx) {
+      const p = achaP(g.pid), v = achaV(g.vid);
+      if ((p.assinaturas || []).some(s => s.vereadorId === v.id)) throw new Error('a coautoria já foi assinada');
+      p.assinaturas = [...(p.assinaturas || []), ass]; p.timeline.push({ date: agoraTL(), label: `Coautoria ${ass.manual ? 'assinada à mão' : 'assinada digitalmente'} por ${v.nome} (${ass.manual ? 'motivo: ' + ass.motivo : ass.metodo})` }, ...notaAut(ass));
+      persistirProt('Coautoria assinada', p); if (ctx.autorizacao) return; UI().aviso('Assinatura registrada.'); desenhar(); lgvrVer(p.id);
+    }
   };
 
   /* ---- detalhe / andamento ---- */
@@ -290,10 +316,7 @@
   window.lgvrCoassinar = function (id) {
     const a = atual(); const p = listaProt().find(x => x.id === id); if (!a || !p) return;
     const base = window.lgsLerPDF ? lgsLerPDF(p.id) : null;
-    assinarDoc({ titulo: `${p.numero}: ${p.ementa}`, arquivo: arq(p.numero + ' assinar'), docId: p.id, base, doc: { tipo: p.tipoNome || 'Projeto de Lei', numero: (p.numero || '').split(' ')[1], ementa: p.ementa, texto: p.texto, justificativa: p.justificativa } }, a.v, ass => {
-      p.assinaturas = [...(p.assinaturas || []), ass]; p.timeline.push({ date: agoraTL(), label: `Coautoria ${ass.manual ? 'assinada à mão' : 'assinada digitalmente'} por ${a.v.nome} (${ass.manual ? 'motivo: ' + ass.motivo : ass.metodo})` });
-      persistirProt('Coautoria assinada', p); UI().aviso('Assinatura registrada.'); desenhar(); lgvrVer(p.id);
-    });
+    assinarDoc({ titulo: `${p.numero}: ${p.ementa}`, arquivo: arq(p.numero + ' assinar'), docId: p.id, chave: p.id + '-coaut-' + a.v.id, base, acao: { nome: 'lgvr.coassinar', args: { pid: p.id, vid: a.v.id } }, doc: { tipo: p.tipoNome || 'Projeto de Lei', numero: (p.numero || '').split(' ')[1], ementa: p.ementa, texto: p.texto, justificativa: p.justificativa } }, a.v, null);
   };
   window.lgvrDocumento = function (id) {
     const p = listaProt().find(x => x.id === id) || dados().atos.find(x => x.id === id); if (!p) return;
@@ -475,16 +498,25 @@
     const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id); const T = TIPOS[tipoDe(p)];
     if (T.fluxo === 'promulga') {
       const ano = new Date().getFullYear(); const n = listaProt().filter(x => (x.lei || '').startsWith(T.ato + ' nº')).length + 1;
-      return assinarDoc({ titulo: `Promulgação: ${T.ato} nº ${n}/${ano}`, arquivo: arq(`${T.ato} ${n} ${ano}`), docId: p.id + '-promulgacao', qualificada: true, doc: { tipo: T.ato, numero: `${String(n).padStart(2, '0')}/${ano}`, ementa: p.ementa, texto: `O PRESIDENTE DA CÂMARA MUNICIPAL DE NEVES PAULISTA, no uso de suas atribuições legais, faz saber que a Câmara Municipal aprovou e ele promulga a seguinte ${T.ato}:\n\n${p.texto || ''}` } }, a.v, ass => {
-        p.status = 'concluido'; p.lei = `${T.ato} nº ${String(n).padStart(2, '0')}/${ano}`; p.vigencia = p.vigencia || 'Na data da publicação'; p.publicacao = hojeBR(); p.assinaturas = [...(p.assinaturas || []), ass];
-        p.timeline.push({ date: agoraTL(), label: `Promulgado(a) pelo Presidente ${a.v.nome}: ${p.lei}` }); persistirProt('Promulgação', p); UI().aviso(p.lei + ' promulgado(a).'); desenhar(); });
+      return assinarDoc({ titulo: `Promulgação: ${T.ato} nº ${n}/${ano}`, arquivo: arq(`${T.ato} ${n} ${ano}`), docId: p.id + '-promulgacao', qualificada: true, acao: { nome: 'lgvr.promulgarAto', args: { pid: p.id, vid: a.v.id, ato: T.ato, n, ano } }, doc: { tipo: T.ato, numero: `${String(n).padStart(2, '0')}/${ano}`, ementa: p.ementa, texto: `O PRESIDENTE DA CÂMARA MUNICIPAL DE NEVES PAULISTA, no uso de suas atribuições legais, faz saber que a Câmara Municipal aprovou e ele promulga a seguinte ${T.ato}:\n\n${p.texto || ''}` } }, a.v, null);
     }
     const d = dados(); const num = d.seqAutografo + 1;
-    assinarDoc({ titulo: `Autógrafo nº ${num}/${new Date().getFullYear()} — ${p.numero}`, arquivo: arq(`Autografo ${num} ${new Date().getFullYear()}`), docId: p.id + '-autografo', qualificada: true, doc: { tipo: 'Autógrafo', numero: `${num}/${new Date().getFullYear()}`, ementa: p.ementa, texto: `A CÂMARA MUNICIPAL DE NEVES PAULISTA aprovou${p.votacao ? ' na ' + p.votacao.sessao : ''} o ${p.tipoNome || 'Projeto de Lei'} nº ${(p.numero || '').split(' ')[1] || p.numero}, de autoria de ${p.autor || '—'}, que segue para sanção do Senhor Prefeito Municipal, nos seguintes termos:\n\n${p.texto || '(texto conforme o projeto aprovado)'}` } }, a.v, ass => {
-      const dd = dados(); dd.seqAutografo = num; salvarDados(dd);
-      p.status = 'aguardando_exec'; p.autografo = { numero: `${num}/${new Date().getFullYear()}`, assinatura: ass };
-      p.timeline.push({ date: agoraTL(), label: `Autógrafo nº ${p.autografo.numero} assinado pelo Presidente e enviado ao Prefeito para sanção` });
-      persistirProt('Autógrafo assinado', p); UI().aviso('Autógrafo assinado e enviado ao Executivo.'); desenhar(); });
+    assinarDoc({ titulo: `Autógrafo nº ${num}/${new Date().getFullYear()} — ${p.numero}`, arquivo: arq(`Autografo ${num} ${new Date().getFullYear()}`), docId: p.id + '-autografo', qualificada: true, acao: { nome: 'lgvr.autografo', args: { pid: p.id, vid: a.v.id, num, ano: new Date().getFullYear() } }, doc: { tipo: 'Autógrafo', numero: `${num}/${new Date().getFullYear()}`, ementa: p.ementa, texto: `A CÂMARA MUNICIPAL DE NEVES PAULISTA aprovou${p.votacao ? ' na ' + p.votacao.sessao : ''} o ${p.tipoNome || 'Projeto de Lei'} nº ${(p.numero || '').split(' ')[1] || p.numero}, de autoria de ${p.autor || '—'}, que segue para sanção do Senhor Prefeito Municipal, nos seguintes termos:\n\n${p.texto || ''}` } }, a.v, null);
+  };
+  ACOES['lgvr.promulgarAto'] = {
+    fazer(g, ass, ctx) {
+      const p = achaP(g.pid), v = achaV(g.vid);
+      p.status = 'concluido'; p.lei = `${g.ato} nº ${String(g.n).padStart(2, '0')}/${g.ano}`; p.vigencia = p.vigencia || 'Na data da publicação'; p.publicacao = hojeBR(); p.assinaturas = [...(p.assinaturas || []), ass];
+      p.timeline.push({ date: agoraTL(), label: `Promulgado(a) pelo Presidente ${v.nome}: ${p.lei}${ass.manual ? ' (assinado à mão)' : ''}` }, ...notaAut(ass)); persistirProt('Promulgação', p); if (ctx.autorizacao) return; UI().aviso(p.lei + ' promulgado(a).'); desenhar();
+    }
+  };
+  ACOES['lgvr.autografo'] = {
+    fazer(g, ass, ctx) {
+      const p = achaP(g.pid); const dd = dados(); dd.seqAutografo = Math.max(dd.seqAutografo || 0, g.num); salvarDados(dd);
+      p.status = 'aguardando_exec'; p.autografo = { numero: `${g.num}/${g.ano}`, assinatura: ass };
+      p.timeline.push({ date: agoraTL(), label: `Autógrafo nº ${p.autografo.numero} ${ass.manual ? 'assinado à mão' : 'assinado'} pelo Presidente e enviado ao Prefeito para sanção` }, ...notaAut(ass));
+      persistirProt('Autógrafo assinado', p); if (ctx.autorizacao) return; UI().aviso('Autógrafo assinado e enviado ao Executivo.'); desenhar();
+    }
   };
   window.lgvrPromulgarLei = function (id) {
     const a = exigePres(); if (!a) return; const p = listaProt().find(x => x.id === id);
@@ -494,7 +526,21 @@
       <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Assinar e promulgar</button></div></form>`);
     const f = $('#lgt-modal form');
     f.onsubmit = e => { e.preventDefault(); if (!f.lei.value.trim()) { f.querySelector('.lgt-erro').textContent = 'Informe o número da lei.'; return; } const mot = f.mot.value, lei = 'Lei Municipal nº ' + f.lei.value.trim(), vig = lerVigencia(f); UI().fecharModal();
-      assinarDoc({ titulo: `Promulgação: ${lei}`, arquivo: arq(lei), docId: p.id + '-lei', qualificada: true, doc: { tipo: 'Lei Municipal', numero: lei.replace('Lei Municipal nº ', ''), ementa: p.ementa, texto: `O PRESIDENTE DA CÂMARA MUNICIPAL DE NEVES PAULISTA, nos termos da Lei Orgânica do Município (${mot.toLowerCase()}), promulga a seguinte Lei:\n\n${p.texto || '(texto conforme o autógrafo)'}` } }, a.v, ass => { p.status = 'concluido'; p.lei = lei; p.vigencia = vig; p.publicacao = hojeBR(); p.assinaturas = [...(p.assinaturas || []), ass]; p.timeline.push({ date: agoraTL(), label: `${lei} promulgada pelo Presidente (${mot}) e publicada` }, { date: agoraTL(), label: `Vigência: ${vig.toLowerCase()}` }); persistirProt('Lei promulgada', p); UI().aviso(lei + ' promulgada.'); desenhar(); }); };
+      assinarDoc({ titulo: `Promulgação: ${lei}`, arquivo: arq(lei), docId: p.id + '-lei', qualificada: true, acao: { nome: 'lgvr.promulgarLei', args: { pid: p.id, lei, vig, mot } }, doc: { tipo: 'Lei Municipal', numero: lei.replace('Lei Municipal nº ', ''), ementa: p.ementa, texto: `O PRESIDENTE DA CÂMARA MUNICIPAL DE NEVES PAULISTA, nos termos da Lei Orgânica do Município (${mot.toLowerCase()}), promulga a seguinte Lei:\n\n${p.texto || '(texto conforme o autógrafo)'}` } }, a.v, null); };
+  };
+  ACOES['lgvr.promulgarLei'] = {
+    fazer(g, ass, ctx) {
+      const p = achaP(g.pid); p.status = 'concluido'; p.lei = g.lei; p.vigencia = g.vig; p.publicacao = hojeBR(); p.assinaturas = [...(p.assinaturas || []), ass];
+      p.timeline.push({ date: agoraTL(), label: `${g.lei} promulgada pelo Presidente (${g.mot}) e publicada${ass.manual ? ' — assinada à mão' : ''}` }, ...notaAut(ass), { date: agoraTL(), label: `Vigência: ${String(g.vig).toLowerCase()}` });
+      persistirProt('Lei promulgada', p); if (ctx.autorizacao) return; UI().aviso(g.lei + ' promulgada.'); desenhar();
+    }
+  };
+  ACOES['lgvr.ato'] = {
+    fazer(g, ass, ctx) {
+      const d = dados(); if (d.atos.some(x => x.id === g.atoId)) throw new Error('este ato já foi registrado');
+      d.atos.unshift({ id: g.atoId, tipoAto: g.tipoAto, numero: `${String(g.n).padStart(3, '0')}/${g.ano}`, ementa: g.ementa, texto: g.texto, data: hojeBR(), assinatura: ass }); salvarDados(d);
+      UI().log('Presidência', `${g.tipoAto} ${g.n}/${g.ano}${ass.manual ? ' (assinado à mão, autorizado)' : ''}`); if (ctx.autorizacao) return; UI().aviso(`${g.tipoAto} nº ${g.n}/${g.ano} assinado(a).`); desenhar();
+    }
   };
   function tAtos(a) {
     const atos = dados().atos;
@@ -512,8 +558,7 @@
     f.onsubmit = e => { e.preventDefault(); if (!f.ementa.value.trim() || !f.texto.value.trim()) { f.querySelector('.lgt-erro').textContent = 'Preencha ementa e texto.'; return; }
       const tipoAto = f.tipo.value, ementa = f.ementa.value.trim(), texto = f.texto.value.trim(); UI().fecharModal();
       const d0 = dados(); const ano0 = new Date().getFullYear(); const n0 = d0.atos.filter(x => x.tipoAto === tipoAto && x.numero.endsWith('/' + ano0)).length + 1; const atoId = uid('at');
-      assinarDoc({ titulo: `${tipoAto} nº ${String(n0).padStart(3, '0')}/${ano0}`, arquivo: arq(`${tipoAto} ${n0} ${ano0}`), docId: atoId, qualificada: true, doc: { tipo: tipoAto, numero: `${String(n0).padStart(3, '0')}/${ano0}`, ementa, texto } }, a.v, ass => { const d = dados(); const ano = ano0; const n = n0;
-        d.atos.unshift({ id: atoId, tipoAto, numero: `${String(n).padStart(3, '0')}/${ano}`, ementa, texto, data: hojeBR(), assinatura: ass }); salvarDados(d); UI().log('Presidência', `${tipoAto} ${n}/${ano}`); UI().aviso(`${tipoAto} nº ${n}/${ano} assinado(a).`); desenhar(); }); };
+      assinarDoc({ titulo: `${tipoAto} nº ${String(n0).padStart(3, '0')}/${ano0}`, arquivo: arq(`${tipoAto} ${n0} ${ano0}`), docId: atoId, qualificada: true, acao: { nome: 'lgvr.ato', args: { atoId, tipoAto, ementa, texto, n: n0, ano: ano0 } }, doc: { tipo: tipoAto, numero: `${String(n0).padStart(3, '0')}/${ano0}`, ementa, texto } }, a.v, null); };
   };
 
   /* ================= publicação automática no Portal da Transparência ================= */

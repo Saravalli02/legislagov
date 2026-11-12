@@ -158,16 +158,24 @@
       api.UI().fecharModal();
       const slug = c.nome.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]+/g, '-').toLowerCase();
       api.assinarDoc({ titulo: `Parecer da Comissão de ${c.nome} — ${p.numero}`, arquivo: api.arq(`Parecer ${c.nome} ${p.numero}`), docId: `${p.id}-parecer-${slug}`,
+        acao: { nome: 'lgcm.parecer', args: { pid: p.id, com: c.nome, vid: a.v.id, dados, k } },
         doc: { tipo: `Parecer da Comissão de ${c.nome}`, numero: p.numero, ementa: p.ementa, texto: `RELATÓRIO\n${dados.relatorio}\n\nVOTO DO RELATOR\n${dados.voto}${k === 'emenda' ? `\n\nEMENDA PROPOSTA\n${dados.emenda}` : ''}\n\nCONCLUSÃO: ${CONCL[k][0].toUpperCase()}` },
-        signatarios: [{ nome: (A().verPorId(a.v.id) || a.v).completo || a.v.nome, cargo: `Relator(a) — Comissão de ${c.nome}` }] }, a.v, ass => {
-        t.parecer = { ...dados, relator: a.v.id, data: new Date().toISOString(), assinatura: ass }; delete t.rascunho; t.votos = { [a.v.id]: 'acompanha' };
-        p.timeline.push({ date: api.agoraTL(), label: `Comissão de ${c.nome}: parecer do relator ${a.v.nome} — ${CONCL[k][0].toLowerCase()} (assinado)` });
-        p.docs = [...new Set([...(p.docs || []), `Parecer Comissão de ${c.nome}.pdf`])];
-        api.UI().aviso('Parecer assinado e enviado aos membros da comissão.'); conferir(api, p, c); fim(api, p, 'Parecer de comissão');
-      });
+        signatarios: [{ nome: (A().verPorId(a.v.id) || a.v).completo || a.v.nome, cargo: `Relator(a) — Comissão de ${c.nome}` }] }, a.v, null);
     };
   };
 
+  // parecer assinado (refeito por quem autoriza, se a assinatura foi à mão)
+  (window.LG_ACOES = window.LG_ACOES || {})['lgcm.parecer'] = {
+    fazer(g, ass, ctx) {
+      const api = A(); const p = api.listaProt().find(x => x.id === g.pid); if (!p) throw new Error('matéria não encontrada');
+      const c = comissao(g.com); if (!c) throw new Error('comissão não encontrada'); const t = trab(p, c.nome); const v = api.verPorId(g.vid) || { id: g.vid, nome: '' };
+      if (t.parecer) throw new Error('o parecer desta comissão já foi registrado');
+      t.parecer = { ...g.dados, relator: g.vid, data: new Date().toISOString(), assinatura: ass }; delete t.rascunho; t.votos = { [g.vid]: 'acompanha' };
+      p.timeline.push({ date: api.agoraTL(), label: `Comissão de ${c.nome}: parecer do relator ${v.nome} — ${CONCL[g.k][0].toLowerCase()} (${ass.manual ? 'assinado à mão' + (ass.autorizacao ? ', autorizado por ' + ass.autorizacao.por : '') : 'assinado'})` });
+      p.docs = [...new Set([...(p.docs || []), `Parecer Comissão de ${c.nome}.pdf`])];
+      if (!ctx.autorizacao) api.UI().aviso('Parecer assinado e enviado aos membros da comissão.'); conferir(api, p, c); fim(api, p, 'Parecer de comissão');
+    }
+  };
   window.lgcmRetomar = function (id) {
     const x = contexto(id); if (!x) return; const { api, a, p, c, t } = x;
     if (t.relator !== a.v.id && c.presidente !== a.v.id) return api.UI().aviso('Só o relator ou o presidente da comissão.', 'erro');

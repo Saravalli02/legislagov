@@ -145,6 +145,10 @@
      op = { titulo, arquivo, docId, gerar():Uint8Array, base?: Uint8Array (PDF já assinado por outros), signatario:{nome,completo}, qualificada?:bool, simular?:bool }
      aoAssinar(assinatura) */
   async function assinar(op, aoAssinar) {
+    const chave = op.chave || op.docId; const pend = chave && manuais().find(x => (x.chave || x.docId) === chave && x.status === 'pendente');
+    if (pend) return verPendente(pend);
+    // ação nomeada (pode ser refeita por outra pessoa, ao autorizar) ou função comum
+    const fazer = op.acao ? (ass => executar(op.acao, ass, {})) : aoAssinar;
     const codigo = 'LGV-' + (op.docId || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-10) + '-' + Date.now().toString(36).toUpperCase().slice(-5);
     const pdf = op.base || op.gerar(codigo);
     const esperado = { tamanho: pdf.length, hash: await sha256(pdf), codigo: op.base ? '' : codigo, pessoa: (op.signatario.completo || op.signatario.nome) };
@@ -160,7 +164,7 @@
         <div id="lgs-res" aria-live="polite"></div>
         <button type="button" class="lgs-mao-bt" id="lgs-mao-bt" aria-expanded="false" aria-controls="lgs-mao">Não consegue assinar pelo gov.br ou com certificado? <b>Assinar à mão</b></button>
         <div class="lgs-mao" id="lgs-mao" hidden>
-          <p class="lgs-mao-av">Use só quando a assinatura digital não for possível. O documento fica marcado como <b>assinado à mão</b> e o <b>Presidente</b> e a <b>Procuradoria</b> são avisados. O original em papel deve ficar arquivado na Câmara.</p>
+          <p class="lgs-mao-av">Use só quando a assinatura digital não for possível. O documento fica marcado como <b>assinado à mão</b> e <b>não segue direto</b>: o <b>Presidente</b> ou a <b>Procuradoria</b> confere a digitalização e autoriza. Até lá ele fica pendente e não aparece no site. O original em papel deve ficar arquivado na Câmara.</p>
           <ol class="lgs-passos">
             <li><span class="lgs-n">1</span><div><b>Imprima e assine à mão</b><small>Baixe o PDF do passo 1 acima, imprima e assine com caneta.</small></div></li>
             <li><span class="lgs-n">2</span><div><b>Envie a digitalização</b><small>PDF escaneado ou foto nítida da página assinada (PDF, JPG ou PNG, até 8 MB).</small><label class="lgs-up"><input type="file" id="lgs-mao-arq" accept="application/pdf,.pdf,image/jpeg,image/png"><span>${ic('materias')} Escolher o arquivo</span></label><small id="lgs-mao-nome"></small></div></li>
@@ -169,7 +173,7 @@
               <input type="text" id="lgs-mao-det" class="lgt-input" maxlength="200" placeholder="Detalhe (opcional)"></div></li>
           </ol>
           <label class="lgs-confirma"><input type="checkbox" id="lgs-mao-conf"> Declaro que ${esc(nomePessoa)} assinou este documento à mão e que o original em papel será entregue à Câmara.</label>
-          <div class="lgs-mao-rod"><button type="button" class="lgt-btn primario" id="lgs-mao-ok" disabled>Registrar assinatura à mão</button></div>
+          <div class="lgs-mao-rod"><button type="button" class="lgt-btn primario" id="lgs-mao-ok" disabled>Enviar para autorização</button></div>
         </div>
       </div>
       <p class="lgt-erro" role="alert"></p>
@@ -199,7 +203,7 @@
       const guardado = guardarPDF(op.docId, arquivo);
       const ass = { vereadorId: op.signatario.id, nome: nomePessoa, data: new Date().toISOString(), hash: r.hash, metodo: r.tipo, certificado: (r.signatariosDaPessoa && r.signatariosDaPessoa.length ? r.signatariosDaPessoa : r.signatarios).join(', '), emissor: r.emissorDaPessoa || '', qualificada: !!r.qualificada, conferencia: { mesmoDocumento: true, nomeConfere: confereNome(r.signatarios, nomePessoa), assinaturasNoArquivo: r.assinaturas }, arquivo: { nome: op.arquivo.replace(/\.pdf$/i, '') + '-assinado.pdf', bytes: arquivo.length, guardado }, por: (UI().usuario() || {}).nome || '' };
       UI().fecharModal(); if (!guardado) UI().aviso('Assinatura registrada, mas o PDF não coube no armazenamento do navegador.', 'erro');
-      aoAssinar(ass);
+      fazer(ass);
     };
     /* assinatura à mão (documento em papel digitalizado) */
     let maoArq = null;
@@ -215,43 +219,135 @@
     $('#lgs-mao-ok').onclick = async () => {
       if (!maoPode()) return;
       const motivo = $('#lgs-mao-motivo').value + ($('#lgs-mao-det').value.trim() ? ' — ' + $('#lgs-mao-det').value.trim() : '');
-      const guardado = guardarPDF(op.docId, maoArq);
+      const arqMao = op.acao ? chave + '-mao' : op.docId;   // com autorização: a digitalização fica à parte até ser aprovada
+      const guardado = guardarPDF(arqMao, maoArq);
       const ext = tipoDe(maoArq)[1];
       const ass = { vereadorId: op.signatario.id, nome: nomePessoa, data: new Date().toISOString(), hash: await sha256(maoArq), metodo: 'Assinado à mão (documento em papel digitalizado)', manual: true, motivo, certificado: '', emissor: '', qualificada: false, conferencia: { manual: true }, arquivo: { nome: op.arquivo.replace(/\.pdf$/i, '') + '-assinado-a-mao' + ext, bytes: maoArq.length, guardado }, por: (UI().usuario() || {}).nome || '' };
-      avisarManual({ titulo: op.titulo, nome: nomePessoa, motivo, docId: op.docId, por: ass.por });
-      UI().fecharModal(); if (!guardado) UI().aviso('Assinatura registrada, mas o arquivo não coube no armazenamento.', 'erro');
-      aoAssinar(ass);
-      UI().aviso('Assinatura à mão registrada. O Presidente e a Procuradoria foram avisados.', 'ok');
+      UI().fecharModal(); if (!guardado) UI().aviso('A digitalização não coube no armazenamento. Tente um arquivo menor.', 'erro');
+      if (op.acao) {
+        const r = avisarManual({ titulo: op.titulo, nome: nomePessoa, vid: op.signatario.id, motivo, docId: op.docId, chave, arq: arqMao, por: ass.por, porLogin: loginAtual(), acao: op.acao, ass, status: 'pendente' });
+        try { const h = acaoDe(op.acao); h && h.pendente && h.pendente(op.acao.args || {}, r); } catch (e) { }
+        UI().aviso('Assinatura à mão enviada. O documento só segue (e só aparece no site) depois que o Presidente ou a Procuradoria conferir e autorizar.', 'ok');
+      } else {
+        avisarManual({ titulo: op.titulo, nome: nomePessoa, vid: op.signatario.id, motivo, docId: op.docId, por: ass.por, status: 'registrada' });
+        fazer(ass);
+        UI().aviso('Assinatura à mão registrada. O Presidente e a Procuradoria foram avisados.', 'ok');
+      }
     };
     if (op.simular) $('#lgs-sim').onclick = async () => {
       const ass = { vereadorId: op.signatario.id, nome: nomePessoa, data: new Date().toISOString(), hash: esperado.hash, metodo: 'Simulação (teste do administrador)', certificado: '', emissor: '', qualificada: false, simulada: true, conferencia: {}, arquivo: { nome: op.arquivo, bytes: pdf.length, guardado: guardarPDF(op.docId, pdf) }, por: (UI().usuario() || {}).nome || '' };
-      UI().fecharModal(); aoAssinar(ass);
+      UI().fecharModal(); fazer(ass);
     };
   }
 
   const MANUAIS = 'lgs_manuais_v1';
+  function manuais() { try { return JSON.parse(localStorage.getItem(MANUAIS) || '[]'); } catch (e) { return []; } }
+  function gravarManuais(l) { try { localStorage.setItem(MANUAIS, JSON.stringify(l.slice(0, 300))); } catch (e) { } try { window.lgavAtualizar && lgavAtualizar(); } catch (e) { } }
   function avisarManual(r) {
-    let l = []; try { l = JSON.parse(localStorage.getItem(MANUAIS) || '[]'); } catch (e) { }
-    l.unshift({ id: 'm' + Date.now().toString(36), data: new Date().toISOString(), ...r }); l = l.slice(0, 200);
-    try { localStorage.setItem(MANUAIS, JSON.stringify(l)); } catch (e) { }
-    try { registrarLog && registrarLog('Assinatura à mão', `${r.nome} — ${r.titulo} (${r.motivo})`); } catch (e) { }
-    try { window.lgavAtualizar && lgavAtualizar(); } catch (e) { }
+    const l = manuais(); const x = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), data: new Date().toISOString(), ...r };
+    l.unshift(x); gravarManuais(l);
+    try { registrarLog && registrarLog('Assinatura à mão', `${r.nome} — ${r.titulo} (${r.motivo})${r.status === 'pendente' ? ' · aguardando autorização' : ''}`); } catch (e) { }
+    return x;
   }
-  // usado pelo sino de avisos: aparece para o Presidente e para a Procuradoria por 30 dias
+  const loginAtual = () => { const u = UI() && UI().usuario ? UI().usuario() : null; return u ? String(u.usuario || u.login || u.nome || '').toLowerCase() : ''; };
+
+  /* ações que podem ser refeitas ao autorizar: registradas pelos módulos em window.LG_ACOES */
+  const acaoDe = a => (window.LG_ACOES || {})[a && a.nome];
+  function executar(acao, ass, ctx) {
+    const h = acaoDe(acao); if (!h) throw new Error('Ação desconhecida: ' + (acao && acao.nome));
+    return (h.fazer || h)(acao.args || {}, ass, ctx || {});
+  }
+  window.lgsExecutar = executar;
+
+  /* quem pode autorizar: Presidente, Procuradoria ou administrador — nunca quem assinou (salvo o administrador) */
+  function podeAutorizar(x) {
+    const u = UI() && UI().usuario ? UI().usuario() : null; if (!u) return [false, 'Entre no sistema.'];
+    const perfil = window.lgPerfil ? lgPerfil(u) : '';
+    const pres = !!(window.lgEhPresidente && lgEhPresidente(u));
+    if (!(perfil === 'adm' || perfil === 'procurador' || pres)) return [false, 'Só o Presidente ou a Procuradoria autorizam.'];
+    const v = window.lgVereadorDoUsuario ? lgVereadorDoUsuario(u) : null;
+    if (perfil !== 'adm' && ((v && v.id === x.vid) || (x.porLogin && x.porLogin === loginAtual()))) return [false, 'Quem assinou não autoriza a própria assinatura.'];
+    return [true, ''];
+  }
+  const quando = d => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  // sino de avisos
   window.lgsPendencias = function () {
-    let l = []; try { l = JSON.parse(localStorage.getItem(MANUAIS) || '[]'); } catch (e) { }
-    const limite = Date.now() - 30 * 864e5;
-    return l.filter(x => new Date(x.data).getTime() > limite).map(x => ({ dest: ['pres', 'perfil:procurador'], chave: 'mao:' + x.id, urgente: true,
-      titulo: `Documento assinado à mão: ${x.titulo}`, texto: `${x.nome} não assinou digitalmente. Motivo: ${x.motivo}. Confira o original em papel.`, acao: 'lgsVerManuais()', area: '' }));
+    const out = [], agora = Date.now();
+    manuais().forEach(x => {
+      const idade = agora - new Date(x.decididaEm || x.data).getTime();
+      if (x.status === 'pendente') {
+        out.push({ dest: ['pres', 'perfil:procurador'], chave: 'mao:' + x.id, urgente: true, titulo: `Autorizar assinatura à mão: ${x.titulo}`,
+          texto: `${x.nome} assinou à mão (${x.motivo}). Confira a digitalização e autorize ou recuse. Até lá, nada segue nem aparece no site.`, acao: `lgsVerManuais('${x.id}')`, area: '' });
+        if (x.vid) out.push({ dest: ['v:' + x.vid], chave: 'maoesp:' + x.id, titulo: `Aguardando autorização: ${x.titulo}`,
+          texto: 'Sua assinatura à mão está com o Presidente e a Procuradoria para conferência. O documento segue assim que for autorizado.', acao: `lgsVerManuais('${x.id}')`, area: 'vereador', info: true });
+      } else if (x.status === 'recusada' && x.vid && idade < 30 * 864e5) {
+        out.push({ dest: ['v:' + x.vid], chave: 'maorec:' + x.id, urgente: true, titulo: `Assinatura à mão recusada: ${x.titulo}`,
+          texto: `Motivo: ${x.recusa ? x.recusa.motivo : ''}. Corrija e assine de novo.`, acao: `lgsVerManuais('${x.id}')`, area: 'vereador' });
+      } else if (x.status === 'autorizada' && x.vid && idade < 7 * 864e5) {
+        out.push({ dest: ['v:' + x.vid], chave: 'maoaut:' + x.id, titulo: `Autorizado: ${x.titulo}`, texto: `Sua assinatura à mão foi conferida por ${x.autorizacao ? x.autorizacao.por : ''}. O documento seguiu.`, acao: `lgsVerManuais('${x.id}')`, area: 'vereador', info: true });
+      } else if (x.status === 'registrada' && idade < 30 * 864e5) {
+        out.push({ dest: ['pres', 'perfil:procurador'], chave: 'mao:' + x.id, titulo: `Documento assinado à mão: ${x.titulo}`, texto: `${x.nome} não assinou digitalmente. Motivo: ${x.motivo}. Confira o original em papel.`, acao: `lgsVerManuais('${x.id}')`, area: '' });
+      }
+    });
+    return out;
   };
-  window.lgsVerManuais = function () {
-    const l = lgsManuais();
-    UI().abrirModal(`<div class="lgt-form lgs"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Documentos assinados à mão</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
-      <div class="lgs-c">${l.length ? `<ul class="lgs-conf">${l.map(x => `<li class="av"><i>!</i><span><b>${esc(x.titulo)}</b><br>${esc(x.nome)} · ${new Date(x.data).toLocaleString('pt-BR')}<br>Motivo: ${esc(x.motivo)}${x.por && x.por !== x.nome ? ' · registrado por ' + esc(x.por) : ''}${window.lgsTemPDF && lgsTemPDF(x.docId) ? `<br><button type="button" class="lgt-btn" style="margin-top:6px" onclick="lgsBaixarPDF('${esc(x.docId)}','${esc(x.docId)}-assinado-a-mao.pdf')">Baixar a digitalização</button>` : ''}</span></li>`).join('')}</ul>` : '<p>Nenhum documento foi assinado à mão.</p>'}
-      <p class="lgs-val">Confira se o original em papel foi entregue e arquivado na Câmara.</p></div>
+
+  const ROT = { pendente: ['Aguardando autorização', 'av'], autorizada: ['Autorizada', 'ok'], recusada: ['Recusada', 'er'], registrada: ['Registrada', 'av'] };
+  function cartao(x, destaque) {
+    const [pode] = podeAutorizar(x); const [rot, cls] = ROT[x.status] || ROT.registrada;
+    const arqX = x.arq || x.docId; const temArq = window.lgsTemPDF && lgsTemPDF(arqX);
+    return `<li class="lgs-item ${destaque ? 'foco' : ''}" id="lgs-it-${esc(x.id)}"><div class="lgs-item-cab"><b>${esc(x.titulo)}</b><span class="lgs-st ${cls}">${rot}</span></div>
+      <small>Assinado à mão por <b>${esc(x.nome)}</b> em ${quando(x.data)}${x.por && x.por !== x.nome ? ' · enviado por ' + esc(x.por) : ''}</small>
+      <small>Motivo: ${esc(x.motivo)}</small>
+      ${x.status === 'autorizada' && x.autorizacao ? `<small>Autorizada por <b>${esc(x.autorizacao.por)}</b> em ${quando(x.autorizacao.data)}</small>` : ''}
+      ${x.status === 'recusada' && x.recusa ? `<small class="lgs-rec">Recusada por <b>${esc(x.recusa.por)}</b> em ${quando(x.recusa.data)}: ${esc(x.recusa.motivo)}</small>` : ''}
+      <div class="lgs-item-ac">${temArq ? `<button type="button" class="lgt-btn" onclick="lgsBaixarPDF('${esc(arqX)}','${esc(x.docId)}-assinado-a-mao.pdf')">${ic('externo')} Ver a digitalização</button>` : ''}
+      ${x.status === 'pendente' && pode ? `<button type="button" class="lgt-btn perigo" onclick="lgsRecusar('${esc(x.id)}')">Recusar</button><button type="button" class="lgt-btn primario" onclick="lgsAutorizar('${esc(x.id)}')">Conferi, autorizar</button>` : ''}</div></li>`;
+  }
+  window.lgsVerManuais = function (foco) {
+    const l = manuais(); const pend = l.filter(x => x.status === 'pendente'), resto = l.filter(x => x.status !== 'pendente').slice(0, 25);
+    UI().abrirModal(`<div class="lgt-form lgs"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Assinaturas à mão</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
+      <div class="lgs-c"><p class="lgs-mao-av">Documento assinado à mão só segue depois que o <b>Presidente</b> ou a <b>Procuradoria</b> confere a digitalização e autoriza. Confira se é o mesmo documento, se a assinatura é da pessoa e se o original em papel foi entregue.</p>
+      <h3 class="lgs-h">Aguardando autorização (${pend.length})</h3>${pend.length ? `<ul class="lgs-lista">${pend.map(x => cartao(x, x.id === foco)).join('')}</ul>` : '<p class="lgs-vazio">Nada aguardando.</p>'}
+      ${resto.length ? `<h3 class="lgs-h">Anteriores</h3><ul class="lgs-lista">${resto.map(x => cartao(x, x.id === foco)).join('')}</ul>` : ''}</div>
       <div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Fechar</button></div></div>`);
+    if (foco) setTimeout(() => { const el = document.getElementById('lgs-it-' + foco); el && el.scrollIntoView({ block: 'nearest' }); }, 60);
   };
-  window.lgsManuais = () => { try { return JSON.parse(localStorage.getItem(MANUAIS) || '[]'); } catch (e) { return []; } };
+  function verPendente(x) {
+    UI().abrirModal(`<div class="lgt-form lgs"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Aguardando autorização</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
+      <div class="lgs-c"><p class="lgs-mao-av">Este documento já foi assinado à mão e está com o Presidente e a Procuradoria para conferência. Ele segue sozinho assim que for autorizado.</p><ul class="lgs-lista">${cartao(x, true)}</ul></div>
+      <div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Fechar</button></div></div>`);
+  }
+  window.lgsAutorizar = async function (id) {
+    const l = manuais(); const x = l.find(y => y.id === id); if (!x || x.status !== 'pendente') return UI().aviso('Esta assinatura já foi decidida.', 'erro');
+    const [pode, porque] = podeAutorizar(x); if (!pode) return UI().aviso(porque, 'erro');
+    const ok = window.lgConfirmar ? await lgConfirmar({ titulo: 'Autorizar a assinatura à mão?', texto: `“${x.titulo}”, assinado à mão por ${x.nome}. Depois de autorizado, o documento segue o andamento normal e pode aparecer no site.`, itens: ['Abri a digitalização e é o mesmo documento', 'A assinatura é de quem consta', 'O original em papel será arquivado na Câmara'], ok: 'Autorizar' }) : true;
+    if (!ok) return;
+    const u = UI().usuario() || {}; const aut = { por: u.nome || '', login: loginAtual(), data: new Date().toISOString() };
+    try { executar(x.acao, { ...x.ass, autorizacao: aut }, { autorizacao: true, registro: x }); if (x.arq && x.arq !== x.docId && !lgsTemPDF(x.docId)) { const b = lerPDF(x.arq); b && guardarPDF(x.docId, b); } }
+    catch (e) { console.error(e); return UI().aviso('Não foi possível concluir: ' + (e.message || e) + '. A assinatura continua pendente.', 'erro'); }
+    const l2 = manuais(); const y = l2.find(z => z.id === id) || x; Object.assign(y, { status: 'autorizada', autorizacao: aut, decididaEm: aut.data }); gravarManuais(l2);
+    try { registrarLog && registrarLog('Assinatura à mão autorizada', `${x.titulo} — ${x.nome}`); } catch (e) { }
+    UI().aviso('Autorizado. O documento seguiu e ' + x.nome + ' foi avisado(a).', 'ok'); lgsVerManuais(id);
+  };
+  window.lgsRecusar = function (id) {
+    const x = manuais().find(y => y.id === id); if (!x || x.status !== 'pendente') return;
+    const [pode, porque] = podeAutorizar(x); if (!pode) return UI().aviso(porque, 'erro');
+    UI().abrirModal(`<form class="lgt-form lgs" novalidate><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Recusar assinatura à mão</h2><button type="button" class="lgt-x" onclick="lgsVerManuais('${esc(id)}')" aria-label="Voltar">×</button></div>
+      <div class="lgs-c"><p class="lgs-mao-av">“${esc(x.titulo)}” — ${esc(x.nome)}. Nada é publicado; quem assinou recebe o motivo e pode assinar de novo.</p>
+      <label class="lgs-campo"><span>Motivo da recusa *</span><textarea name="mot" rows="3" class="lgt-input" maxlength="300" placeholder="Ex.: a digitalização está ilegível; a página assinada não é a do documento"></textarea></label></div>
+      <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgsVerManuais('${esc(id)}')">Voltar</button><button type="submit" class="lgt-btn perigo">Recusar</button></div></form>`);
+    const f = $('#lgt-modal form');
+    f.onsubmit = e => { e.preventDefault(); const mot = f.mot.value.trim(); if (!mot) { f.querySelector('.lgt-erro').textContent = 'Escreva o motivo para quem assinou saber o que corrigir.'; return; }
+      const l = manuais(); const y = l.find(z => z.id === id); const u = UI().usuario() || {}; const rec = { por: u.nome || '', login: loginAtual(), data: new Date().toISOString(), motivo: mot };
+      Object.assign(y, { status: 'recusada', recusa: rec, decididaEm: rec.data }); gravarManuais(l);
+      try { const h = acaoDe(y.acao); h && h.liberar && h.liberar(y.acao.args || {}, y); } catch (e2) { }
+      try { registrarLog && registrarLog('Assinatura à mão recusada', `${y.titulo} — ${mot}`); } catch (e2) { }
+      UI().aviso('Recusada. ' + y.nome + ' foi avisado(a) com o motivo.'); lgsVerManuais(id); };
+  };
+  window.lgsManuais = manuais;
+  window.lgsPendenteDe = chave => manuais().find(x => (x.chave || x.docId) === chave && x.status === 'pendente') || null;
 
   window.lgsAssinar = assinar;
   window.lgsDocumento = documentoCamara;
@@ -287,6 +383,18 @@
   .lgs-mao-av{margin:0;font-size:13px;line-height:1.5}
   .lgs-mao .lgt-input{width:100%;margin-top:6px}
   .lgs-mao-rod{display:flex;justify-content:flex-end;margin-top:12px}
-  @media(max-width:600px){.lgs-c{padding:12px 16px}}`;
+  .lgs-h{font-size:14px;margin:16px 0 8px}
+  .lgs-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .lgs-item{padding:12px 14px;border-radius:12px;border:1px solid var(--lg28-stroke);background:var(--lg28-inset);display:flex;flex-direction:column;gap:4px}
+  .lgs-item.foco{border-color:#e2aa1c;box-shadow:0 0 0 1px #e2aa1c}
+  .lgs-item-cab{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}.lgs-item-cab b{font-size:14px}
+  .lgs-item small{font-size:12.5px;color:var(--lg28-muted);line-height:1.5}.lgs-item small b{color:var(--lg28-ink)}
+  .lgs-rec{color:#ff8a8f!important}
+  .lgs-st{flex:0 0 auto;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:rgba(226,170,28,.15);color:#e2aa1c}
+  .lgs-st.ok{background:rgba(47,191,113,.15);color:#2fbf71}.lgs-st.er{background:rgba(229,72,77,.15);color:#ff8a8f}
+  .lgs-item-ac{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.lgs-item-ac:empty{display:none}
+  .lgs-vazio{font-size:13px;color:var(--lg28-muted)}
+  .lgs-campo{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:13px;font-weight:600}
+  @media(max-width:600px){.lgs-c{padding:12px 16px}.lgs-item-ac .lgt-btn{flex:1}}`;
   document.head.appendChild(css);
 })();

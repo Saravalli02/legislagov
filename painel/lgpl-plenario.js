@@ -361,11 +361,19 @@
   window.lgplAtaAprovada = sid => comAta(sid, (s, d) => { s.ata.status = 'aprovada'; s.ata.aprovadaEm = new Date().toISOString(); salvar(d); publicarTransparencia(s, 'ata'); desenhar(); });
   window.lgplAtaPublicar = sid => comAta(sid, (s, d) => {
     salvar(d); const pres = comp().vereadores.find(v => v.id === comp().presidente);
-    const publicar = ass => { const dd = dados(); const x = sessaoPorId(dd, sid); x.ata = { ...s.ata, status: 'publicada', publicadaEm: new Date().toISOString(), assinatura: ass || null }; salvar(dd); publicarTransparencia(x, 'ata'); UI().aviso('Ata publicada no Portal da Transparência.'); desenhar(); };
-    if (pres && A().assinarDoc) A().assinarDoc({ titulo: `Ata da ${s.titulo}`, arquivo: A().arq('Ata ' + s.titulo), docId: 'ata-' + s.id, doc: { tipo: 'Ata', numero: `${s.numero || ''}/${new Date(s.quando).getFullYear()}`, ementa: `Ata da ${s.titulo} de ${dataBR(s.quando)}`, texto: s.ata.texto } }, pres, publicar);
-    else publicar(null);
+    const acao = { nome: 'lgpl.ata', args: { sid, texto: s.ata.texto } };
+    if (pres && A().assinarDoc) A().assinarDoc({ titulo: `Ata da ${s.titulo}`, arquivo: A().arq('Ata ' + s.titulo), docId: 'ata-' + s.id, acao, doc: { tipo: 'Ata', numero: `${s.numero || ''}/${new Date(s.quando).getFullYear()}`, ementa: `Ata da ${s.titulo} de ${dataBR(s.quando)}`, texto: s.ata.texto } }, pres, null);
+    else window.LG_ACOES['lgpl.ata'].fazer(acao.args, null, {});
   });
 
+  // publicar a ata assinada (refeito por quem autoriza, se a assinatura foi à mão)
+  (window.LG_ACOES = window.LG_ACOES || {})['lgpl.ata'] = {
+    fazer(g, ass, ctx) {
+      const dd = dados(); const x = sessaoPorId(dd, g.sid); if (!x) throw new Error('sessão não encontrada');
+      x.ata = { ...(x.ata || {}), texto: g.texto, status: 'publicada', publicadaEm: new Date().toISOString(), assinatura: ass || null }; salvar(dd); publicarTransparencia(x, 'ata');
+      if (ctx.autorizacao) return; UI().aviso('Ata publicada no Portal da Transparência.'); desenhar();
+    }
+  };
   /* ---- documento para imprimir ---- */
   function documento(titulo, texto) {
     const w = window.open('', '_blank'); if (!w) return UI().aviso('Permita janelas pop-up para ver o documento.', 'erro');
