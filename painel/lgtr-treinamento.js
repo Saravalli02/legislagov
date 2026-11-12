@@ -444,6 +444,7 @@
   .lgtr-ok{background:#16181d;border-color:#16181d;color:#fff;padding:0 18px}.lgtr-ok:hover{background:#2a2d33}
   .lgtr-b:focus-visible,.lgtr-fechar:focus-visible{outline:3px solid #e2aa1c;outline-offset:2px}
   html.lgtr-ativo .lgv31-side,html.lgtr-ativo aside.lgv31-side{z-index:auto}
+  html.lgt-travado #lgtr-convite,html:has(#lgok) #lgtr-convite{display:none}   /* não fica por cima de janelas abertas */
   #lgtr-convite{position:fixed;right:20px;bottom:20px;z-index:2147482000;width:min(360px,calc(100vw - 32px));background:#fff;color:#16181d;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.35);padding:16px 18px;border-top:4px solid #e2aa1c;animation:lgtrEntra .35s ease}
   #lgtr-convite b{font-size:16px}#lgtr-convite p{margin:6px 0 12px;font-size:14px;line-height:1.45;color:#2b2f36}#lgtr-convite div{display:flex;gap:8px;flex-wrap:wrap}
   #lgtr-convite .lgtr-fechar{position:absolute;right:8px;top:8px}

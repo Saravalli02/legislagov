@@ -17,6 +17,20 @@
     { id: 'vereador', nome: 'Vereador(a)', perfil: 'usuario', setor: 'Gabinete', unico: false, funcao: 'Portal do Vereador' },
   ];
   window.LG_CARGOS = CARGOS;
+  /* setores de quem está logado: usados para entregar expedientes, protocolos e avisos "para o setor" */
+  const SETORES_DO_CARGO = { diretora: ['Secretaria', 'Secretaria Legislativa', 'Protocolo'], contabil: ['Contabilidade'], tesoureira: ['Tesouraria'],
+    procurador: ['Procuradoria Legislativa'], vereador: ['Vereadores', 'Gabinete'] };
+  window.lgSetoresDe = function (u) {
+    u = u || (typeof usuarioAtual !== 'undefined' ? usuarioAtual : null); if (!u) return [];
+    const out = new Set([u.setor, u.cargo].filter(Boolean));
+    const c = cargoDe(u); (SETORES_DO_CARGO[c] || []).forEach(x => out.add(x));
+    const p = window.lgPerfil ? lgPerfil(u) : '';
+    if (p === 'secretaria') SETORES_DO_CARGO.diretora.forEach(x => out.add(x));
+    if (p === 'procurador') out.add('Procuradoria Legislativa');
+    if (p === 'vereador') SETORES_DO_CARGO.vereador.forEach(x => out.add(x));
+    if (window.lgEhPresidente && lgEhPresidente(u)) out.add('Presidente da Câmara');
+    return [...out];
+  };
   const $ = (s, el = document) => el.querySelector(s);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const users = () => (typeof lgUsers === 'function' ? lgUsers() : []);

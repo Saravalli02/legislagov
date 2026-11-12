@@ -68,6 +68,8 @@ def limpar(s3):
     for pagina in pag.paginate(Bucket=BUCKET):
         for v in pagina.get("Versions", []) + pagina.get("DeleteMarkers", []):
             k = v["Key"]; velho = False
+            if k.startswith("arquivos/"):
+                continue   # anexos nunca vencem (as informações apontam para eles)
             try:
                 if k.startswith("diarias/"):
                     velho = (hoje - dt.date.fromisoformat(k[8:18])).days > DIAS
@@ -104,6 +106,29 @@ def testar(s3):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def copiar_arquivos(s3):
+    """PDFs, fotos e anexos (DADOS/arquivos/<câmara>/<id>): o nome é o resumo do conteúdo, então só sobe o que é novo."""
+    pasta = os.path.join(DADOS, "arquivos")
+    if not os.path.isdir(pasta):
+        return {"enviados": 0, "total": 0}
+    ja = set()
+    for pagina in s3.get_paginator("list_objects_v2").paginate(Bucket=BUCKET, Prefix="arquivos/"):
+        ja.update(o["Key"] for o in pagina.get("Contents", []))
+    enviados = total = 0
+    for cam in sorted(os.listdir(pasta)):
+        dcam = os.path.join(pasta, cam)
+        if not os.path.isdir(dcam):
+            continue
+        for nome in os.listdir(dcam):
+            if ".tmp" in nome:
+                continue
+            total += 1
+            chave = f"arquivos/{cam}/{nome}"
+            if chave not in ja:
+                s3.upload_file(os.path.join(dcam, nome), BUCKET, chave, ExtraArgs={"ServerSideEncryption": "AES256"}); enviados += 1
+    return {"enviados": enviados, "total": total}
+
+
 def uso(s3):
     total = 0; qtd = 0
     for pagina in s3.get_paginator("list_object_versions").paginate(Bucket=BUCKET):
@@ -122,7 +147,8 @@ def main():
     try:
         s3 = cliente()
         if "--teste" not in sys.argv:
-            st["envio"] = {"quando": agora, "ok": True, "arquivos": enviar(s3, ultima_local()), "apagados_antigos": limpar(s3)}
+            st["envio"] = {"quando": agora, "ok": True, "arquivos": enviar(s3, ultima_local()), "apagados_antigos": limpar(s3),
+                           "anexos": copiar_arquivos(s3)}
         st["teste_restauracao"] = {"quando": agora, "ok": True, **testar(s3)}
         st["deposito"] = {"nome": BUCKET, "regiao": REGIAO, **uso(s3)}
         st["ok"] = True; st.pop("erro", None)

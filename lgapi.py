@@ -77,9 +77,13 @@ def _db():
         CREATE TABLE IF NOT EXISTS historico(id INTEGER PRIMARY KEY AUTOINCREMENT, camara TEXT, chave TEXT, versao INTEGER, valor TEXT, quando TEXT, por TEXT);
         CREATE TABLE IF NOT EXISTS registro(id INTEGER PRIMARY KEY AUTOINCREMENT, camara TEXT, quando TEXT, usuario TEXT, acao TEXT, detalhe TEXT, ip TEXT);
         CREATE TABLE IF NOT EXISTS contador(nome TEXT PRIMARY KEY, valor INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS arquivos(camara TEXT NOT NULL, id TEXT NOT NULL, tipo TEXT, tamanho INTEGER, publico INTEGER DEFAULT 0,
+            criado TEXT, por TEXT, PRIMARY KEY(camara, id));
         CREATE INDEX IF NOT EXISTS ix_dados_seq ON dados(camara, seq);
         CREATE INDEX IF NOT EXISTS ix_hist ON historico(camara, chave, id);
         """)
+        if "acesso" not in [r[1] for r in _con.execute("PRAGMA table_info(arquivos)")]:
+            _con.execute("ALTER TABLE arquivos ADD COLUMN acesso TEXT")   # quem pode abrir (expedientes e mensagens)
     return _con
 
 
@@ -190,6 +194,7 @@ def semear(camara):
         gravar(camara, "lg_seed_perfis_v2", "1", None, "sistema")
         registrar(camara, "sistema", "Câmara criada no banco", "administradores Ricardo e Geraldo")
     _limpeza_v2(camara)
+    migrar_arquivos(camara)
 
 
 def _limpeza_v2(camara):
@@ -362,6 +367,382 @@ def cargos_ocupados(camara):
     return sorted(out)
 
 
+# ---------------------------------------------------------------- arquivos
+# PDFs, digitalizações, fotos e anexos ficam em disco (PASTA_DADOS/arquivos/<câmara>/<id>), não dentro das
+# informações. No lugar do conteúdo fica o endereço /api/arquivo/<id>. Assim o navegador não enche
+# (cada um baixa só o que abrir) e o banco continua pequeno. O id é o resumo (sha256) do conteúdo.
+PASTA_ARQ = os.path.join(PASTA_DADOS, "arquivos")
+DATA_RE = re.compile(r"data:([\w.+\-]+/[\w.+\-]+)(?:;[\w.+\-]+=[\w.+\-]+)*;base64,([A-Za-z0-9+/=]+)")
+MIN_B64 = 3000            # menos que isso (ícones pequenos) continua dentro da informação
+MAX_ARQ = 15 * 1024 * 1024
+PREFIXO_REF = "lgarq:"    # chaves lgs_pdf_* guardavam só o base64; agora guardam lgarq:/api/arquivo/<id>
+
+
+def _eh_publico(chave):
+    return bool(PUBLICAS.match(chave)) and chave != "lgo_v1"   # anexos da ouvidoria têm dados pessoais
+
+
+def salvar_arquivo(camara, tipo, conteudo, publico, por, acesso=None):
+    """Guarda o arquivo em disco. acesso = {"para": [setores/usuários], "donos": [logins]} restringe quem abre."""
+    if len(conteudo) > MAX_ARQ:
+        raise ValueError("Arquivo grande demais (máximo 15 MB).")
+    aid = hashlib.sha256(conteudo).hexdigest()[:40]
+    pasta = os.path.join(PASTA_ARQ, re.sub(r"[^\w\-]", "_", camara))
+    os.makedirs(pasta, exist_ok=True)
+    caminho = os.path.join(pasta, aid)
+    if not os.path.exists(caminho):
+        tmp = caminho + ".tmp" + secrets.token_hex(3)
+        with open(tmp, "wb") as fh:
+            fh.write(conteudo)
+        os.replace(tmp, caminho)
+    tipo = (tipo or "application/octet-stream")[:80]
+    c = _db()
+    antes = c.execute("SELECT acesso FROM arquivos WHERE camara=? AND id=?", (camara, aid)).fetchone()
+    novo = None
+    if isinstance(acesso, dict):
+        novo = {"para": sorted({str(x)[:120] for x in (acesso.get("para") or [])[:20]}),
+                "donos": sorted({str(x).lower()[:60] for x in (acesso.get("donos") or [])[:20]} | {str(por).lower()})}
+        if antes is not None:
+            if not antes["acesso"]:
+                novo = None   # o mesmo conteúdo já circula sem restrição
+            else:
+                try:
+                    v = json.loads(antes["acesso"])
+                    novo = {"para": sorted(set(v.get("para", [])) | set(novo["para"])), "donos": sorted(set(v.get("donos", [])) | set(novo["donos"]))}
+                except Exception:
+                    pass
+    if antes is None:
+        c.execute("INSERT INTO arquivos(camara, id, tipo, tamanho, publico, criado, por, acesso) VALUES(?,?,?,?,?,?,?,?)",
+                  (camara, aid, tipo, len(conteudo), 1 if publico else 0, agora(), por, json.dumps(novo, ensure_ascii=False) if novo else None))
+    else:
+        c.execute("UPDATE arquivos SET acesso=?, publico=MAX(publico, ?) WHERE camara=? AND id=?",
+                  (json.dumps(novo, ensure_ascii=False) if novo else None, 1 if publico else 0, camara, aid))
+    return "/api/arquivo/" + aid
+
+
+def extrair_arquivos(camara, chave, valor, por):
+    """Troca o conteúdo embutido (data:...;base64,...) pelo endereço do arquivo guardado em disco."""
+    import base64
+    if not isinstance(valor, str):
+        return valor
+    pub = _eh_publico(chave)
+    if chave.startswith("lgs_pdf_"):
+        if valor.startswith(PREFIXO_REF) or len(valor) < MIN_B64:
+            return valor
+        m = DATA_RE.fullmatch(valor)
+        tipo, b64 = (m.group(1), m.group(2)) if m else ("application/pdf", valor)
+        try:
+            bruto = base64.b64decode(b64)
+        except Exception:
+            return valor
+        if bruto[:4] == b"%PDF":
+            tipo = "application/pdf"
+        elif bruto[:3] == b"\xff\xd8\xff":
+            tipo = "image/jpeg"
+        elif bruto[:8] == b"\x89PNG\r\n\x1a\n":
+            tipo = "image/png"
+        return PREFIXO_REF + salvar_arquivo(camara, tipo, bruto, pub, por)
+    if "base64," not in valor:
+        return valor
+
+    def troca(m):
+        if len(m.group(2)) < MIN_B64:
+            return m.group(0)
+        try:
+            return salvar_arquivo(camara, m.group(1), base64.b64decode(m.group(2)), pub, por)
+        except Exception:
+            return m.group(0)
+    return DATA_RE.sub(troca, valor)
+
+
+def ler_arquivo(camara, aid, u):
+    """Devolve (tipo, caminho) se a pessoa pode ver o arquivo; senão None."""
+    if not re.fullmatch(r"[0-9a-f]{40}", aid or ""):
+        return None
+    r = _db().execute("SELECT tipo, publico, acesso FROM arquivos WHERE camara=? AND id=?", (camara, aid)).fetchone()
+    if not r or not (r["publico"] or u):
+        return None
+    if r["acesso"] and not r["publico"]:
+        try:
+            ac = json.loads(r["acesso"])
+        except Exception:
+            ac = {}
+        q = Quem(camara, u)
+        meus = {_norm(x) for x in q.setores}
+        ok = q.adm or q.login in ac.get("donos", []) or any(
+            (_norm(p)[6:] in meus) if _norm(p).startswith("setor:") else (_norm(p) == q.login or _norm(p) in meus) for p in ac.get("para", []))
+        if not ok:
+            return None
+    caminho = os.path.join(PASTA_ARQ, re.sub(r"[^\w\-]", "_", camara), aid)
+    return (r["tipo"], caminho) if os.path.exists(caminho) else None
+
+
+def migrar_arquivos(camara):
+    """Uma vez por câmara: tira os arquivos que já estavam dentro das informações (e do histórico)."""
+    c = _db()
+    marca = "arquivos_v1:" + camara
+    if c.execute("SELECT 1 FROM contador WHERE nome=?", (marca,)).fetchone():
+        return
+    n = 0
+    for r in c.execute("SELECT chave, valor FROM dados WHERE camara=?", (camara,)).fetchall():
+        novo = extrair_arquivos(camara, r["chave"], r["valor"], "sistema")
+        if novo != r["valor"]:
+            gravar(camara, r["chave"], novo, None, "sistema"); n += 1
+    for r in c.execute("SELECT id, chave, valor FROM historico WHERE camara=? AND (valor LIKE '%base64,%' OR chave LIKE 'lgs_pdf_%')", (camara,)).fetchall():
+        novo = extrair_arquivos(camara, r["chave"], r["valor"], "sistema")
+        if novo != r["valor"]:
+            c.execute("UPDATE historico SET valor=? WHERE id=?", (novo, r["id"]))
+    c.execute("INSERT INTO contador(nome, valor) VALUES(?, 1)", (marca,))
+    registrar(camara, "sistema", "Arquivos movidos para o disco", f"{n} informações")
+
+
+# ---------------------------------------------------------------- permissões (conferidas aqui, não só na tela)
+# Mesmo modelo do painel (lgt-publicacoes.js): perfil → painéis; exceções em "Áreas e acessos" (lgt_areas_v1).
+PERFIS_AREAS = {
+    "adm": {"legislativo": "edicao", "vereador": "edicao", "transparencia": "edicao", "financeiro": "edicao", "site": "edicao"},
+    "procurador": {"legislativo": "edicao"},
+    "secretaria": {"legislativo": "edicao"},
+    "financeiro": {"financeiro": "edicao", "transparencia": "edicao"},
+    "vereador": {"vereador": "edicao"},
+    "servidor": {"legislativo": "consulta"},
+}
+
+
+SETORES_DO_CARGO = {"diretora": ["Secretaria", "Secretaria Legislativa", "Protocolo"], "contabil": ["Contabilidade"], "tesoureira": ["Tesouraria"],
+                    "procurador": ["Procuradoria Legislativa"], "vereador": ["Vereadores", "Gabinete"]}
+
+
+def _norm(x):
+    return str(x or "").strip().lower()
+
+
+class Quem:
+    """Quem está gravando: perfil, vereador vinculado, Presidente e níveis por painel (calculado uma vez)."""
+
+    def __init__(self, camara, u):
+        self.camara, self.u = camara, u or {}
+        self.login = str(self.u.get("usuario") or "").lower()
+        self._comp = None
+
+    def _ler(self, chave):
+        r = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (self.camara, chave)).fetchone()
+        try:
+            return json.loads(r["valor"]) if r else None
+        except Exception:
+            return None
+
+    @property
+    def comp(self):
+        if self._comp is None:
+            c = self._ler("lgv_camara_v1")
+            self._comp = c if isinstance(c, dict) else {}
+        return self._comp
+
+    @property
+    def vereador(self):
+        for v in self.comp.get("vereadores", []) or []:
+            if isinstance(v, dict) and str(v.get("usuario") or "").lower() == self.login and self.login:
+                return v
+        return None
+
+    @property
+    def presidente(self):
+        v = self.vereador
+        return bool(v) and v.get("id") == self.comp.get("presidente")
+
+    @property
+    def perfil(self):
+        u = self.u
+        if u.get("orgao") == "ambos" or u.get("perfil") == "admin":
+            return "adm"
+        if self.vereador:
+            return "vereador"
+        if u.get("perfil") in PERFIS_AREAS and u.get("perfil") not in ("adm", "vereador"):
+            return u["perfil"]
+        t = f"{u.get('cargo', '')} {u.get('setor', '')}"
+        if re.search(r"procurad", t, re.I):
+            return "procurador"
+        if re.search(r"tesour|contab|financ", t, re.I):
+            return "financeiro"
+        if re.search(r"secret", t, re.I):
+            return "secretaria"
+        return "servidor"
+
+    @property
+    def setores(self):
+        """Mesmo cálculo do painel (lgcg-cargos.js, lgSetoresDe): para quem vão os documentos 'do setor'."""
+        u = self.u
+        out = {x for x in (u.get("setor"), u.get("cargo")) if x}
+        out.update(SETORES_DO_CARGO.get(u.get("cargoId") or "", []))
+        p = self.perfil
+        if p == "secretaria":
+            out.update(SETORES_DO_CARGO["diretora"])
+        if p == "procurador":
+            out.add("Procuradoria Legislativa")
+        if p == "vereador":
+            out.update(SETORES_DO_CARGO["vereador"])
+        if self.presidente:
+            out.add("Presidente da Câmara")
+        return out
+
+    def nivel(self, area):
+        p = self.perfil
+        if p == "adm":
+            return "edicao"
+        if area == "financeiro":
+            return "nenhum"   # painel travado (PAINEIS_OCULTOS)
+        m = self._ler("lgt_areas_v1") or {}
+        r = (m.get(self.login) or {}).get(area) if isinstance(m, dict) else None
+        return r or PERFIS_AREAS.get(p, PERFIS_AREAS["servidor"]).get(area, "nenhum")
+
+    def edita(self, *areas):
+        return any(self.nivel(a) == "edicao" for a in areas)
+
+    @property
+    def adm(self):
+        return self.perfil == "adm"
+
+    @property
+    def gestor(self):
+        return self.perfil in ("adm", "procurador")
+
+    @property
+    def edita_algo(self):
+        return self.edita("legislativo", "vereador", "transparencia", "site", "financeiro")
+
+
+def _regra(chave, q):
+    """True/False: pode gravar a informação inteira. 'votos' / 'manuais': confere o que mudou."""
+    if q.adm:
+        return True
+    if chave in ("lg_seed_perfis_v2", "legislagov_users_v1"):
+        return False
+    if chave in ("lgt_areas_v1", "lgt_publicadores_v1", "lgav_prazos_v1") or chave.startswith("legislagov_whatsapp_config_v1"):
+        return q.gestor
+    if chave == "lgf_v1":
+        return q.edita("financeiro")
+    if chave in ("lgt_site_noticias_v1", "lgt_site_cfg_v1") or re.fullmatch(r"lgs_site_[a-z]+_v1", chave):
+        return q.edita("site")
+    if chave == "lgt_transp_v1":
+        # quem não publica na Transparência só atualiza a lista automática de matérias (origem "legislativo")
+        return True if (q.edita("transparencia", "legislativo") or q.presidente) else ("transp_leg" if q.edita_algo else False)
+    if chave in ("lgtc_v1", "lgpn_v1"):
+        return q.edita("transparencia", "legislativo") or q.presidente
+    if chave == "lgv_camara_v1":
+        return q.gestor or q.edita("site", "legislativo") or q.presidente
+    if chave == "lgo_v1":
+        return q.edita("legislativo")
+    if chave in ("lgll_v1", "lgv11_agenda_v1"):
+        return q.edita("legislativo") or q.presidente
+    if chave == "lgpl_v1":
+        return True if (q.edita("legislativo") or q.presidente) else ("votos" if q.vereador and q.edita("vereador") else False)
+    if chave == "lgs_manuais_v1":
+        return "manuais" if q.edita_algo else False
+    return q.edita_algo
+
+
+_FALTA = object()
+
+
+def _difs(a, b, caminho=()):
+    if a == b:
+        return
+    if isinstance(a, dict) and isinstance(b, dict):
+        for k in set(a) | set(b):
+            yield from _difs(a.get(k, _FALTA), b.get(k, _FALTA), caminho + (k,))
+    elif isinstance(a, list) and isinstance(b, list) and len(a) == len(b):
+        for i, (x, y) in enumerate(zip(a, b)):
+            yield from _difs(x, y, caminho + (i,))
+    else:
+        yield caminho
+
+
+def _so_proprio_voto(antigo, novo, vid):
+    """Vereador (sem ser Presidente nem da Mesa) só mexe na própria presença e no próprio voto."""
+    for c in _difs(antigo, novo):
+        ok = any(c[i] in ("votos", "presenca", "porMesa") and len(c) > i + 1 and c[i + 1] == vid for i in range(len(c)))
+        if not ok:
+            return False
+    return True
+
+
+def _so_automaticos(antigo, novo):
+    """Lista da Transparência: só mudam itens gerados das matérias (origem 'legislativo')."""
+    if not isinstance(novo, list):
+        return False
+    a = {x.get("id"): x for x in (antigo if isinstance(antigo, list) else []) if isinstance(x, dict)}
+    b = {x.get("id"): x for x in novo if isinstance(x, dict)}
+    for k in set(a) | set(b):
+        x, y = a.get(k), b.get(k)
+        if x == y:
+            continue
+        if any(i is not None and i.get("origem") != "legislativo" for i in (x, y)):
+            return False
+    return True
+
+
+def _manuais_ok(antigo, novo, q):
+    """Assinaturas à mão: só Presidente, Procuradoria ou administrador decidem; ninguém decide a própria."""
+    if not isinstance(novo, list):
+        return False
+    velhos = {x.get("id"): x for x in (antigo if isinstance(antigo, list) else []) if isinstance(x, dict)}
+    decide = q.gestor or q.presidente
+    meu_vid = (q.vereador or {}).get("id")
+    for x in novo:
+        if not isinstance(x, dict):
+            return False
+        v = velhos.get(x.get("id"))
+        st_antes = v.get("status") if v else None
+        if x.get("status") in ("autorizada", "recusada") and st_antes != x.get("status"):
+            if not decide:
+                return False
+            if not q.adm and ((meu_vid and x.get("vid") == meu_vid) or (x.get("porLogin") and str(x.get("porLogin")).lower() == q.login)):
+                return False
+        if v is None and x.get("status") in ("autorizada", "recusada"):
+            return False
+        if v is not None and st_antes in ("autorizada", "recusada") and x.get("status") != st_antes:
+            return False   # decisão tomada não volta atrás
+    return True
+
+
+def pode_gravar_valor(camara, chave, u, valor_txt):
+    """Confere no servidor se esta pessoa pode gravar este valor. Devolve (ok, motivo)."""
+    if LOCAIS.match(chave):
+        return False, "informação local"
+    q = Quem(camara, u)
+    r = _regra(chave, q)
+    if r is True:
+        return True, ""
+    if r is False:
+        return False, "sem permissão"
+    try:
+        novo = json.loads(valor_txt) if valor_txt is not None else None
+    except Exception:
+        return False, "valor inválido"
+    antigo = q._ler(chave)
+    if r == "votos":
+        return (_so_proprio_voto(antigo, novo, q.vereador["id"]), "o vereador só registra a própria presença e o próprio voto")
+    if r == "transp_leg":
+        return (_so_automaticos(antigo, novo), "só quem publica na Transparência altera os documentos")
+    if r == "manuais":
+        return (_manuais_ok(antigo, novo, q), "só o Presidente ou a Procuradoria autorizam assinaturas à mão")
+    return False, "sem permissão"
+
+
+def pode_ler(camara, chave, u, q=None):
+    """None = não manda; 'publico' = manda a versão sem dados pessoais; True = manda inteira."""
+    q = q or Quem(camara, u)
+    if q.adm:
+        return True
+    if chave == "legislagov_users_v1":
+        return None
+    if chave == "lgf_v1":
+        return True if q.edita("financeiro", "transparencia") else None
+    if chave == "lgo_v1":
+        return True if q.edita("legislativo") else "publico"
+    return True
+
+
 # ---------------------------------------------------------------- dados
 def _publico(chave, valor_txt):
     """Versão para o site: tira dados pessoais."""
@@ -383,9 +764,14 @@ def carregar(camara, u):
     c = _db()
     seq = c.execute("SELECT COALESCE(MAX(seq),0) FROM dados WHERE camara=?", (camara,)).fetchone()[0]
     out = {}
+    q = Quem(camara, u) if u else None
     for r in c.execute("SELECT chave, valor, versao FROM dados WHERE camara=?", (camara,)):
         if u:
-            out[r["chave"]] = [r["valor"], r["versao"]]
+            p = pode_ler(camara, r["chave"], u, q)
+            if p is True:
+                out[r["chave"]] = [r["valor"], r["versao"]]
+            elif p == "publico":
+                out[r["chave"]] = [_publico(r["chave"], r["valor"]), r["versao"]]
         elif PUBLICAS.match(r["chave"]):
             out[r["chave"]] = [_publico(r["chave"], r["valor"]), r["versao"]]
     if u:
@@ -396,9 +782,14 @@ def carregar(camara, u):
 def mudancas(camara, desde, u):
     lin = _db().execute("SELECT chave, valor, versao, seq, por FROM dados WHERE camara=? AND seq>? ORDER BY seq", (camara, desde)).fetchall()
     out, ult = {}, desde
+    q = Quem(camara, u) if u else None
     for r in lin:
         ult = max(ult, r["seq"])
-        out[r["chave"]] = [r["valor"], r["versao"], r["por"]]
+        p = pode_ler(camara, r["chave"], u, q) if u else None
+        if p is True:
+            out[r["chave"]] = [r["valor"], r["versao"], r["por"]]
+        elif p == "publico":
+            out[r["chave"]] = [_publico(r["chave"], r["valor"]), r["versao"], r["por"]]
     if u and out.pop(CHAVE_USUARIOS, None) is not None:
         out[CHAVE_USUARIOS] = [json.dumps(usuarios(camara), ensure_ascii=False), 0, ""]
     return out, ult
@@ -407,6 +798,7 @@ def mudancas(camara, desde, u):
 def gravar(camara, chave, valor, versao_base, autor_login):
     """Grava se a versão do navegador for a atual; senão devolve o valor atual para juntar (409)."""
     c = _db()
+    valor = extrair_arquivos(camara, chave, valor, autor_login)
     with _trava:
         r = c.execute("SELECT valor, versao FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()
         if r and versao_base is not None and int(versao_base) != r["versao"]:

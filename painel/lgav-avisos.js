@@ -84,6 +84,13 @@
     return { etapa: e, cfg, desde, ...semaforo(desde, cfg) };
   }
   window.lgavPrazoDe = p => prazoDe(p);
+  window.lgavL10 = function (id) {   // abre o aviso do painel administrativo e marca como lido
+    const n = ler('lgv10_notifications_v1', []).find(x => x.id === id); try { window.lgv10Read && lgv10Read(id); } catch (e) { }
+    if (!n) return; const k = n.kind || '';
+    if (k.startsWith('expediente:') && window.lgv20OpenPrivate) return lgv20OpenPrivate(k.slice(11));
+    if (k === 'protocolo' && window.lgv9Open) return lgv9Open();
+    if (window.lgv10Open) lgv10Open(k === 'mensagem' ? 'inbox' : 'notifications');
+  };
   const chip = pz => pz && typeof pz === 'object' && pz.txt ? `<span class="lgav-chip c-${pz.cor}" title="${esc((pz.cfg || {}).nome || '')}">${ic('prazo')}${esc(pz.txt)}</span>` : '';
   window.lgavChip = p => chip(prazoDe(p));
 
@@ -99,6 +106,7 @@
   function meuDestino(dest, me) {
     if (!me) return false;
     if (dest.startsWith('v:')) return !!me.v && me.v.id === dest.slice(2);
+    if (dest === 'eu') return true;
     if (dest === 'pres') return me.pres;
     if (dest.startsWith('perfil:')) return me.perfil === dest.slice(7) || me.perfil === 'adm';
     if (dest === 'area:transparencia') return me.perfil !== 'vereador' && window.lgNivelArea && lgNivelArea('transparencia') === 'edicao';
@@ -141,6 +149,8 @@
     try { (A().dados().rascunhos || []).filter(r => !r.pendenteMao).forEach(r => add(['v:' + r.autorId], { chave: `rasc:${r.id}`, titulo: `Rascunho a assinar: ${A().TIPOS[r.tipo]?.nome || ''}`, texto: r.ementa, acao: "lgvrAbrir('assinar')", area: 'vereador' })); } catch (e) { }
     try { if (window.lgfxPendencias) lgfxPendencias().forEach(x => add(x.dest, x)); } catch (e) { }
     try { if (window.lgsPendencias) lgsPendencias().forEach(x => add(x.dest, x)); } catch (e) { }
+    // expedientes, protocolos numerados e mensagens (avisos do painel administrativo)
+    try { if (window.lgv10Para) ler('lgv10_notifications_v1', []).filter(n => lgv10Para(n)).slice(0, 30).forEach(n => add(['eu'], { chave: 'l10:' + n.id, titulo: n.title, texto: n.detail, acao: `lgavL10('${n.id}')`, area: '', urgente: /^(expediente|protocolo)/.test(n.kind || '') })); } catch (e) { }
     return out;
   }
   function minhas() {

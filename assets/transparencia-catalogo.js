@@ -67,7 +67,8 @@
   ];
 
   g.TRANSP_TIPOS_ARQUIVO = '.pdf,.csv,.xlsx,.xls,.ods,.odt,.doc,.docx,.txt,.json,.jpg,.jpeg,.png';
-  g.TRANSP_LIMITE_ARQUIVO = 2.5 * 1024 * 1024; // demonstração: o navegador guarda até ~5 MB no total
+  // com o servidor ligado o arquivo vai para o disco do servidor (até 15 MB); na demonstração fica no navegador (~5 MB no total)
+  g.TRANSP_LIMITE_ARQUIVO = (g.LG_SYNC && g.LG_SYNC.ativo ? 15 : 2.5) * 1024 * 1024;
 
   g.TRANSP_CATALOGO.forEach(c => { if (c.grupos && !c.subs) c.subs = c.grupos.flatMap(x => x[1]); });
 
@@ -89,6 +90,11 @@
   /* abre um arquivo guardado como data URL em nova aba (navegadores bloqueiam data: direto) */
   g.transpAbrirArquivo = function (item) {
     if (!item || !item.arquivo) return;
+    if (!/^data:/.test(item.arquivo.dados || '')) {   // no servidor: o arquivo tem endereço próprio
+      const a = document.createElement('a'); a.href = item.arquivo.dados; a.target = '_blank'; a.rel = 'noopener';
+      if (!/\.(pdf|png|jpe?g|gif|webp|txt)$/i.test(item.arquivo.nome || '') && !/pdf/.test(item.arquivo.tipo || '')) a.download = item.arquivo.nome || '';
+      document.body.appendChild(a); a.click(); a.remove(); return;
+    }
     const [meta, b64] = item.arquivo.dados.split(',');
     const tipo = (meta.match(/data:([^;]+)/) || [])[1] || 'application/octet-stream';
     const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);

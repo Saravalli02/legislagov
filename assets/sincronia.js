@@ -51,8 +51,17 @@
     el.className = sessaoCaiu ? 'erro' : falhou ? 'erro' : salvando ? 'salvando' : '';
     el.textContent = sessaoCaiu ? 'Sua sessão terminou. Saia e entre de novo para continuar salvando.' : falhou ? 'Sem conexão com o servidor. Tentando de novo…' : salvando ? 'Salvando…' : '';
   }
+  const recusas = {}; let ultimaAcao = 0;
+  ['pointerdown', 'keydown'].forEach(t => addEventListener(t, () => { ultimaAcao = Date.now(); }, true));
+  function negado(k, erro) {
+    const agora = Date.now(), r = recusas[k] = (recusas[k] || []).filter(t => agora - t < 60000); r.push(agora);
+    console.warn('LegislaGov: o servidor recusou', k, erro || '');
+    // só avisa quando foi a pessoa que mandou gravar (gravações automáticas de fundo são recusadas em silêncio)
+    if (r.length === 1 && agora - ultimaAcao < 5000) { try { const U = window.lgtUI; if (U && U.aviso) U.aviso('Você não tem permissão para alterar esta informação. Nada foi gravado.', 'erro'); } catch (e) { } }
+  }
+  const bloqueado = k => (recusas[k] || []).filter(t => Date.now() - t < 60000).length >= 3;   // a tela insiste: espera um minuto
   function agendar(k) {
-    if (!eu || sessaoCaiu) return;
+    if (!eu || sessaoCaiu || bloqueado(k)) return;
     clearTimeout(pendentes.get(k)); pendentes.set(k, setTimeout(() => enviar(k), 350)); status();
   }
   async function enviar(k) {
@@ -74,7 +83,15 @@
         if (junto !== d.valor) agendar(k);
       } else if (r.ok) {
         if (k === USUARIOS && typeof d.valor === 'string') { orig.set.call(LS, k, d.valor); base[k] = d.valor; }
+        else if (typeof d.valor === 'string') {   // o servidor trocou arquivos embutidos por endereços
+          ver[k] = d.versao; base[k] = d.valor; if (orig.get.call(LS, k) === valor) orig.set.call(LS, k, d.valor);
+        }
         else { ver[k] = d.versao; base[k] = valor; }
+      } else if (r.status === 403) {
+        // sem permissão: volta ao que está no servidor (sem redesenhar, para não repetir)
+        if (typeof d.valor === 'string') { orig.set.call(LS, k, d.valor); base[k] = d.valor; ver[k] = d.versao; }
+        else if (base[k] != null) orig.set.call(LS, k, base[k]); else orig.rem.call(LS, k);
+        negado(k, d.erro);
       } else console.warn('LegislaGov: não salvou', k, d.erro);
     } catch (e) { falhou = true; setTimeout(() => agendar(k), 5000); }
     emEnvio.delete(k); status();
@@ -89,8 +106,56 @@
     try { await fetch('/api/publico/enviar', { method: 'POST', headers: cab, body: JSON.stringify({ chave: k, itens: novos }) }); } catch (e) { }
   }
 
+  /* ---------------- arquivos: vão para o servidor, a informação guarda só o endereço ---------------- */
+  const DATA_RE = /data:([\w.+\-]+\/[\w.+\-]+)(?:;[\w.+\-]+=[\w.+\-]+)*;base64,([A-Za-z0-9+/=]+)/g, MIN_B64 = 3000;
+  function subir(chave, tipo, b64) {
+    const x = new XMLHttpRequest(); x.open('POST', '/api/arquivo', false);
+    x.setRequestHeader('Content-Type', 'application/json'); x.setRequestHeader('X-LG', '1');
+    x.send(JSON.stringify({ chave, tipo, b64 }));
+    if (x.status !== 200) throw new Error('arquivo ' + x.status);
+    return JSON.parse(x.responseText).url;
+  }
+  function tirarArquivos(k, v) {
+    try {
+      if (k.startsWith('lgs_pdf_')) {
+        if (v.startsWith('lgarq:') || v.length < MIN_B64) return v;
+        const m = /^data:([^;,]+)[^,]*;base64,(.*)$/.exec(v);
+        return 'lgarq:' + subir(k, m ? m[1] : 'application/pdf', m ? m[2] : v);
+      }
+      if (v.length < MIN_B64 || v.indexOf('base64,') < 0) return v;
+      return v.replace(DATA_RE, (t, tipo, b64) => b64.length < MIN_B64 ? t : subir(k, tipo, b64));
+    } catch (e) { console.warn('LegislaGov: arquivo não enviado agora (o servidor tenta ao gravar)', e); return v; }
+  }
+  // lê um arquivo guardado (para assinar por cima, conferir, juntar páginas)
+  SYNC.bytes = function (url) {
+    const x = new XMLHttpRequest(); x.open('GET', url, false); x.overrideMimeType('text/plain; charset=x-user-defined'); x.send();
+    if (x.status !== 200) return null;
+    const t = x.responseText, u8 = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) u8[i] = t.charCodeAt(i) & 255; return u8;
+  };
+  window.lgArquivoBytes = SYNC.bytes;
+  // anexos de expedientes, mensagens e agenda (antes ficavam só no navegador de quem enviou)
+  const REF_ANEXOS = 'lg_anexos_ref_v1';
+  if (PAINEL) window.lgAnexo = {
+    async salvar(chave, file, acesso) {
+      const b64 = await new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = erro; r.readAsDataURL(file); });
+      const r = await fetch('/api/arquivo', { method: 'POST', headers: cab, credentials: 'same-origin', body: JSON.stringify({ chave: REF_ANEXOS, tipo: file.type || 'application/octet-stream', b64, acesso: acesso || null }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.url) throw new Error(d.erro || 'o servidor não recebeu o arquivo');
+      let m = {}; try { m = JSON.parse(localStorage.getItem(REF_ANEXOS) || '{}') || {}; } catch (e) { }
+      m[chave] = { url: d.url, nome: file.name || 'documento', tipo: file.type || '', tamanho: file.size || 0, em: new Date().toISOString() };
+      localStorage.setItem(REF_ANEXOS, JSON.stringify(m));
+    },
+    async ler(chave) {
+      let m = {}; try { m = JSON.parse(localStorage.getItem(REF_ANEXOS) || '{}') || {}; } catch (e) { }
+      const x = m[chave]; if (!x) return null;
+      const r = await fetch(x.url, { credentials: 'same-origin' }); if (!r.ok) return null;
+      const bl = await r.blob(); return new File([bl], x.nome || 'documento', { type: x.tipo || bl.type });
+    }
+  };
+
   ST.setItem = function (k, v) {
     if (this !== LS || !sincroniza(k)) return orig.set.call(this, k, v);
+    if (PAINEL && eu && typeof v === 'string') v = tirarArquivos(k, v);
     const antes = orig.get.call(LS, k);
     orig.set.call(this, k, v);
     if (String(v) === antes) return;

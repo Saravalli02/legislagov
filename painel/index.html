@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<script src="../assets/sincronia.js?v=202611120935"></script>
+<script src="../assets/sincronia.js?v=202611121545"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="app/app-192.png">
@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="LegislaGov">
-<script src="app/instalar.js?v=202611120935" defer></script>
+<script src="app/instalar.js?v=202611121545" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LegislaGov — Câmara Municipal</title>
 <link rel="icon" type="image/png" href="logo-legislagov.png">
@@ -1375,7 +1375,7 @@ function abrirNovoExpediente() { carregarExpedientes(); document.getElementById(
 function mostrarListaExpedientes() { document.getElementById('expediente-form-view').style.display='none'; document.getElementById('expediente-detail-view').style.display='none'; document.getElementById('expedientes-list-view').style.display='block'; renderExpedientes(); window.scrollTo(0,0); }
 async function criarExpediente() { const assunto=document.getElementById('exp-assunto').value.trim(); const descricao=document.getElementById('exp-descricao').value.trim(); if(!assunto || !descricao){ alert('Informe o assunto e a descrição do expediente.'); return; } const data=new Date(); const label=document.getElementById('exp-natureza').value==='interna'?'Comunicação interna':'Integração institucional'; const item={id:'exp-'+Date.now(), numero:numeroExpediente(), municipio:municipioAtual, natureza:document.getElementById('exp-natureza').value, tipo:document.getElementById('exp-tipo').value, assunto, origem:document.getElementById('exp-origem').value, destino:document.getElementById('exp-destino').value, responsavel:document.getElementById('exp-responsavel').value.trim()||document.getElementById('exp-destino').value, prazo:document.getElementById('exp-prazo').value, descricao, documentos:Array.from(document.getElementById('exp-arquivos').files).map(f=>f.name), privado:true, status:'enviado', criadoPor:usuarioAtual?usuarioAtual.nome:'Usuário atual', timeline:[{date:data.toLocaleString('pt-BR'),label:'Expediente criado e enviado',user:usuarioAtual?usuarioAtual.nome:'Usuário atual'},{date:data.toLocaleString('pt-BR'),label:'Aguardando recebimento por '+(document.getElementById('exp-responsavel').value.trim()||document.getElementById('exp-destino').value),user:usuarioAtual?usuarioAtual.nome:'Usuário atual'}]}; const anexos=Array.from(document.getElementById('exp-arquivos').files);
 if(anexos.some(f=>f.size>8*1024*1024)||anexos.reduce((n,f)=>n+f.size,0)>20*1024*1024){alert('Limite: 8 MB por arquivo e 20 MB por expediente.');return;}
-try { for(let i=0;i<anexos.length;i++) await salvarAnexoLocal(item.id,i,anexos[i]); }
+try { for(let i=0;i<anexos.length;i++) await salvarAnexoLocal(item.id,i,anexos[i],{para:[item.destino,item.responsavel].filter(Boolean)}); }
 catch(err){ alert('Não foi possível salvar os anexos neste navegador. '+err.message);return; }
 const todos=getExpedientes(); todos.unshift(item); expedientes=todos.filter(e=>e.municipio===municipioAtual); saveExpedientes(); registrarLog('Expediente criado', item.numero+' — '+label); const p={id:item.id,full:item.numero,ementa:item.assunto}; if(typeof lgv10Notify==='function'){const destino='setor:'+item.destino;lgv10Notify(destino,(item.privado?'🔒 Documento privado enviado para ':'Documento enviado para ')+item.destino,item.numero+' • '+item.assunto+' • Enviado por '+item.criadoPor,'expediente:'+item.id)}/* A notificação geral antiga tentava abrir o expediente como protocolo legislativo e
    interrompia o envio comum. O sino próprio já recebe o aviso acima. */
@@ -1926,8 +1926,8 @@ window.addEventListener('DOMContentLoaded',()=>{const sw=document.querySelector(
    Demonstração individual: não compartilha anexos entre computadores. */
 function escLG(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function dbAnexos(){return new Promise((resolve,reject)=>{const r=indexedDB.open('legislagov_anexos_v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('anexos');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
-async function salvarAnexoLocal(id,i,file){const db=await dbAnexos();return new Promise((resolve,reject)=>{const tx=db.transaction('anexos','readwrite');tx.objectStore('anexos').put(file,id+':'+i);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
-async function baixarAnexoLocal(id,i){try{const db=await dbAnexos();const f=await new Promise((resolve,reject)=>{const r=db.transaction('anexos').objectStore('anexos').get(id+':'+i);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});db.close();if(!f){alert('Arquivo não encontrado neste navegador. Anexos não são sincronizados entre computadores nesta prévia.');return;}const url=URL.createObjectURL(f),a=document.createElement('a');a.href=url;a.download=f.name||'documento';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);registrarLog('Anexo baixado',f.name);}catch(err){alert('Erro ao baixar: '+err.message);}}
+async function salvarAnexoLocal(id,i,file,acesso){if(window.lgAnexo)return lgAnexo.salvar('exp:'+id+':'+i,file,acesso);const db=await dbAnexos();return new Promise((resolve,reject)=>{const tx=db.transaction('anexos','readwrite');tx.objectStore('anexos').put(file,id+':'+i);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+async function baixarAnexoLocal(id,i){try{let f;if(window.lgAnexo)f=await lgAnexo.ler('exp:'+id+':'+i);else{const db=await dbAnexos();f=await new Promise((resolve,reject)=>{const r=db.transaction('anexos').objectStore('anexos').get(id+':'+i);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});db.close();}if(!f){alert('Arquivo não encontrado neste navegador. Peça a quem enviou para anexar de novo.');return;}const url=URL.createObjectURL(f),a=document.createElement('a');a.href=url;a.download=f.name||'documento';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);registrarLog('Anexo baixado',f.name);}catch(err){alert('Erro ao baixar: '+err.message);}}
 function downloadTextoLG(texto,nome,tipo){const blob=new Blob(['\ufeff',texto],{type:tipo});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=nome;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}
 function exportarExpediente(id,formato){const e=getExpedientes().find(x=>x.id===id);if(!e)return;const linhas=[['Número',e.numero],['Tipo',e.tipo],['Assunto',e.assunto],['Origem',e.origem],['Destino',e.destino],['Responsável',e.responsavel],['Descrição',e.descricao],['Arquivos',e.documentos.join('; ')]];
 if(formato==='excel'){downloadTextoLG('<html><body><table border="1">'+linhas.map(([a,b])=>'<tr><th>'+escLG(a)+'</th><td>'+escLG(b)+'</td></tr>').join('')+'</table></body></html>',e.numero+'.xls','application/vnd.ms-excel');return;}
@@ -2085,16 +2085,17 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const current=()=>window.usuarioAtual?.usuario||window.usuarioAtual?.nome||((typeof usuarioAtual!=='undefined'&&usuarioAtual)?usuarioAtual.usuario||usuarioAtual.nome:'');
 const user=()=>String(current()||'').trim();
 const sector=()=>((typeof usuarioAtual!=='undefined'&&usuarioAtual)?usuarioAtual.cargo||'':'');
-const matches=r=>r==='*'||r.toLowerCase()===user().toLowerCase()||r.toLowerCase()===('setor:'+sector()).toLowerCase();
+const matches=r=>{r=String(r||'');const l=r.toLowerCase();if(r==='*'||l===user().toLowerCase())return true;if(!l.startsWith('setor:'))return false;const ss=window.lgSetoresDe?lgSetoresDe():[sector()];return ss.some(s=>('setor:'+s).toLowerCase()===l)};
+window.lgv10Para=n=>!!n&&matches(n.to)&&!(n.readBy||[]).includes(user().toLowerCase());
 function db(){return new Promise((resolve,reject)=>{const q=indexedDB.open('legislagov_v10_files',1);q.onupgradeneeded=()=>q.result.createObjectStore('files');q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)})}
-async function saveFile(id,file){const d=await db();return new Promise((ok,no)=>{const t=d.transaction('files','readwrite');t.objectStore('files').put(file,id);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})}
-window.lgv10Download=async id=>{try{const d=await db();const file=await new Promise((ok,no)=>{const t=d.transaction('files','readonly');const q=t.objectStore('files').get(id);q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)});d.close();if(!file){alert('Anexo não encontrado neste navegador.');return}const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}catch(e){alert('Não foi possível baixar o arquivo: '+e.message)}};
+async function saveFile(id,file,acesso){if(window.lgAnexo)return lgAnexo.salvar('msg:'+id,file,acesso);const d=await db();return new Promise((ok,no)=>{const t=d.transaction('files','readwrite');t.objectStore('files').put(file,id);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})}
+window.lgv10Download=async id=>{try{let file;if(window.lgAnexo)file=await lgAnexo.ler('msg:'+id);else{const d=await db();file=await new Promise((ok,no)=>{const t=d.transaction('files','readonly');const q=t.objectStore('files').get(id);q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)});d.close();}if(!file){alert('Anexo não encontrado neste navegador.');return}const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}catch(e){alert('Não foi possível baixar o arquivo: '+e.message)}};
 window.lgv10Notify=function(to,title,detail,kind='mensagem'){const a=get(NK);a.unshift({id:'nt'+Date.now()+Math.random().toString(36).slice(2),to,title,detail,kind,readBy:[],date:new Date().toISOString()});put(NK,a.slice(0,500));lgv10Update()};
 window.lgv10Update=function(){const el=document.getElementById('lgv10-bell');if(!el)return;el.style.display=user()?'block':'none';const count=get(NK).filter(n=>matches(n.to)&&!n.readBy.includes(user().toLowerCase())).length;const badge=document.getElementById('lgv10-count');badge.textContent=count>99?'99+':count;badge.style.display=count?'inline':'none'};
 window.lgv10Open=function(tab='notifications'){if(!user()){alert('Entre no sistema para acessar as mensagens.');return}document.getElementById('lgv10-panel').style.display='block';['notifications','inbox','compose'].forEach(t=>{document.getElementById('lgv10-'+t).style.display=t===tab?'block':'none';document.getElementById('lgv10-tab-'+t).classList.toggle('active',t===tab)});if(tab==='notifications')lgv10RenderNotifications();if(tab==='inbox')lgv10RenderMessages();if(tab==='compose')lgv10Recipients();lgv10Update()};
 window.lgv10Close=()=>document.getElementById('lgv10-panel').style.display='none';
 window.lgv10Recipients=function(){const sel=document.getElementById('lgv10-recipient'),prev=sel.value;let users=[];try{users=JSON.parse(localStorage.getItem('legislagov_users_v1')||'[]')}catch{};try{const other=typeof lgUsers==='function'?lgUsers():[];users=[...users,...other]}catch{};const names=[...new Set(users.map(u=>u.usuario||u.nome).filter(n=>n&&n.toLowerCase()!==user().toLowerCase()))];const sectors=['Procuradoria Legislativa', 'Secretaria', 'Contabilidade', 'Tesouraria', 'Vereadores', 'Presidente da Câmara', 'Protocolo'];sel.innerHTML='<optgroup label="Usuários">'+names.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('')+'</optgroup><optgroup label="Setores">'+sectors.map(n=>'<option value="setor:'+esc(n)+'">'+esc(n)+'</option>').join('')+'</optgroup>';if([...sel.options].some(o=>o.value===prev))sel.value=prev};
-window.lgv10Send=async function(){const to=document.getElementById('lgv10-recipient').value,subject=document.getElementById('lgv10-subject').value.trim(),body=document.getElementById('lgv10-text').value.trim(),files=[...document.getElementById('lgv10-files').files],status=document.getElementById('lgv10-status');if(!to||!subject||(!body&&!files.length)){alert('Escolha o destinatário e informe assunto e mensagem ou anexo.');return}status.textContent='Salvando anexos...';const id='msg'+Date.now()+Math.random().toString(36).slice(2),attached=[];try{for(let i=0;i<files.length;i++){const fid=id+'-'+i;await saveFile(fid,files[i]);attached.push({id:fid,name:files[i].name,size:files[i].size})}const a=get(KEY);a.unshift({id,from:user(),to,subject,body,files:attached,date:new Date().toISOString()});put(KEY,a);lgv10Notify(to,'Nova mensagem: '+subject,'De '+user()+(files.length?' • '+files.length+' arquivo(s)':''));status.textContent='Mensagem enviada nesta demonstração local.';document.getElementById('lgv10-subject').value='';document.getElementById('lgv10-text').value='';document.getElementById('lgv10-files').value='';if(typeof registrarLog==='function')registrarLog('Mensagem enviada','Para '+to+': '+subject)}catch(e){status.textContent='Falha ao salvar: '+e.message}};
+window.lgv10Send=async function(){const to=document.getElementById('lgv10-recipient').value,subject=document.getElementById('lgv10-subject').value.trim(),body=document.getElementById('lgv10-text').value.trim(),files=[...document.getElementById('lgv10-files').files],status=document.getElementById('lgv10-status');if(!to||!subject||(!body&&!files.length)){alert('Escolha o destinatário e informe assunto e mensagem ou anexo.');return}status.textContent='Salvando anexos...';const id='msg'+Date.now()+Math.random().toString(36).slice(2),attached=[];try{for(let i=0;i<files.length;i++){const fid=id+'-'+i;await saveFile(fid,files[i],{para:[to]});attached.push({id:fid,name:files[i].name,size:files[i].size})}const a=get(KEY);a.unshift({id,from:user(),to,subject,body,files:attached,date:new Date().toISOString()});put(KEY,a);lgv10Notify(to,'Nova mensagem: '+subject,'De '+user()+(files.length?' • '+files.length+' arquivo(s)':''));status.textContent='Mensagem enviada nesta demonstração local.';document.getElementById('lgv10-subject').value='';document.getElementById('lgv10-text').value='';document.getElementById('lgv10-files').value='';if(typeof registrarLog==='function')registrarLog('Mensagem enviada','Para '+to+': '+subject)}catch(e){status.textContent='Falha ao salvar: '+e.message}};
 window.lgv10RenderNotifications=function(){const a=get(NK).filter(n=>matches(n.to)),el=document.getElementById('lgv10-notification-list');el.innerHTML=a.length?a.map(n=>'<div class="lgv10-item"><b>'+esc(n.title)+'</b><p>'+esc(n.detail)+'</p><span class="lgv10-muted">'+new Date(n.date).toLocaleString('pt-BR')+'</span> '+(n.kind&&n.kind.startsWith('expediente:')?'<button onclick="lgv20OpenPrivate(\''+esc(n.kind.slice(11))+'\')">Abrir documento</button> ':'')+(!n.readBy.includes(user().toLowerCase())?'<button onclick="lgv10Read(\''+esc(n.id)+'\')">Marcar como lida</button>':'✓ Lida')+'</div>').join(''):'<p>Nenhuma notificação para este usuário.</p>'};
 window.lgv10Read=function(id){const a=get(NK),n=a.find(x=>x.id===id);if(n&&!n.readBy.includes(user().toLowerCase())){n.readBy.push(user().toLowerCase());put(NK,a)}lgv10RenderNotifications();lgv10Update()};
 window.lgv10RenderMessages=function(){const a=get(KEY).filter(m=>matches(m.to)||m.from.toLowerCase()===user().toLowerCase());document.getElementById('lgv10-message-list').innerHTML=a.length?a.map(m=>'<div class="lgv10-item"><b>'+esc(m.subject)+'</b><p class="lgv10-muted">'+esc(m.from)+' → '+esc(m.to)+' • '+new Date(m.date).toLocaleString('pt-BR')+'</p><p style="white-space:pre-wrap">'+esc(m.body)+'</p>'+m.files.map(f=>'<button onclick="lgv10Download(\''+esc(f.id)+'\')">📎 '+esc(f.name)+' ('+Math.ceil(f.size/1024)+' KB)</button> ').join('')+'<p><button onclick="lgv10Reply(\''+esc(m.from)+'\',\''+esc(m.subject)+'\')">Responder</button></p></div>').join(''):'<p>Nenhuma mensagem.</p>'};
@@ -2146,8 +2147,8 @@ const uid=()=>('lgv11-'+Date.now()+'-'+Math.random().toString(36).slice(2));
 const date=v=>{if(!v)return 'Data não informada';const d=new Date(v);return isNaN(d)?v:d.toLocaleString('pt-BR',{dateStyle:'full',timeStyle:'short'})};
 const now=()=>new Date().toISOString();
 function idb(){return new Promise((ok,no)=>{const q=indexedDB.open('lgv11_files',1);q.onupgradeneeded=()=>q.result.createObjectStore('attachments');q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)})}
-async function filePut(id,file){const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('attachments','readwrite');t.objectStore('attachments').put(file,id);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})}
-async function fileGet(id){const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('attachments','readonly');const q=t.objectStore('attachments').get(id);q.onsuccess=()=>{d.close();ok(q.result)};q.onerror=()=>{d.close();no(q.error)}})}
+async function filePut(id,file){if(window.lgAnexo)return lgAnexo.salvar('ag:'+id,file);const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('attachments','readwrite');t.objectStore('attachments').put(file,id);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})}
+async function fileGet(id){if(window.lgAnexo)return lgAnexo.ler('ag:'+id);const d=await idb();return new Promise((ok,no)=>{const t=d.transaction('attachments','readonly');const q=t.objectStore('attachments').get(id);q.onsuccess=()=>{d.close();ok(q.result)};q.onerror=()=>{d.close();no(q.error)}})}
 window.lgv11Close=()=>{document.getElementById('lgv11-overlay').style.display='none'};
 window.lgv11Open=function(which){if(!me()){alert('Entre no LegislaGov primeiro.');return}document.getElementById('lgv11-overlay').style.display='block';document.getElementById('lgv11-title').textContent=which==='agenda'?'📅 Agenda de sessões da Câmara':'💡 Melhorias do LegislaGov';if(which==='agenda')lgv11Agenda();else lgv11Melhorias()};
 function attachmentHTML(f){return '<button onclick="lgv11File(\''+esc(f.id)+'\',\'download\')">⬇ Baixar '+esc(f.name)+'</button> <button onclick="lgv11File(\''+esc(f.id)+'\',\'view\')">👁 Ler arquivo</button>'}
@@ -2221,9 +2222,10 @@ function lgv20CanSee(e){
  if(typeof usuarioAtual==='undefined'||!usuarioAtual)return false;
  const norm=v=>String(v||'').trim().toLocaleLowerCase('pt-BR');
  const current=lgUsers().find(u=>u.id===usuarioAtual.id)||usuarioAtual;
- const sector=current.setor||(['Procuradoria Legislativa','Secretaria','Contabilidade','Tesouraria','Vereadores','Presidente da Câmara','Protocolo'].includes(current.cargo)?current.cargo:'');
+ const setores=window.lgSetoresDe?lgSetoresDe(current):[current.setor||(['Procuradoria Legislativa','Secretaria','Contabilidade','Tesouraria','Vereadores','Presidente da Câmara','Protocolo'].includes(current.cargo)?current.cargo:'')].filter(Boolean);
  const mine=norm(e.criadoPor)===norm(current.nome)||norm(e.criadoPor)===norm(current.usuario);
- return mine || (!!sector && norm(e.destino)===norm(sector));
+ const adm=window.lgPerfil&&lgPerfil(current)==='adm';
+ return mine || adm || setores.some(s=>norm(e.destino)===norm(s)) || norm(e.responsavel)===norm(current.nome);
 }
 function lgv20OpenPrivate(id){const e=getExpedientes().find(x=>x.id===id);if(!e||!lgv20CanSee(e)){alert('Documento privado não autorizado para esta conta.');return}lgv10Close();gotoShared('expedientes');abrirDetalheExpediente(id)}
 </script>
@@ -3125,20 +3127,20 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
-<script src="../assets/transparencia-catalogo.js?v=202611120935"></script>
-<script src="lgt-publicacoes.js?v=202611120935"></script>
-<script src="lgok-confirmar.js?v=202611120935"></script>
-<script src="lgf-financeiro.js?v=202611120935"></script>
-<script src="lgs-assinatura.js?v=202611120935"></script>
-<script src="lgvr-vereador.js?v=202611120935"></script>
-<script src="lgcm-comissoes.js?v=202611120935"></script>
-<script src="lgcg-cargos.js?v=202611120935"></script>
-<script src="lgux-facil.js?v=202611120935"></script>
-<script src="../assets/leis-comum.js?v=202611120935"></script>
-<script src="../assets/tv.js?v=202611120935"></script>
-<script src="lgpl-plenario.js?v=202611120935"></script>
-<script src="lgfx-funcoes.js?v=202611120935"></script>
-<script src="lgav-avisos.js?v=202611120935"></script>
-<script src="lgsc-site.js?v=202611120935"></script>
-<script src="lgtr-treinamento.js?v=202611120935"></script>
+<script src="../assets/transparencia-catalogo.js?v=202611121545"></script>
+<script src="lgt-publicacoes.js?v=202611121545"></script>
+<script src="lgok-confirmar.js?v=202611121545"></script>
+<script src="lgf-financeiro.js?v=202611121545"></script>
+<script src="lgs-assinatura.js?v=202611121545"></script>
+<script src="lgvr-vereador.js?v=202611121545"></script>
+<script src="lgcm-comissoes.js?v=202611121545"></script>
+<script src="lgcg-cargos.js?v=202611121545"></script>
+<script src="lgux-facil.js?v=202611121545"></script>
+<script src="../assets/leis-comum.js?v=202611121545"></script>
+<script src="../assets/tv.js?v=202611121545"></script>
+<script src="lgpl-plenario.js?v=202611121545"></script>
+<script src="lgfx-funcoes.js?v=202611121545"></script>
+<script src="lgav-avisos.js?v=202611121545"></script>
+<script src="lgsc-site.js?v=202611121545"></script>
+<script src="lgtr-treinamento.js?v=202611121545"></script>
 </body></html>

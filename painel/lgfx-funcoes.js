@@ -305,11 +305,11 @@
       <p class="lgt-p cheio">${esc(p.ementa)}</p>
       <label><span>Recebida em *</span><input name="data" type="date" value="${hojeISO()}"></label><label><span>Documento</span><input name="doc" placeholder="Ex.: Ofício nº 98/2026 — GP"></label>
       <label class="cheio"><span>Resumo da resposta *</span><textarea name="texto" rows="4" placeholder="Ex.: Informa que o serviço foi incluído no cronograma de dezembro."></textarea></label>
-      <label class="cheio"><span>Arquivo (PDF, até 1,5 MB)</span><input name="arq" type="file" accept="application/pdf"></label></div>
+      <label class="cheio"><span>Arquivo (PDF, até ${window.LG_SYNC && LG_SYNC.ativo ? '15' : '1,5'} MB)</span><input name="arq" type="file" accept="application/pdf"></label></div>
       <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Registrar resposta</button></div></form>`);
     const f = $('#lgt-modal form');
     f.onsubmit = async e => { e.preventDefault(); const er = f.querySelector('.lgt-erro'); if (!f.texto.value.trim()) { er.textContent = 'Escreva o resumo da resposta.'; return; }
-      let arquivo = null; const fl = f.arq.files[0]; if (fl) { if (fl.size > 1.5e6) { er.textContent = 'O PDF passa de 1,5 MB. Reduza o arquivo ou registre só o resumo.'; return; } arquivo = { nome: fl.name, data: await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(fl); }) }; }
+      let arquivo = null; const fl = f.arq.files[0]; if (fl) { if (fl.size > (window.LG_SYNC && LG_SYNC.ativo ? 15e6 : 1.5e6)) { er.textContent = 'O PDF passa do limite. Reduza o arquivo ou registre só o resumo.'; return; } arquivo = { nome: fl.name, data: await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(fl); }) }; }
       p.oficio = p.oficio || { enviado: new Date().toISOString() };
       p.resposta = { data: new Date(f.data.value + 'T12:00').toISOString(), doc: f.doc.value.trim(), texto: f.texto.value.trim(), arquivo, por: (usuario() || {}).nome || '' };
       p.timeline.push({ date: A().agoraTL(), label: `Resposta da Prefeitura recebida${p.resposta.doc ? ' (' + p.resposta.doc + ')' : ''}: ${p.resposta.texto.slice(0, 120)}` });

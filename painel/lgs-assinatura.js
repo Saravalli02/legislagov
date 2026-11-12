@@ -134,8 +134,9 @@
   /* ---------------- guardar/baixar PDFs ---------------- */
   const b64 = bytes => { let s = ''; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); return btoa(s); };
   const deB64 = t => { const s = atob(t); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
-  function guardarPDF(id, bytes) { try { localStorage.setItem(PDF_PREFIX + id, b64(bytes)); return true; } catch (e) { return false; } }
-  function lerPDF(id) { try { const t = localStorage.getItem(PDF_PREFIX + id); return t ? deB64(t) : null; } catch (e) { return null; } }
+  function guardarPDF(id, bytes) { try { localStorage.setItem(PDF_PREFIX + id, b64(bytes)); return !!localStorage.getItem(PDF_PREFIX + id); } catch (e) { return false; } }
+  // no servidor, o arquivo fica em disco e aqui só o endereço (lgarq:/api/arquivo/…); baixa quando precisa
+  function lerPDF(id) { try { const t = localStorage.getItem(PDF_PREFIX + id); if (!t) return null; if (t.startsWith('lgarq:')) return window.lgArquivoBytes ? lgArquivoBytes(t.slice(6)) : null; return deB64(t); } catch (e) { return null; } }
   function tipoDe(bytes) { return bytes[0] === 0xFF && bytes[1] === 0xD8 ? ['image/jpeg', '.jpg'] : bytes[0] === 0x89 && bytes[1] === 0x50 ? ['image/png', '.png'] : ['application/pdf', '.pdf']; }
   function baixar(bytes, nome) { const [mime, ext] = tipoDe(bytes); if (ext !== '.pdf') nome = String(nome).replace(/\.pdf$/i, '') + ext; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], { type: mime })); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
   window.lgsBaixarPDF = (id, nome) => { const b = lerPDF(id); if (!b) return UI().aviso('PDF não encontrado neste navegador.', 'erro'); baixar(b, nome || id + '.pdf'); };

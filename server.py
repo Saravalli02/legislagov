@@ -24,6 +24,7 @@ o arquivo de legenda (baixado no YouTube Studio) pelo painel. O resumo fica como
 alguém da Câmara aprovar no painel.
 """
 import json
+import shutil
 import os
 import re
 import threading
@@ -337,6 +338,22 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(corpo)
         return True
 
+    def _arquivo(self, tipo, caminho, publico=False):
+        tam = os.path.getsize(caminho)
+        self.send_response(200)
+        seguro = re.fullmatch(r"application/pdf|image/(png|jpe?g|gif|webp)|audio/[\w.+-]+|video/[\w.+-]+|text/plain", tipo or "")
+        self.send_header("Content-Type", tipo if seguro else "application/octet-stream")
+        if tipo != "application/pdf":   # o leitor de PDF do navegador não abre em página isolada
+            self.send_header("Content-Security-Policy", "sandbox; default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'")
+        self.send_header("Content-Length", str(tam))
+        self.send_header("Cache-Control", ("public" if publico else "private") + ", max-age=31536000, immutable")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Disposition", "inline" if seguro else "attachment")
+        self.end_headers()
+        with open(caminho, "rb") as fh:
+            shutil.copyfileobj(fh, self.wfile)
+        return True
+
     def _corpo(self, limite=8_000_000):
         tam = int(self.headers.get("Content-Length", "0") or 0)
         if tam <= 0:
@@ -388,6 +405,11 @@ class Handler(SimpleHTTPRequestHandler):
             if caminho == "/api/cadastro" and metodo == "POST":
                 erro = lgapi.cadastro(camara, self._corpo(20_000), ip)
                 return self._json(400 if erro else 200, {"ok": not erro, "erro": erro})
+            if caminho.startswith("/api/arquivo/") and metodo == "GET":
+                achado = lgapi.ler_arquivo(camara, caminho[len("/api/arquivo/"):], u)
+                if not achado:
+                    return self._json(404 if u else 401, {"ok": False, "erro": "Arquivo não encontrado ou sem permissão."})
+                return self._arquivo(*achado, publico=not u)
             if caminho == "/api/publico/enviar" and metodo == "POST":
                 d = self._corpo(300_000)
                 erro = lgapi.envio_publico(camara, str(d.get("chave", "")), d.get("itens"), ip)
@@ -398,6 +420,21 @@ class Handler(SimpleHTTPRequestHandler):
                 d = self._corpo(20_000)
                 erro = lgapi.trocar_senha(u, d.get("atual", ""), d.get("nova", ""))
                 return self._json(400 if erro else 200, {"ok": not erro, "erro": erro}, cookie=None if erro else "")
+            if caminho == "/api/arquivo" and metodo == "POST":
+                if not lgapi.Quem(camara, u).edita_algo:
+                    return self._json(403, {"ok": False, "erro": "Sem permissão para enviar arquivos."})
+                d = self._corpo(21_000_000)
+                import base64
+                try:
+                    bruto = base64.b64decode(str(d.get("b64", "")), validate=False)
+                except Exception:
+                    return self._json(400, {"ok": False, "erro": "Arquivo inválido."})
+                if not bruto:
+                    return self._json(400, {"ok": False, "erro": "Arquivo vazio."})
+                with lgapi._trava:
+                    url = lgapi.salvar_arquivo(camara, str(d.get("tipo", ""))[:80], bruto, lgapi._eh_publico(str(d.get("chave", ""))), u["usuario"],
+                                               d.get("acesso") if isinstance(d.get("acesso"), dict) else None)
+                return self._json(200, {"ok": True, "url": url})
             if caminho == "/api/mudancas" and metodo == "GET":
                 desde = int((re.search(r"desde=(\d+)", self.path) or [0, "0"])[1])
                 dados, seq = lgapi.mudancas(camara, desde, u)
@@ -407,10 +444,14 @@ class Handler(SimpleHTTPRequestHandler):
                 if not re.fullmatch(r"[\w.\-]{1,120}", chave) or not lgapi.pode_gravar(chave, u):
                     return self._json(403, {"ok": False, "erro": "Sem permissão para esta informação."})
                 if metodo == "DELETE":
+                    ok, motivo = lgapi.pode_gravar_valor(camara, chave, u, None)
+                    if not ok:
+                        lgapi.registrar(camara, u["usuario"], "Gravação recusada", f"{chave}: {motivo}", self._ip())
+                        return self._json(403, {"ok": False, "erro": "Sem permissão: " + motivo})
                     lgapi.remover(camara, chave, u["usuario"])
                     return self._json(200, {"ok": True})
                 if metodo == "PUT":
-                    d = self._corpo()
+                    d = self._corpo(21_000_000)
                     valor = d.get("valor")
                     if not isinstance(valor, str):
                         return self._json(400, {"ok": False, "erro": "Valor inválido."})
@@ -418,10 +459,22 @@ class Handler(SimpleHTTPRequestHandler):
                         with lgapi._trava:
                             lgapi.gravar_usuarios(camara, json.loads(valor), u)
                         return self._json(200, {"ok": True, "versao": 0, "valor": json.dumps(lgapi.usuarios(camara), ensure_ascii=False)})
-                    ok, atual, versao = lgapi.gravar(camara, chave, valor, d.get("versao"), u["usuario"])
+                    with lgapi._trava:
+                        # versão antiga: primeiro junta (409); só depois confere a permissão sobre o que mudou
+                        r0 = lgapi._db().execute("SELECT valor, versao FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()
+                        if r0 and d.get("versao") is not None and int(d.get("versao")) != r0["versao"]:
+                            return self._json(409, {"ok": False, "valor": r0["valor"], "versao": r0["versao"]})
+                        pode, motivo = lgapi.pode_gravar_valor(camara, chave, u, valor)
+                        if not pode:
+                            lgapi.registrar(camara, u["usuario"], "Gravação recusada", f"{chave}: {motivo}", self._ip())
+                            return self._json(403, {"ok": False, "erro": "Sem permissão: " + motivo, "valor": r0["valor"] if r0 else None, "versao": r0["versao"] if r0 else None})
+                        ok, atual, versao = lgapi.gravar(camara, chave, valor, d.get("versao"), u["usuario"])
                     if not ok:
                         return self._json(409, {"ok": False, "valor": atual, "versao": versao})
-                    return self._json(200, {"ok": True, "versao": versao})
+                    resp = {"ok": True, "versao": versao}
+                    if atual != valor:
+                        resp["valor"] = atual   # arquivos embutidos viraram endereços
+                    return self._json(200, resp)
             return self._json(404, {"ok": False, "erro": "Rota não encontrada."})
         except Exception as erro:
             print("api:", caminho, repr(erro), flush=True)

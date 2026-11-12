@@ -133,7 +133,7 @@
     const u = usuario(); const a = atual();
     if (!window.lgsAssinar && cfg.acao) return assinarGovBr(cfg.titulo, JSON.stringify(cfg.doc || {}), signatario, ass => (window.LG_ACOES[cfg.acao.nome].fazer)(cfg.acao.args, ass, {}));
     lgsAssinar({ titulo: cfg.titulo, arquivo: cfg.arquivo, docId: cfg.docId, base: cfg.base || null, qualificada: !!cfg.qualificada, signatario, acao: cfg.acao || null, chave: cfg.chave || null,
-      simular: ehGestor(u) || !!(a && a.demo),
+      simular: ehGestor(u) || !!(a && a.demo) || !!(window.LG_SYNC && LG_SYNC.camara === 'teste'),   // ambiente de testes: todos podem simular
       gerar: codigo => lgsDocumento({ ...cfg.doc, codigo, signatarios: cfg.signatarios || [{ nome: signatario.completo || signatario.nome, cargo: cargoDe(signatario) }] }) }, aoAssinar);
   }
   const arq = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) + '.pdf';
