@@ -25,5 +25,26 @@
     }
   }
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedido = e; mostrar(); });
+
+  /* iPhone/iPad: não existe botão automático de instalar; mostramos o passo a passo do Safari */
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function passoIos() {
+    if (!ios || instalado()) return;
+    let dispensado = ''; try { dispensado = localStorage.getItem('lgapp_ios_dispensado'); } catch (e) { }
+    const card = document.querySelector('#auth-screen .auth-card form#login-form');
+    const icone = '<svg viewBox="0 0 24 24" width="18" height="18" aria-label="Compartilhar" style="vertical-align:-3px"><path d="M12 3v12M8 7l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    if (card && !document.querySelector('.lgapp-bt')) {
+      card.insertAdjacentHTML('afterend', '<button type="button" class="lgapp-bt"><img src="app/app-192.png" alt="">Instalar o app no iPhone</button>');
+      document.querySelector('.lgapp-bt').onclick = () => { try { localStorage.removeItem('lgapp_ios_dispensado'); } catch (e) { } faixaIos(); };
+    }
+    if (!dispensado) faixaIos();
+    function faixaIos() {
+      if (document.getElementById('lgapp-faixa')) return;
+      document.body.insertAdjacentHTML('beforeend', `<div id="lgapp-faixa" role="dialog" aria-label="Instalar o app no iPhone"><img src="app/app-192.png" alt=""><div><b>Instale o app LegislaGov</b><small>No Safari, toque em ${icone} <b>Compartilhar</b> e depois em <b>Adicionar à Tela de Início</b>.</small></div><button class="nao" type="button" aria-label="Fechar">×</button></div>`);
+      const f = document.getElementById('lgapp-faixa');
+      f.querySelector('.nao').onclick = () => { f.remove(); try { localStorage.setItem('lgapp_ios_dispensado', '1'); } catch (e) { } };
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(passoIos, 800)); else setTimeout(passoIos, 800);
   addEventListener('appinstalled', limpar);
 })();
