@@ -26,6 +26,21 @@ if ! cmp -s "$APP/ferramentas/aws/importar.versao" /var/lib/legislagov/conteudo/
   systemd-run --unit="legislagov-importacao-$(date +%s)" --no-block /bin/bash -c '/usr/local/bin/legislagov-importar > /var/log/legislagov-importar.log 2>&1' || true
 fi
 
+# cópia do banco fora do servidor (depósito Lightsail legislagov-backup-sp, São Paulo), 03:45 todo dia
+python3 -c 'import boto3' 2>/dev/null || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-boto3; } || true
+cat > /usr/local/bin/legislagov-copia-externa <<'EOS'
+#!/bin/bash
+# envia a cópia do dia ao depósito e testa a restauração (resultado: /var/lib/legislagov/copias/externa.json)
+ls /var/lib/legislagov/copias/legislagov-*.db.gz >/dev/null 2>&1 || /usr/local/bin/legislagov-copia
+exec python3 /opt/legislagov/app/ferramentas/aws/copia_externa.py "$@"
+EOS
+chmod 755 /usr/local/bin/legislagov-copia-externa
+echo '45 3 * * * root /usr/local/bin/legislagov-copia-externa > /var/log/legislagov-copia-externa.log 2>&1' > /etc/cron.d/legislagov-copia-externa
+if ! cmp -s "$APP/ferramentas/aws/copia.versao" /var/lib/legislagov/copias/.versao-externa; then
+  cp "$APP/ferramentas/aws/copia.versao" /var/lib/legislagov/copias/.versao-externa
+  systemd-run --unit="legislagov-copia-externa-$(date +%s)" --no-block /bin/bash -c '/usr/local/bin/legislagov-copia > /dev/null 2>&1; /usr/local/bin/legislagov-copia-externa > /var/log/legislagov-copia-externa.log 2>&1' || true
+fi
+
 # comando para definir senha de usuário direto no servidor
 cat > /usr/local/bin/legislagov-senha <<'EOS'
 #!/bin/bash

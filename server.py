@@ -456,6 +456,18 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"ok")
             return
+        if caminho == "/healthz/copia":   # situação da cópia fora do servidor (sem dados da Câmara)
+            try:
+                with open(os.path.join(PASTA_DADOS, "copias", "externa.json"), "rb") as fh:
+                    corpo = fh.read()
+            except OSError:
+                corpo = '{"ok": false, "erro": {"mensagem": "ainda sem cópia externa"}}'.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(corpo)
+            return
         if caminho == "/api/youtube":
             with _yt_trava:
                 corpo = json.dumps({**_yt, "ia": bool(IA_CHAVE)}, ensure_ascii=False).encode("utf-8")
