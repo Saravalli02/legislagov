@@ -302,6 +302,7 @@ def camara_do_host(host):
 
 
 class Handler(SimpleHTTPRequestHandler):
+    extensions_map = {**SimpleHTTPRequestHandler.extensions_map, ".webmanifest": "application/manifest+json", ".webp": "image/webp"}
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
                       ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
                       ".html": "text/html; charset=utf-8", ".json": "application/json; charset=utf-8",
