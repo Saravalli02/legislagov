@@ -75,7 +75,7 @@ function img(src, alt = '', cls = '', ph = '') {
 /* Brasão sem fundo: o arquivo oficial é JPG com fundo branco (aparecia como um "recorte" no cabeçalho).
    O site pede o brasão ao próprio servidor (/api/brasao.jpg), apaga o branco de fora e o vão sob a fita,
    e guarda o resultado (WebP transparente) no navegador. Regra do site: imagens com fundo bonito ou PNG transparente. */
-const BRASAO_KEY = 'lg_brasao_v1';
+const BRASAO_KEY = 'lg_brasao_v2';   // v2: também tira o branco fechado sob a coroa
 try { const b = localStorage.getItem(BRASAO_KEY); if (b && b.startsWith('data:image/')) IMG.brasao = { local: b, limpo: true }; } catch (e) { }
 function brasaoTransparente() {
   if (IMG.brasao.limpo || location.protocol === 'file:') return;
@@ -94,6 +94,15 @@ function brasaoTransparente() {
     const vi = Math.round(W * .5), vj = Math.round(H * .84); let semente = -1;
     for (let r = 0; r < 25 && semente < 0; r++) for (let dj = -r; dj <= r && semente < 0; dj++) for (let di = -r; di <= r; di++) { const p = (vj + dj) * W + vi + di; if (p >= 0 && p < W * H && claro(p) && !f[p]) { semente = p; break; } }
     if (semente >= 0) encher([semente]);
+    // outras áreas brancas fechadas e grandes (ex.: a faixa sob a coroa). As letras são pequenas e ficam.
+    const visto = new Uint8Array(W * H), minimo = Math.round(W * H * 0.002);
+    for (let s0 = 0; s0 < W * H; s0++) {
+      if (visto[s0] || f[s0] || !claro(s0)) continue;
+      const comp = [], q = [s0]; visto[s0] = 1;
+      while (q.length) { const p = q.pop(); comp.push(p); const i = p % W, j = (p - i) / W;
+        for (const t of [i > 0 ? p - 1 : -1, i < W - 1 ? p + 1 : -1, j > 0 ? p - W : -1, j < H - 1 ? p + W : -1]) if (t >= 0 && !visto[t] && !f[t] && claro(t)) { visto[t] = 1; q.push(t); } }
+      if (comp.length >= minimo) comp.forEach(p => { f[p] = 1; });
+    }
     for (let p = 0; p < W * H; p++) if (f[p]) d[p * 4 + 3] = 0;
     for (let p = 0; p < W * H; p++) { if (f[p]) continue; const i = p % W, j = (p - i) / W;
       if ((i > 0 && f[p - 1]) || (i < W - 1 && f[p + 1]) || (j > 0 && f[p - W]) || (j < H - 1 && f[p + W])) { const k = p * 4, mn = Math.min(d[k], d[k + 1], d[k + 2]); if (mn > 150) d[k + 3] = Math.round(255 * (255 - mn) / 105); } }

@@ -168,10 +168,22 @@
   .lgcg-fixo{padding:11px 12px;border-radius:9px;border:1px solid #2c2f34;background:#141517;color:#f3f4f6;font-size:14px}
   .lgcg-ajuda{display:block;margin-top:6px;font-size:12px;color:#9a9fa6;line-height:1.4}
   .lgcg-ajuda.lgcg-erro{color:#f87171;font-weight:600}
+  #auth-screen .auth-card{position:relative}
+  .lgcg-voltar{position:absolute;top:16px;left:18px;display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:#9a9fa6!important;text-decoration:none;padding:6px 10px 6px 6px;border-radius:8px}
+  .lgcg-voltar:hover,.lgcg-voltar:focus-visible{color:#f3f4f6!important;background:#17181b}
+  .lgcg-voltar svg{width:16px;height:16px}
   #reg-cargo.lgcg-invalido{border-color:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.18)!important}`;
   document.head.appendChild(css);
 
+  /* tela de entrada: voltar para o site da Câmara (não aparece para quem contratou só o sistema) */
+  function voltarSite() {
+    const card = document.querySelector('#auth-screen .auth-card'); if (!card || card.querySelector('.lgcg-voltar')) return;
+    if (window.LG_SYNC && LG_SYNC.ativo && LG_SYNC.modo === 'sistema') return;
+    card.insertAdjacentHTML('afterbegin', '<a class="lgcg-voltar" href="../index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar para o site</a>');
+  }
+
   function iniciar() {
+    voltarSite();
     migrar(); atualizarCargos(); rotuloCargo(); setTimeout(() => { migrar(); atualizarCargos(); rotuloCargo(); }, 1500);
     const tab = window.setAuthTab; if (typeof tab === 'function' && !tab.__lgcg) { const w = function (t) { const r = tab.apply(this, arguments); if (t === 'register') atualizarCargos(); return r; }; w.__lgcg = true; window.setAuthTab = w; }
     const io = window.iniciarSessao; if (typeof io === 'function' && !io.__lgcg) { const w = function () { const r = io.apply(this, arguments); setTimeout(rotuloCargo, 50); return r; }; w.__lgcg = true; Object.keys(io).forEach(k => { w[k] = io[k]; }); window.iniciarSessao = w; }
