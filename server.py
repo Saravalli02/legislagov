@@ -323,6 +323,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     # ---------------------------------------------------------------- banco de dados (LG_BANCO=1)
     def _json(self, cod, dados, cookie=None):
+        if getattr(self, "_fila", None) is not None:   # dentro da trava do banco: envia depois
+            self._fila.append((self._json, (cod, dados), {"cookie": cookie}))
+            return True
         corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
         self.send_response(cod)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -339,6 +342,9 @@ class Handler(SimpleHTTPRequestHandler):
         return True
 
     def _arquivo(self, tipo, caminho, publico=False):
+        if getattr(self, "_fila", None) is not None:
+            self._fila.append((self._arquivo, (tipo, caminho), {"publico": publico}))
+            return True
         tam = os.path.getsize(caminho)
         self.send_response(200)
         seguro = re.fullmatch(r"application/pdf|image/(png|jpe?g|gif|webp)|audio/[\w.+-]+|video/[\w.+-]+|text/plain", tipo or "")
@@ -355,6 +361,12 @@ class Handler(SimpleHTTPRequestHandler):
         return True
 
     def _corpo(self, limite=8_000_000):
+        if getattr(self, "_bruto", None) is not None:
+            if not self._bruto:
+                return {}
+            if len(self._bruto) > limite:
+                raise ValueError("Conteúdo grande demais.")
+            return json.loads(self._bruto.decode("utf-8"))
         tam = int(self.headers.get("Content-Length", "0") or 0)
         if tam <= 0:
             return {}
@@ -373,9 +385,27 @@ class Handler(SimpleHTTPRequestHandler):
         if not lgapi.ativo():
             return False
         camara, modo = camara_do_host(self.headers.get("Host"))
+        # O banco (uma conexão SQLite) atende um pedido por vez: o corpo é lido antes e a resposta é
+        # enviada depois, fora da trava, para um celular lento não segurar os outros usuários.
+        self._bruto = None
+        if metodo in ("POST", "PUT"):
+            tam = int(self.headers.get("Content-Length", "0") or 0)
+            if tam > 21_000_000:
+                return self._json(413, {"ok": False, "erro": "Conteúdo grande demais."})
+            self._bruto = self.rfile.read(tam) if tam > 0 else b""
+        self._fila = []
         try:
             with lgapi._trava:
-                lgapi.semear(camara)
+                r = self._api_rotas(metodo, caminho, camara, modo)
+        finally:
+            fila, self._fila = self._fila, None
+        for fn, args, kw in fila:
+            fn(*args, **kw)
+        return r
+
+    def _api_rotas(self, metodo, caminho, camara, modo):
+        try:
+            lgapi.semear(camara)
             ck = SimpleCookie(self.headers.get("Cookie", ""))
             token = ck["lg_sessao"].value if "lg_sessao" in ck else ""
             u = lgapi.sessao(token, camara)
@@ -599,6 +629,8 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     iniciar_youtube()
+    ThreadingHTTPServer.request_queue_size = 128   # muitos abrindo ao mesmo tempo (o padrão é 5)
+    ThreadingHTTPServer.daemon_threads = True
     servidor = ThreadingHTTPServer(("0.0.0.0", PORTA), partial(Handler, directory=PASTA))
     print(f"Câmara de Neves Paulista no ar na porta {PORTA}", flush=True)
     servidor.serve_forever()
