@@ -167,6 +167,11 @@ def _criar_usuario(camara, dados, senha):
 ADMINS = [("usr-ricardo", "Ricardo", "Ricardo Saravalli"), ("usr-geraldo", "Geraldo", "Geraldo José de Almeida Neto")]
 
 
+def _id_admin(uid, camara):
+    """O id do usuário é único no servidor inteiro; cada câmara tem os seus."""
+    return f"{uid}-{camara}"
+
+
 def _sem_senha_valida():
     """Senha impossível de acertar: a pessoa define a dela no servidor (legislagov-senha)."""
     return "!" + secrets.token_hex(24)
@@ -178,6 +183,7 @@ def semear(camara):
     c = _db()
     if not c.execute("SELECT 1 FROM usuarios WHERE camara=? LIMIT 1", (camara,)).fetchone():
         for uid, login_, nome in ADMINS:
+            uid = _id_admin(uid, camara)
             _criar_usuario(camara, {"id": uid, "usuario": login_, "nome": nome, "cargo": "Administrador do sistema", "perfil": "admin",
                                     "orgao": "ambos", "municipio": "Neves Paulista — SP", "ativo": True}, "")
             c.execute("UPDATE usuarios SET senha=? WHERE id=?", (_sem_senha_valida(), uid))
@@ -192,10 +198,12 @@ def _limpeza_v2(camara):
     marca = "limpeza_v2:" + camara
     if c.execute("SELECT 1 FROM contador WHERE nome=?", (marca,)).fetchone():
         return
-    manter = {a[0] for a in ADMINS}
+    manter = {_id_admin(a[0], camara) for a in ADMINS} | {a[0] for a in ADMINS}
     c.execute("DELETE FROM usuarios WHERE camara=? AND id NOT IN (%s)" % ",".join("?" * len(manter)), (camara, *manter))
     for uid, login_, nome in ADMINS:
-        if not c.execute("SELECT 1 FROM usuarios WHERE id=?", (uid,)).fetchone():
+        r0 = c.execute("SELECT id FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone()
+        uid = r0["id"] if r0 else _id_admin(uid, camara)
+        if not r0:
             _criar_usuario(camara, {"id": uid, "usuario": login_, "nome": nome, "cargo": "Administrador do sistema", "perfil": "admin",
                                     "orgao": "ambos", "municipio": "Neves Paulista — SP", "ativo": True}, "")
         c.execute("UPDATE usuarios SET senha=? WHERE id=? AND senha NOT LIKE 'pbkdf2$%'", (_sem_senha_valida(), uid))
