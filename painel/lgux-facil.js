@@ -107,6 +107,9 @@
   .lgux-mais svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;transition:transform .15s}
   .lgux-mais[aria-expanded=true] svg{transform:rotate(180deg)}
   .lgux-vazio{display:none!important}
+  .lgux-rodape{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin:36px 16px 18px;padding-top:16px;border-top:1px solid var(--lg28-stroke,rgba(255,255,255,.1));font:12px/1.6 system-ui,sans-serif;color:var(--lg28-muted,#8e9198);text-align:center}
+  .lgux-rodape a{color:inherit;text-decoration:none}.lgux-rodape a:hover{text-decoration:underline;color:var(--lg28-ink,#f3f4f6)}
+  .lgux-rodape b{font-weight:800;color:var(--lg28-ink,#f3f4f6)}.lgux-rodape b i{font-style:normal;color:#2bb3e8}
   #lgux-barra{display:none}
   @media (max-width:820px){
     html.lgux-com-barra #lgux-barra{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;position:fixed;left:0;right:0;bottom:0;z-index:9000;background:rgba(10,10,12,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid #23252a;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
@@ -121,11 +124,18 @@
   }`;
   document.head.appendChild(css);
 
+  // rodapé com o site da LegislaGov no fim de todas as telas (também no celular e no app)
+  function rodape() {
+    const main = document.querySelector('#app > main') || document.querySelector('#app main'); if (!main || main.querySelector(':scope > .lgux-rodape')) return;
+    const u = 'https://legislagov.com.br', ln = (h, t) => `<a href="${u}${h}" target="_blank" rel="noopener">${t}</a>`;
+    main.insertAdjacentHTML('beforeend', `<footer class="lgux-rodape"><span>Desenvolvido por ${ln('/', '<b>Legisla<i>Gov</i></b>')} · ${ln('/', 'legislagov.com.br')}</span><span>Conheça também: ${ln('/produtos.html#site', 'Site e Transparência')} · ${ln('/produtos.html#email', 'E-mail institucional')} · ${ln('/produtos.html#app', 'App no celular')}</span></footer>`);
+  }
+
   function iniciar() {
     const nav = document.querySelector('nav.lgv31-nav');
     if (nav && !nav.__lgux) { nav.__lgux = true; new MutationObserver(() => { if (!nav.querySelector('.lgux-mais')) setTimeout(organizar, 0); marcar(); }).observe(nav, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] }); }
     if (nav && nav.dataset.lguxPapel && nav.dataset.lguxPapel !== papel() && window.lgv33Render) { lgv33Render(); return; }   // entrou outro usuário
-    organizar(); barra();
+    organizar(); barra(); rodape();
   }
   // o Treinamento aponta itens do menu: abre "Mais opções" durante o tour
   const abrirMais = () => { const bt = document.querySelector('.lgux-mais'), box = document.getElementById('lgux-mais-box'); if (bt && box && box.hidden) bt.click(); };
