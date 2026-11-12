@@ -149,6 +149,15 @@
     try { (A().dados().rascunhos || []).filter(r => !r.pendenteMao).forEach(r => add(['v:' + r.autorId], { chave: `rasc:${r.id}`, titulo: `Rascunho a assinar: ${A().TIPOS[r.tipo]?.nome || ''}`, texto: r.ementa, acao: "lgvrAbrir('assinar')", area: 'vereador' })); } catch (e) { }
     try { if (window.lgfxPendencias) lgfxPendencias().forEach(x => add(x.dest, x)); } catch (e) { }
     try { if (window.lgsPendencias) lgsPendencias().forEach(x => add(x.dest, x)); } catch (e) { }
+    // segurança: muitas senhas erradas numa conta (o servidor manda ao administrador todas e a cada um só as suas)
+    try {
+      const me = eu(); const lista = ler('lg_alertas_seg_v1', []).filter(x => Date.now() - new Date(x.quando).getTime() < 48 * 36e5).slice(0, 10);
+      lista.forEach(x => { const minha = me && String(x.login || '').toLowerCase() === me.login;
+        add(['eu'], { chave: 'seg:' + x.id, urgente: true, area: '',
+          titulo: minha ? 'Tentativas de entrar na sua conta' : `Alerta de segurança: conta “${x.login}”${x.existe ? '' : ' (não existe)'}`,
+          texto: `${x.tentativas} senhas erradas em 15 minutos, às ${new Date(x.quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} de ${new Date(x.quando).toLocaleDateString('pt-BR')}, do endereço ${x.ip}.${x.tipo === 'bloqueio' ? ' A conta ficou bloqueada por 15 minutos para esse endereço.' : ''} ${minha ? 'Se não foi você, troque sua senha agora.' : 'Se o usuário não reconhecer, peça para trocar a senha.'}`,
+          acao: minha ? 'window.lgTrocarSenha && lgTrocarSenha()' : '' }); });
+    } catch (e) { }
     // expedientes, protocolos numerados e mensagens (avisos do painel administrativo)
     try { if (window.lgv10Para) ler('lgv10_notifications_v1', []).filter(n => lgv10Para(n)).slice(0, 30).forEach(n => add(['eu'], { chave: 'l10:' + n.id, titulo: n.title, texto: n.detail, acao: `lgavL10('${n.id}')`, area: '', urgente: /^(expediente|protocolo)/.test(n.kind || '') })); } catch (e) { }
     return out;

@@ -74,6 +74,9 @@
     const org = document.getElementById('reg-orgao'); const grpOrg = org && org.closest('.field-group');
     if (grpOrg) { grpOrg.style.display = 'none'; grpOrg.insertAdjacentHTML('afterend', '<div class="field-group lgcg-org"><label>Órgão</label><div class="lgcg-fixo">Câmara Municipal de Neves Paulista</div></div>'); }
     ['reg-cpf', 'reg-telefone'].forEach(id => { const e = document.getElementById(id); if (e) e.required = false; }); // campos ocultos: não podem travar o envio
+    // celular (opcional): recebe o aviso se alguém tentar entrar na conta com senha errada várias vezes
+    const tel = document.getElementById('reg-telefone'), gTel = tel && tel.closest('.field-group'), gUsu = document.getElementById('reg-email')?.closest('.field-group');
+    if (gTel && gUsu) { gUsu.after(gTel); const l = gTel.querySelector('label'); if (l) l.textContent = 'Celular com DDD (opcional)'; gTel.insertAdjacentHTML('beforeend', '<small class="lgcg-ajuda">Para receber aviso se alguém tentar entrar na sua conta.</small>'); }
     const mun = document.getElementById('reg-municipio'); if (mun) { const g = mun.closest('.field-group'); if (g) g.style.display = 'none'; }
     const sel = document.getElementById('reg-cargo'); const grp = sel && sel.closest('.field-group');
     if (grp) { const l = grp.querySelector('label'); if (l) { l.textContent = 'Cargo'; l.setAttribute('for', 'reg-cargo'); }
@@ -115,7 +118,7 @@
     if (senha.length < (SYNC() ? 8 : 6)) return erro(`A senha precisa ter pelo menos ${SYNC() ? 8 : 6} caracteres.`);
     if (senha !== senha2) return erro('As senhas não coincidem.');
     if (SYNC()) {   // servidor: o cadastro fica aguardando a liberação do administrador
-      const r = await SYNC().api('/api/cadastro', { nome, usuario, senha, cargoId: c.id, cargo: c.nome, setor: c.setor, perfil: c.perfil === 'usuario' ? (c.id === 'vereador' ? 'vereador' : 'usuario') : c.perfil, vereadorId: verId });
+      const r = await SYNC().api('/api/cadastro', { nome, usuario, senha, cargoId: c.id, cargo: c.nome, setor: c.setor, perfil: c.perfil === 'usuario' ? (c.id === 'vereador' ? 'vereador' : 'usuario') : c.perfil, vereadorId: verId, telefone: v('reg-telefone') });
       if (!r.ok) return erro(r.erro || 'Não foi possível enviar o cadastro.');
       if (c.unico) SYNC().ocupados = [...(SYNC().ocupados || []), c.id];
       esconderErro('register-error'); setAuthTab('login'); document.getElementById('login-email').value = usuario;

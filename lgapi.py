@@ -84,7 +84,17 @@ def _db():
         """)
         if "acesso" not in [r[1] for r in _con.execute("PRAGMA table_info(arquivos)")]:
             _con.execute("ALTER TABLE arquivos ADD COLUMN acesso TEXT")   # quem pode abrir (expedientes e mensagens)
+        # 12/11/2026: a chave de sessão passa a ser guardada só como resumo (sha256), como as senhas.
+        # As sessões abertas continuam valendo: o valor antigo vira o resumo dele mesmo.
+        if not _con.execute("SELECT 1 FROM contador WHERE nome='sessoes_resumo_v1'").fetchone():
+            for r in _con.execute("SELECT token FROM sessoes").fetchall():
+                _con.execute("UPDATE sessoes SET token=? WHERE token=?", (_resumo(r[0]), r[0]))
+            _con.execute("INSERT INTO contador(nome, valor) VALUES('sessoes_resumo_v1', 1)")
     return _con
+
+
+def _resumo(token):
+    return "h:" + hashlib.sha256(str(token).encode()).hexdigest()
 
 
 def agora():
@@ -281,16 +291,17 @@ def gravar_usuarios(camara, lista, autor):
 
 # ---------------------------------------------------------------- sessões
 def criar_sessao(u):
-    token = secrets.token_urlsafe(32)
+    token = secrets.token_urlsafe(32)   # vai só para o navegador (cookie); no banco fica o resumo
     _db().execute("INSERT INTO sessoes(token, usuario_id, camara, expira) VALUES(?,?,?,?)",
-                  (token, u["id"], u["camara"], time.time() + SESSAO_DIAS * 86400))
+                  (_resumo(token), u["id"], u["camara"], time.time() + SESSAO_DIAS * 86400))
+    _db().execute("DELETE FROM sessoes WHERE expira < ?", (time.time(),))
     return token
 
 
 def sessao(token, camara):
     if not token:
         return None
-    r = _db().execute("SELECT * FROM sessoes WHERE token=?", (token,)).fetchone()
+    r = _db().execute("SELECT * FROM sessoes WHERE token=?", (_resumo(token),)).fetchone()
     if not r or r["expira"] < time.time() or r["camara"] != camara:
         return None
     u = _usuario(r["usuario_id"])
@@ -300,21 +311,57 @@ def sessao(token, camara):
 
 
 def encerrar(token):
-    _db().execute("DELETE FROM sessoes WHERE token=?", (token,))
+    _db().execute("DELETE FROM sessoes WHERE token=?", (_resumo(token),))
 
 
 _tentativas = {}
+_falhas_conta = {}     # (câmara, login) -> horários das senhas erradas (de qualquer endereço)
+_alertado = {}         # (câmara, login, tipo) -> último aviso
+ALERTAS = "lg_alertas_seg_v1"
+ALERTA_APOS = 5        # senhas erradas em 15 minutos para avisar
+
+
+def _alertar(camara, login_, ip, n, tipo):
+    """Avisa o administrador e o dono da conta: no sino do sistema e, se configurado, por SMS."""
+    k = (camara, login_.lower(), tipo)
+    if time.time() - _alertado.get(k, 0) < 1800:   # no máximo um aviso de cada tipo a cada 30 min
+        return
+    _alertado[k] = time.time()
+    r = _db().execute("SELECT id FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone()
+    u = _usuario(r["id"]) if r else None
+    item = {"id": "al" + secrets.token_hex(5), "quando": agora(), "login": login_[:60], "nome": (u or {}).get("nome", ""),
+            "existe": bool(u), "ip": ip, "tentativas": n, "tipo": tipo}
+    with _trava:
+        atual = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, ALERTAS)).fetchone()
+        try:
+            lista = json.loads(atual["valor"]) if atual else []
+        except Exception:
+            lista = []
+        lista = ([item] + (lista if isinstance(lista, list) else []))[:100]
+        gravar(camara, ALERTAS, json.dumps(lista, ensure_ascii=False), None, "sistema")
+    registrar(camara, "sistema", "Alerta de segurança", f"{login_}: {n} senhas erradas em 15 min ({tipo}) — {ip}", ip)
+    try:
+        import alerta_externo
+        threading.Thread(target=alerta_externo.enviar, args=(camara, item, u, [x for x in usuarios(camara) if x.get("perfil") == "admin"]), daemon=True).start()
+    except Exception as e:
+        print("alerta externo:", repr(e), flush=True)
 
 
 def login(camara, usuario, senha, ip):
     chave = (ip, camara, str(usuario).lower())
     hist = [t for t in _tentativas.get(chave, []) if time.time() - t < 900]
     if len(hist) >= 8:
+        _alertar(camara, str(usuario).strip(), ip, len(hist), "bloqueio")
         return None, "Muitas tentativas. Espere 15 minutos e tente de novo."
     r = _db().execute("SELECT id, senha FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, str(usuario).strip())).fetchone()
     if not r or not confere_senha(str(senha), r["senha"]):
         _tentativas[chave] = hist + [time.time()]
+        kc = (camara, str(usuario).strip().lower())
+        fc = [t for t in _falhas_conta.get(kc, []) if time.time() - t < 900] + [time.time()]
+        _falhas_conta[kc] = fc
         registrar(camara, usuario, "Login recusado", "", ip)
+        if len(fc) >= ALERTA_APOS:
+            _alertar(camara, str(usuario).strip(), ip, len(fc), "tentativas")
         return None, "Usuário ou senha incorretos."
     u = _usuario(r["id"])
     if u.get("pendente"):
@@ -350,7 +397,7 @@ def cadastro(camara, d, ip):
     dados = {"usuario": login_, "nome": nome[:120], "cargoId": cargo_id, "cargo": str(d.get("cargo", ""))[:80],
              "setor": str(d.get("setor", ""))[:80], "perfil": str(d.get("perfil", "usuario"))[:20], "orgao": "cam",
              "municipio": "Neves Paulista — SP", "ativo": False, "pendente": True, "criadoEm": agora(),
-             "vereadorPedido": str(d.get("vereadorId", ""))[:20]}
+             "vereadorPedido": str(d.get("vereadorId", ""))[:20], "telefone": re.sub(r"[^\d]", "", str(d.get("telefone", "")))[:13]}
     if dados["perfil"] in ("admin",):
         dados["perfil"] = "usuario"
     with _trava:
@@ -613,6 +660,8 @@ class Quem:
 
 def _regra(chave, q):
     """True/False: pode gravar a informação inteira. 'votos' / 'manuais': confere o que mudou."""
+    if chave == ALERTAS:
+        return False   # só o servidor escreve
     if q.adm:
         return True
     if chave in ("lg_seed_perfis_v2", "legislagov_users_v1"):
@@ -734,6 +783,8 @@ def pode_ler(camara, chave, u, q=None):
     q = q or Quem(camara, u)
     if q.adm:
         return True
+    if chave == ALERTAS:
+        return "proprio"
     if chave == "legislagov_users_v1":
         return None
     if chave == "lgf_v1":
@@ -744,6 +795,14 @@ def pode_ler(camara, chave, u, q=None):
 
 
 # ---------------------------------------------------------------- dados
+def _so_meus(valor_txt, login_):
+    try:
+        v = json.loads(valor_txt)
+        return json.dumps([x for x in v if isinstance(x, dict) and str(x.get("login", "")).lower() == login_], ensure_ascii=False)
+    except Exception:
+        return "[]"
+
+
 def _publico(chave, valor_txt):
     """Versão para o site: tira dados pessoais."""
     try:
@@ -772,6 +831,8 @@ def carregar(camara, u):
                 out[r["chave"]] = [r["valor"], r["versao"]]
             elif p == "publico":
                 out[r["chave"]] = [_publico(r["chave"], r["valor"]), r["versao"]]
+            elif p == "proprio":
+                out[r["chave"]] = [_so_meus(r["valor"], q.login), r["versao"]]
         elif PUBLICAS.match(r["chave"]):
             out[r["chave"]] = [_publico(r["chave"], r["valor"]), r["versao"]]
     if u:
@@ -790,6 +851,8 @@ def mudancas(camara, desde, u):
             out[r["chave"]] = [r["valor"], r["versao"], r["por"]]
         elif p == "publico":
             out[r["chave"]] = [_publico(r["chave"], r["valor"]), r["versao"], r["por"]]
+        elif p == "proprio":
+            out[r["chave"]] = [_so_meus(r["valor"], q.login), r["versao"], r["por"]]
     if u and out.pop(CHAVE_USUARIOS, None) is not None:
         out[CHAVE_USUARIOS] = [json.dumps(usuarios(camara), ensure_ascii=False), 0, ""]
     return out, ult
