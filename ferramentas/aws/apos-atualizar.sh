@@ -32,6 +32,7 @@ cat > /usr/local/bin/legislagov-copia-externa <<'EOS'
 #!/bin/bash
 # envia a cópia do dia ao depósito e testa a restauração (resultado: /var/lib/legislagov/copias/externa.json)
 ls /var/lib/legislagov/copias/legislagov-*.db.gz >/dev/null 2>&1 || /usr/local/bin/legislagov-copia
+set -a; . /etc/legislagov.env; set +a
 exec python3 /opt/legislagov/app/ferramentas/aws/copia_externa.py "$@"
 EOS
 chmod 755 /usr/local/bin/legislagov-copia-externa

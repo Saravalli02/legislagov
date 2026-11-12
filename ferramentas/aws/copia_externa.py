@@ -23,7 +23,24 @@ DIAS, MESES = 30, 12
 
 def cliente():
     import boto3
+    chave, segredo = os.environ.get("LG_COPIA_CHAVE"), os.environ.get("LG_COPIA_SEGREDO")
+    if chave and segredo:   # chave de acesso do depósito (em /etc/legislagov.env), se o vínculo do Lightsail não bastar
+        return boto3.client("s3", region_name=REGIAO, aws_access_key_id=chave, aws_secret_access_key=segredo)
     return boto3.client("s3", region_name=REGIAO)
+
+
+def diagnostico():
+    """Mostra de onde viriam as credenciais (sem expor nenhum segredo)."""
+    import urllib.request
+    out = {}
+    try:
+        tk = urllib.request.urlopen(urllib.request.Request("http://169.254.169.254/latest/api/token", method="PUT", headers={"X-aws-ec2-metadata-token-ttl-seconds": "60"}), timeout=3).read().decode()
+        r = urllib.request.urlopen(urllib.request.Request("http://169.254.169.254/latest/meta-data/iam/security-credentials/", headers={"X-aws-ec2-metadata-token": tk}), timeout=3).read().decode()
+        out["papel_da_instancia"] = r.strip() or "(nenhum)"
+    except Exception as e:
+        out["metadados"] = str(e)[:120]
+    out["chave_no_env"] = bool(os.environ.get("LG_COPIA_CHAVE"))
+    return out
 
 
 def ultima_local():
@@ -111,7 +128,7 @@ def main():
         st["ok"] = True; st.pop("erro", None)
     except Exception as e:
         traceback.print_exc()
-        st["ok"] = False; st["erro"] = {"quando": agora, "mensagem": str(e)[:300]}
+        st["ok"] = False; st["erro"] = {"quando": agora, "mensagem": str(e)[:300], "diagnostico": diagnostico()}
     os.makedirs(COPIAS, exist_ok=True)
     json.dump(st, open(STATUS, "w"), ensure_ascii=False, indent=1)
     print(json.dumps(st, ensure_ascii=False, indent=1))
