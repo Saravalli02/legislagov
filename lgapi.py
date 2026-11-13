@@ -205,6 +205,26 @@ def semear(camara):
         registrar(camara, "sistema", "Câmara criada no banco", "administradores Ricardo e Geraldo")
     _limpeza_v2(camara)
     migrar_arquivos(camara)
+    _herdar_senha_admins(camara)
+
+
+# Endereços do Atendimento WhatsApp: os administradores (Ricardo e Geraldo) entram com a MESMA senha
+# do painel da Câmara. Só copia o resumo (pbkdf2) da senha enquanto a pessoa ainda não definiu uma
+# própria naquele endereço; nenhuma senha fica no código.
+HERDA_SENHA = {"teste": "neves-paulista-sp", "prefeitura-neves-sp": "neves-paulista-sp"}
+
+
+def _herdar_senha_admins(camara):
+    origem = HERDA_SENHA.get(camara)
+    if not origem:
+        return
+    c = _db()
+    for _uid, login_, _nome in ADMINS:
+        alvo = c.execute("SELECT id, senha FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone()
+        fonte = c.execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (origem, login_)).fetchone()
+        if alvo and fonte and str(alvo["senha"]).startswith("!") and str(fonte["senha"]).startswith("pbkdf2$"):
+            c.execute("UPDATE usuarios SET senha=? WHERE id=?", (fonte["senha"], alvo["id"]))
+            registrar(camara, "sistema", "Senha do administrador igual à do painel da Câmara", login_)
 
 
 def _limpeza_v2(camara):
