@@ -1,0 +1,18 @@
+{
+  "name": "LegislaGov · Atendimento WhatsApp",
+  "short_name": "Atendimento",
+  "description": "Painel de atendimento do WhatsApp da Tributação (17) 3271-9020.",
+  "lang": "pt-BR",
+  "id": "/atendimento/",
+  "start_url": "/atendimento/",
+  "scope": "/atendimento/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#161615",
+  "theme_color": "#161615",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

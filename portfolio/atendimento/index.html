@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#161615">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Atendimento WhatsApp · LegislaGov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
+/* Layout: sidebar escura LegislaGov + área de trabalho em papel; atendimento em três colunas (fila · conversa · ficha) */
+:root{
+  --paper:#ece5d3; --paper-raised:#f4efe2; --ink:#1c1b19; --ink-soft:#55524b;
+  --primary:#1c1b19; --primary-deep:#0e0e0d; --primary-tint:rgba(28,27,25,.1); --brass:#a3742f; --brass-soft:#c99a4f;
+  --brick:#8c3b2e; --sage:#6d7f63; --line:rgba(28,27,25,.16); --line-strong:rgba(28,27,25,.3);
+  --bubble-in:#f4efe2; --bubble-out:#e2ddd2; --bubble-bot:#efe3c9;
+  --wa-bg:#e7e0d0; --wa-dot:rgba(28,27,25,.07); --wa-in:#fffdf8; --wa-out:#e3ddd0; --wa-bot:#f2e5c6; --wa-sys:#f6edd8; --wa-file:rgba(28,27,25,.06);
+  --sidebar-bg-top:#161615; --sidebar-bg-bottom:#0b0b0a; --sidebar-text:#e9e6d9; --sidebar-dim:rgba(233,230,217,.72);
+  --shadow-sm:0 1px 2px rgba(28,49,35,.06),0 1px 1px rgba(28,49,35,.04);
+  --shadow-md:0 2px 6px rgba(28,49,35,.08),0 8px 24px rgba(28,49,35,.06);
+  --radius:7px; --radius-sm:4px;
+  --font-display:"Source Serif 4",Georgia,serif;
+  --font-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#1a1a18; --paper-raised:#232320; --ink:#ece8dc; --ink-soft:#aeaa9f; --primary:#ece8dc; --primary-deep:#ffffff; --primary-tint:rgba(236,232,220,.12);
+  --brass:#d9ac5c; --brass-soft:#e6c485; --brick:#d18a78; --sage:#93a487; --line:rgba(236,232,220,.14); --line-strong:rgba(236,232,220,.26);
+  --bubble-in:#2a2a26; --bubble-out:#33322e; --bubble-bot:#3a3324; --wa-bg:#121211; --wa-dot:rgba(236,232,220,.05); --wa-in:#262624; --wa-out:#35332e; --wa-bot:#3b3324; --wa-sys:#2a2620; --wa-file:rgba(255,255,255,.06); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#1a1a18; --paper-raised:#232320; --ink:#ece8dc; --ink-soft:#aeaa9f; --primary:#ece8dc; --primary-deep:#ffffff; --primary-tint:rgba(236,232,220,.12);
+  --brass:#d9ac5c; --brass-soft:#e6c485; --brick:#d18a78; --sage:#93a487; --line:rgba(236,232,220,.14); --line-strong:rgba(236,232,220,.26);
+  --bubble-in:#2a2a26; --bubble-out:#33322e; --bubble-bot:#3a3324; --wa-bg:#121211; --wa-dot:rgba(236,232,220,.05); --wa-in:#262624; --wa-out:#35332e; --wa-bot:#3b3324; --wa-sys:#2a2620; --wa-file:rgba(255,255,255,.06); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+#root{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font-body);font-size:14px;color:var(--ink)}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+/* ---------- Login ---------- */
+.login{min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:1fr 1fr;padding:0}
+.login-art{background:linear-gradient(180deg,var(--sidebar-bg-top),var(--sidebar-bg-bottom));color:var(--sidebar-text);padding-block:48px;padding-left:max(48px,env(safe-area-inset-left,0px));padding-right:48px;display:flex;flex-direction:column;justify-content:space-between;gap:32px}
+.login-art h1{font-family:var(--font-display);font-size:clamp(30px,4vw,44px);line-height:1.1;margin:0;text-wrap:balance;font-weight:600}
+.login-art p{color:var(--sidebar-dim);max-width:44ch;margin:14px 0 0}
+.phone-tag{font-family:var(--font-mono);color:var(--brass-soft);font-size:13px;letter-spacing:.04em}
+.login-form-wrap{display:flex;align-items:center;justify-content:center;padding-block:40px;padding-left:24px;padding-right:max(24px,env(safe-area-inset-right,0px))}
+.login-form{width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px}
+.login-form h2{font-family:var(--font-display);font-size:24px;margin:0}
+.login-form .sub{color:var(--ink-soft);font-size:13px;margin:-6px 0 6px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11.5px;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+.field input,.field select,.field textarea{background:var(--paper-raised);border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:10px 12px;width:100%}
+.field textarea{min-height:90px;resize:vertical}
+.demo-note{font-size:12px;color:var(--ink-soft);background:var(--paper-raised);border:1px dashed var(--line-strong);border-radius:var(--radius-sm);padding:10px 12px}
+.btn-primary{background:var(--primary);color:#f4efe2;border:0;border-radius:var(--radius-sm);padding:10px 16px;font-weight:500}
+.btn-primary:hover{background:var(--primary-deep)}
+:root[data-theme="dark"] .btn-primary{color:#171d16}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn-primary{color:#171d16}}
+.btn-secondary{background:none;color:var(--primary);border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:9px 14px;font-weight:500}
+.btn-secondary:hover{background:var(--paper-raised)}
+.btn-brass{background:var(--brass);color:#fff8ed;border:0;border-radius:var(--radius-sm);padding:9px 14px;font-weight:500}
+
+/* ---------- App shell ---------- */
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);height:100vh;height:100dvh;overflow:hidden}
+.sidebar{background:linear-gradient(180deg,var(--sidebar-bg-top),var(--sidebar-bg-bottom));color:var(--sidebar-text);padding:28px 22px;padding-left:max(22px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;overflow-y:auto;box-shadow:2px 0 14px rgba(0,0,0,.12)}
+.brand{display:flex;align-items:center;gap:12px;padding-bottom:26px;border-bottom:1px solid rgba(233,230,217,.16);margin-bottom:20px}
+.brand-mark{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--brass-soft);display:flex;align-items:center;justify-content:center;flex:none;color:var(--brass-soft)}
+.brand-mark svg{width:18px;height:18px}
+.brand-name{font-family:var(--font-display);font-size:17px;font-weight:600}
+.brand-sub{font-size:11.5px;color:rgba(233,230,217,.6);margin-top:2px}
+.status-switch{display:flex;gap:4px;padding:4px;background:rgba(233,230,217,.08);border-radius:3px;margin-bottom:24px}
+.status-switch button{flex:1;padding:8px 0;font-size:11.5px;border-radius:2px;color:rgba(233,230,217,.5);background:none;border:0}
+.status-switch button.current{background:rgba(233,230,217,.14);color:#f4efe2;font-weight:500}
+.status-switch button:not(.current):hover{color:#f4efe2}
+nav{display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:3px;font-size:14px;color:var(--sidebar-dim);background:none;border:0;border-left:2px solid transparent;text-align:left;width:100%}
+.nav-item svg{width:16px;height:16px;flex:none;opacity:.85}
+.nav-item .count{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--brass-soft)}
+.nav-item.active{color:#f4efe2;background:rgba(233,230,217,.07);border-left-color:var(--brass-soft);font-weight:500}
+.nav-item:not(.active):hover{color:#f4efe2}
+.sidebar-foot{margin-top:auto;padding-top:16px;border-top:1px solid rgba(233,230,217,.16);font-size:12px;color:rgba(233,230,217,.55)}
+.user-chip{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.avatar{width:34px;height:34px;background:rgba(233,230,217,.1);border-radius:50%;border:1.5px solid var(--brass-soft);color:var(--brass-soft);font-family:var(--font-display);font-weight:600;font-size:12.5px;display:flex;align-items:center;justify-content:center;flex:none}
+.user-chip strong{display:block;color:rgba(233,230,217,.9);font-size:13px;font-weight:500}
+.logout-btn{display:flex;align-items:center;justify-content:center;gap:7px;background:none;border:1px solid rgba(233,230,217,.18);color:rgba(233,230,217,.75);font-size:12px;padding:8px 12px;border-radius:var(--radius-sm);width:100%}
+.logout-btn:hover{background:rgba(233,230,217,.08);color:#f4efe2}
+
+.main{min-width:0;overflow-y:auto;padding-block:28px;padding-left:32px;padding-right:max(32px,env(safe-area-inset-right,0px))}
+.main.flush{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.eyebrow{font-family:var(--font-mono);font-size:11.5px;color:var(--brass);letter-spacing:.04em}
+h1.page-title{font-family:var(--font-display);font-size:28px;margin:2px 0 0;font-weight:600;text-wrap:balance}
+.page-sub{color:var(--ink-soft);font-size:13px;margin:4px 0 0}
+.card{background:var(--paper-raised);border:1px solid var(--line-strong);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow-sm)}
+.card h2{font-family:var(--font-display);font-size:19px;margin:0 0 4px}
+.card .sub{color:var(--ink-soft);font-size:12.5px;margin:0 0 16px}
+
+/* ---------- Tabelas ---------- */
+.table-wrap{overflow-x:auto}
+table.docket{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
+table.docket th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--line-strong)}
+table.docket td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+table.docket tr:hover td{background:rgba(163,116,47,.05)}
+.mini-btn{font-size:11.5px;color:var(--primary);background:none;border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:5px 10px;white-space:nowrap}
+.mini-btn:hover{background:var(--paper)}
+.grid-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.stack{display:flex;flex-direction:column;gap:18px}
+
+/* ITBI */
+.itbi-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:start}
+.doc-preview{border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--paper);padding:18px;font-family:var(--font-display);font-size:13px;line-height:1.6;color:var(--ink-soft)}
+.doc-preview mark{background:rgba(163,116,47,.22);color:var(--ink);padding:0 2px;border-radius:2px}
+.extracted{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.calc{margin-top:16px;border-top:1px solid var(--line-strong);padding-top:14px;display:grid;grid-template-columns:1fr auto;gap:6px 14px;font-size:13px}
+.calc .v{font-family:var(--font-mono);text-align:right;font-variant-numeric:tabular-nums}
+.calc .total{font-weight:600;font-size:15px;border-top:1px solid var(--line);padding-top:8px}
+.ai-flag{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink-soft);background:rgba(163,116,47,.08);border:1px solid rgba(163,116,47,.28);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px}
+
+/* Menus */
+.tree{font-size:13.5px}
+.tree ul{list-style:none;margin:0;padding-left:20px;border-left:1px solid var(--line-strong)}
+.tree>ul{padding-left:0;border:0}
+.tree li{padding:5px 0}
+.opt{display:inline-flex;gap:8px;align-items:baseline}
+.opt .k{font-family:var(--font-mono);color:var(--brass);font-weight:500;min-width:16px}
+.opt .act{font-size:11.5px;color:var(--ink-soft)}
+.off{opacity:.55}
+.bot-preview{background:var(--paper);border:1px solid var(--line-strong);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:8px}
+
+/* Relatórios */
+.stat-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line-strong);border-bottom:1px solid var(--line-strong);margin-bottom:22px}
+.stat-row>div{padding:14px 16px;border-left:1px solid var(--line)}
+.stat-row>div:first-child{border-left:0;padding-left:0}
+.stat-row strong{display:block;font-family:var(--font-display);font-size:26px;color:var(--primary);font-weight:600}
+.stat-row span{font-size:11.5px;color:var(--ink-soft)}
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:grid;grid-template-columns:130px minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:12.5px}
+.bar-track{height:10px;background:var(--paper);border-radius:2px;overflow:hidden;border:1px solid var(--line)}
+.bar-fill{height:100%;background:var(--primary)}
+.bar-row .n{font-family:var(--font-mono);text-align:right}
+
+/* Modal + toast */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,20,14,.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-card{width:100%;max-width:420px;background:var(--paper-raised);border:1px solid var(--line-strong);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:24px;display:flex;flex-direction:column;gap:12px;max-height:calc(100% - 40px);overflow-y:auto}
+.modal-card h2{font-family:var(--font-display);font-size:19px;margin:0}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+.toast{position:fixed;z-index:60;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:min(360px,calc(100vw - 32px));padding:14px 16px;background:var(--primary-deep);color:var(--paper-raised);border-left:3px solid var(--brass-soft);border-radius:var(--radius-sm);box-shadow:0 8px 28px rgba(0,0,0,.22);font-size:13px;opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.toast strong{display:block;color:var(--brass-soft);font-size:12px;margin-bottom:2px}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+.banner{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;background:var(--primary-tint);border:1px solid var(--line-strong);border-radius:var(--radius-sm);color:var(--ink-soft);font-size:12.5px;margin-bottom:18px}
+.banner strong{color:var(--primary)}
+
+
+/* ---------- Ficha do contribuinte e peças comuns ---------- */
+.empty{padding:28px 18px;color:var(--ink-soft);font-size:13px}
+.sec-label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--brass);font-weight:600;margin:18px 0 8px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 14px;font-size:13px;margin:0}
+.kv dt{color:var(--ink-soft)}
+.kv dd{margin:0;text-align:right;overflow-wrap:anywhere}
+.debt{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.debt>span:first-child{min-width:0}
+.debt .amt{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;flex:none}
+.debt.late .amt,.debt.late>span:first-child{color:var(--brick)}
+.api-note{font-size:11.5px;color:var(--ink-soft);margin-top:10px;display:flex;gap:6px;align-items:center}
+.api-note .dot{width:7px;height:7px;border-radius:50%;background:var(--sage)}
+.side-btns{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.side-btns button{width:100%;padding:10px 14px}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.quick button{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:4px 11px;font-size:12px;color:var(--ink-soft)}
+.quick button:hover{color:var(--ink);border-color:var(--line-strong)}
+.wa-info-body .empty{padding:4px 0}
+.wa-list-head h1,.wa-blank h2{letter-spacing:-.01em}
+/* ---------- Atendimento com aparência de WhatsApp ---------- */
+.wa{flex:1;min-height:0;display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);position:relative}
+.wa.with-info{grid-template-columns:minmax(300px,380px) minmax(0,1fr) 320px}
+.wa-list{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid var(--line-strong);background:var(--paper-raised)}
+.wa-list-head{display:flex;justify-content:space-between;align-items:center;padding:18px 14px 10px 16px}
+.wa-list-head h1{font-family:var(--font-display);font-size:22px;margin:0;font-weight:600}
+.wa-icon{width:36px;height:36px;border-radius:50%;border:0;background:none;color:var(--ink-soft);display:inline-flex;align-items:center;justify-content:center;flex:none;padding:0}
+.wa-icon:hover{background:var(--primary-tint);color:var(--ink)}
+.wa-icon svg{width:20px;height:20px}
+.wa-search{margin:0 12px 10px;display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:8px;padding:0 12px;color:var(--ink-soft)}
+.wa-search svg{width:16px;height:16px;flex:none}
+.wa-search input{flex:1;min-width:0;border:0;background:none;padding:9px 0;outline:none}
+.wa-search:focus-within{box-shadow:0 0 0 2px var(--brass)}
+.wa-filters{display:flex;gap:6px;padding:0 12px 10px;overflow-x:auto;border-bottom:1px solid var(--line)}
+.wa-filters button{border:0;background:var(--paper);color:var(--ink-soft);border-radius:20px;padding:5px 12px;font-size:13px;white-space:nowrap}
+.wa-filters button:hover{color:var(--ink)}
+.wa-filters button.on{background:var(--primary);color:var(--paper-raised)}
+.wa-filters button span{font-family:var(--font-mono);font-size:11px;opacity:.85}
+.wa-items{overflow-y:auto;flex:1;min-height:0}
+.wa-item{display:flex;gap:12px;align-items:center;width:100%;padding:0 0 0 14px;border:0;background:none;text-align:left;color:var(--ink)}
+.wa-item:hover{background:var(--paper)}
+.wa-item.sel{background:var(--primary-tint)}
+.wa-item-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:11px 14px 11px 0;border-bottom:1px solid var(--line)}
+.wa-row{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}
+.wa-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.wa-time{font-size:11.5px;color:var(--ink-soft);flex:none;font-variant-numeric:tabular-nums}
+.wa-time.new{color:var(--brass);font-weight:600}
+.wa-prev{font-size:13px;color:var(--ink-soft);display:flex;align-items:center;gap:3px;min-width:0}
+.wa-prev b{font-weight:500;color:var(--brass);flex:none}
+.ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.wa-badge{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--brass);color:#fff8ed;font:600 11px var(--font-mono);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.wa-tags{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa-st{font-weight:500}
+.wa-st.fila{color:var(--brick)}.wa-st.bot{color:var(--brass)}.wa-st.meu{color:var(--ink)}.wa-st.enc{color:var(--sage)}
+.wa-av{width:46px;height:46px;border-radius:50%;background:var(--paper);border:1px solid var(--line-strong);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:600;font-size:15px;color:var(--ink-soft);flex:none;position:relative}
+.wa-av.fila::after{content:"";position:absolute;right:0;bottom:1px;width:11px;height:11px;border-radius:50%;background:var(--brick);border:2px solid var(--paper-raised)}
+.tick{width:16px;height:11px;flex:none;color:var(--brass)}
+.wa-chat{display:flex;flex-direction:column;min-height:0;min-width:0;background-color:var(--wa-bg);background-image:radial-gradient(var(--wa-dot) 1px,transparent 1.3px);background-size:18px 18px}
+.wa-chat-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 14px;background:var(--paper-raised);border-bottom:1px solid var(--line-strong);min-height:62px}
+.wa-who-btn{display:flex;align-items:center;gap:12px;border:0;background:none;text-align:left;min-width:0;flex:1;padding:0;color:var(--ink)}
+.wa-who-btn .wa-av{width:40px;height:40px;font-size:13.5px}
+.wa-who-btn>span:last-child{min-width:0}
+.wa-who-btn strong{display:block;font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa-who-btn small{display:block;font-size:12px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa-head-actions{display:flex;gap:6px;align-items:center;flex:none}
+.wa-head-actions .btn-primary,.wa-head-actions .btn-secondary{padding:7px 12px;font-size:13px}
+.wa-msgs{flex:1;min-height:0;overflow-y:auto;padding:16px 6%;display:flex;flex-direction:column;gap:2px}
+.wa-day{align-self:center;margin:4px 0 8px}
+.wa-day span,.wa-sys span{display:inline-block;background:var(--paper-raised);color:var(--ink-soft);font-size:12px;padding:5px 12px;border-radius:8px;box-shadow:var(--shadow-sm)}
+.wa-sys{align-self:center;margin:6px 0}
+.wa-sys span{font-size:11.5px;background:var(--wa-sys)}
+.wa-msg{position:relative;max-width:min(72%,560px);padding:6px 9px;border-radius:8px;box-shadow:0 1px .5px rgba(0,0,0,.13);font-size:14.2px;line-height:1.4;margin-top:6px;overflow-wrap:anywhere;color:var(--ink)}
+.wa-msg.in{align-self:flex-start;background:var(--wa-in);border-top-left-radius:0}
+.wa-msg.out{align-self:flex-end;background:var(--wa-out);border-top-right-radius:0}
+.wa-msg.out.bot{background:var(--wa-bot)}
+.wa-msg::before{content:"";position:absolute;top:0;width:8px;height:13px}
+.wa-msg.in::before{left:-8px;background:var(--wa-in);clip-path:polygon(100% 0,0 0,100% 100%)}
+.wa-msg.out::before{right:-8px;background:var(--wa-out);clip-path:polygon(0 0,100% 0,0 100%)}
+.wa-msg.out.bot::before{background:var(--wa-bot)}
+.wa-who{display:block;font-size:12px;font-weight:600;margin-bottom:1px}
+.wa-who.bot{color:var(--brass)}
+.wa-txt{white-space:pre-wrap}
+.wa-meta{float:right;margin:6px 0 -4px 12px;font-size:11px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:3px;font-variant-numeric:tabular-nums}
+.wa-file{display:flex;align-items:center;gap:10px;background:var(--wa-file);border-radius:6px;padding:9px 10px;margin:2px 0;min-width:min(240px,100%)}
+.wa-file svg{width:28px;height:28px;color:var(--brick);flex:none}
+.wa-file strong{display:block;font-size:13px;font-weight:500;overflow-wrap:anywhere}
+.wa-file small{font-size:11px;color:var(--ink-soft)}
+.wa-compose-wrap{background:var(--paper-raised);border-top:1px solid var(--line);padding:8px 12px 10px;display:flex;flex-direction:column;gap:8px}
+.wa-compose{display:flex;align-items:center;gap:8px}
+.wa-compose input{flex:1;min-width:0;border:0;background:var(--paper);border-radius:22px;padding:11px 16px;outline:none}
+.wa-compose input:focus{box-shadow:0 0 0 2px var(--brass)}
+.wa-send{width:42px;height:42px;border-radius:50%;border:0;background:var(--primary);color:var(--paper-raised);display:inline-flex;align-items:center;justify-content:center;flex:none;padding:0}
+.wa-send svg{width:19px;height:19px}
+.wa-locked{background:var(--paper-raised);border-top:1px solid var(--line);padding:14px;text-align:center;font-size:13px;color:var(--ink-soft)}
+.wa-readonly{background:var(--paper-raised);border-top:1px solid var(--line);padding:10px 14px;font-size:12.5px;color:var(--ink-soft);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.wa-blank{align-items:center;justify-content:center;text-align:center;color:var(--ink-soft);background-image:none;background-color:var(--paper);padding:24px}
+.wa-blank h2{font-family:var(--font-display);color:var(--ink);font-size:24px;margin:16px 0 6px;font-weight:600}
+.wa-blank p{margin:4px 0}
+.brand-mark.big{width:72px;height:72px;margin:0 auto;color:var(--brass);border-color:var(--brass)}
+.brand-mark.big svg{width:32px;height:32px}
+.wa-info{border-left:1px solid var(--line-strong);background:var(--paper-raised);overflow-y:auto;min-height:0;min-width:0}
+.wa-info-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:500}
+.wa-info-top{text-align:center;padding:22px 18px 16px;border-bottom:1px solid var(--line)}
+.wa-info-top .wa-av{width:84px;height:84px;font-size:26px}
+.wa-info-top h3{font-family:var(--font-display);font-size:19px;margin:10px 0 2px}
+.wa-info-body{padding:4px 18px 18px}
+.wa-past{display:flex;justify-content:space-between;gap:8px;width:100%;border:0;background:none;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink);text-align:left}
+.wa-past:hover{color:var(--brass)}
+.wa-past span:last-child{font-family:var(--font-mono);color:var(--ink-soft);flex:none}
+.wa-group{padding:9px 16px 6px;font:500 11px var(--font-mono);color:var(--brass);letter-spacing:.04em;text-transform:uppercase;background:var(--paper-raised);position:sticky;top:0;z-index:1;border-bottom:1px solid var(--line)}
+.wa-hfilters{display:flex;gap:8px;padding:0 12px 10px;border-bottom:1px solid var(--line)}
+.wa-hfilters select{flex:1;min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px}
+.wa-back{display:none}
+@media (max-width:1180px){.wa.with-info{grid-template-columns:minmax(280px,340px) minmax(0,1fr)}.wa.with-info .wa-info{position:absolute;inset:0 0 0 auto;width:min(340px,100%);z-index:20;box-shadow:var(--shadow-md)}}
+@media (max-width:900px){.wa,.wa.with-info{grid-template-columns:1fr}.wa.with-info .wa-info{position:fixed;inset:0;width:100%;padding-top:env(safe-area-inset-top,0px)}.wa .wa-chat{display:none}.wa.open .wa-list{display:none}.wa.open .wa-chat{display:flex}.wa-back{display:inline-flex}.wa-msgs{padding:12px 14px}.wa-msg{max-width:86%}}
+
+
+/* ---------- Faixa de instalação ---------- */
+.inst{position:fixed;z-index:70;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top,0px));width:min(560px,calc(100vw - 32px));display:flex;align-items:center;gap:14px;padding:12px 14px;background:#161615;color:#e9e6d9;border:1px solid rgba(201,154,79,.45);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.28);font-size:13.5px}
+.inst img{width:40px;height:40px;flex:none}
+.inst div{flex:1;min-width:0}
+.inst strong{display:block;color:#f4efe2;font-weight:500}
+.inst span{color:rgba(233,230,217,.7);font-size:12.5px}
+.inst .btn-brass{flex:none}
+.inst .x{background:none;border:0;color:rgba(233,230,217,.6);font-size:20px;line-height:1;padding:4px 6px}
+/* ---------- Responsivo ---------- */
+.mobile-back{display:none}
+@media (max-width:900px){
+  .login{grid-template-columns:1fr}
+  .login-art{padding-block:32px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .sidebar{flex-direction:row;align-items:center;gap:10px;padding:10px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));overflow-x:auto;overflow-y:hidden}
+  .brand{border:0;margin:0;padding:0}.brand-sub,.brand-name,.status-switch,.sidebar-foot .user-chip,.sidebar-org{display:none}
+  nav{flex-direction:row}
+  .nav-item{padding:8px 10px;border-left:0;border-bottom:2px solid transparent;white-space:nowrap}
+  .nav-item>span:not(.count){display:none}
+  .logout-btn{font-size:0;gap:0;padding:8px}
+  .main.flush{height:auto}
+  .nav-item.active{border-bottom-color:var(--brass-soft)}
+  .sidebar-foot{margin:0 0 0 auto;padding:0;border:0}
+  .logout-btn{width:auto}
+  .main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .grid-2,.itbi-layout,.extracted{grid-template-columns:1fr}
+  .stat-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat-row>div:nth-child(odd){border-left:0;padding-left:0}
+  .bar-row{grid-template-columns:96px minmax(0,1fr) 36px}
+}
+</style>
+
+</head>
+<body>
+<div class="inst" id="inst" role="region" aria-label="Instalar programa" hidden>
+  <img src="icons/icon-192.png" alt="">
+  <div><strong id="inst-t">Instale o Atendimento neste computador</strong><span id="inst-m">Fica com ícone na área de trabalho e abre em janela própria.</span></div>
+  <button class="btn-brass" id="inst-ok" type="button">Instalar</button>
+  <button class="x" id="inst-x" type="button" aria-label="Fechar">×</button>
+</div>
+<div id="root"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><strong id="toast-t"></strong><span id="toast-m"></span></div>
+
+<script>
+/* ============================================================
+   ZapGov — protótipo do painel de atendimento (dados de exemplo)
+   Não conecta ao Supabase do LegislaGov: tudo roda em memória.
+   ============================================================ */
+/* Ícones no mesmo traço do LegislaGov (stroke 1.6) */
+const ICON = {
+  chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8"/></svg>',
+  doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h7"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.7-3.8 2.9-5.8 6-5.8s5.3 2 6 5.8"/><path d="M16 4.2a3.2 3.2 0 010 6.2"/><path d="M18.5 14.4c2.3.6 3.7 2.4 4.2 5.6"/></svg>',
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7.8l1.7 1M18.1 15.2l1.7 1M3 12h2M19 12h2M4.2 16.2l1.7-1M18.1 8.8l1.7-1"/></svg>',
+  chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="3.5" width="7" height="7"/><rect x="13.5" y="3.5" width="7" height="7"/><rect x="3.5" y="13.5" width="7" height="7"/><rect x="13.5" y="13.5" width="7" height="7"/></svg>',
+  out:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
+  pdf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v11H9l-5 4z"/><path d="M12 8v5M9.5 10.5h5"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 7.6v.4"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  clip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 11.5l-8.2 8.2a4.8 4.8 0 01-6.8-6.8l8.4-8.4a3.2 3.2 0 014.5 4.5l-8.4 8.4a1.6 1.6 0 01-2.3-2.3l7.7-7.7"/></svg>',
+  send:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4l17.4-7.5c.8-.4.8-1.5 0-1.8L3.4 3.6c-.7-.3-1.4.3-1.2 1l1.9 6.4 8.9 1-8.9 1-1.9 6.4c-.2.7.5 1.3 1.2 1z"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  mark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 3l8 4v2H4V7l8-4z"/><path d="M5 10v8M9 10v8M15 10v8M19 10v8"/><path d="M4 20h16"/></svg>'
+};
+
+const USERS = [
+  {id:1,nome:'Ricardo Saravalli',login:'ricardo',perfil:'Admin',ativo:true,online:true,atend:0},
+  {id:2,nome:'Ana Paula Moreira',login:'ana.moreira',perfil:'Supervisor',ativo:true,online:true,atend:3},
+  {id:3,nome:'Carlos Henrique Dias',login:'carlos.dias',perfil:'Atendente',ativo:true,online:true,atend:2},
+  {id:4,nome:'Juliana Rocha',login:'juliana.rocha',perfil:'Atendente',ativo:true,online:false,atend:0},
+  {id:5,nome:'Marcos Vinícius Lopes',login:'marcos.lopes',perfil:'Atendente',ativo:false,online:false,atend:0}
+];
+
+let CONVS = [
+  {id:101,unread:2,nome:'Maria Aparecida Souza',tel:'(17) 99612-4471',doc:'***.482.118-**',insc:'01.02.0145.001',end:'R. São Paulo, 412 – Centro',assunto:'IPTU',status:'fila',hora:'07:31',
+   debitos:[{d:'IPTU 2026 – parcela 9/10',v:142.30,late:false},{d:'IPTU 2026 – parcela 8/10',v:142.30,late:true}],
+   msgs:[
+    {f:'in',t:'07:28',x:'Bom dia'},
+    {f:'bot',t:'07:28',x:'Olá! Este é o atendimento digital da Prefeitura de Neves Paulista.\nEscolha o setor:\n1 – Tributação'},
+    {f:'in',t:'07:29',x:'1'},
+    {f:'bot',t:'07:29',x:'Tributação. Sobre o que deseja falar?\n1 – IPTU\n2 – ISS\n3 – Taxa de Licença\n4 – ITBI\n5 – Receitas Diversas\n6 – Água e Esgoto\n9 – Falar com atendente'},
+    {f:'in',t:'07:30',x:'1'},
+    {f:'bot',t:'07:30',x:'IPTU\n1 – Segunda via\n2 – Consultar débitos\n9 – Falar com atendente'},
+    {f:'in',t:'07:31',x:'9'},
+    {f:'in',t:'07:31',x:'Quero parcelar o atrasado, como faço?'}
+   ]},
+  {id:102,unread:1,nome:'João Batista Ferreira',tel:'(17) 99178-0932',doc:'***.019.556-**',insc:'—',end:'Escritura enviada',assunto:'ITBI',status:'fila',hora:'07:24',
+   debitos:[],
+   msgs:[
+    {f:'in',t:'07:20',x:'Preciso calcular o ITBI de um terreno que comprei'},
+    {f:'bot',t:'07:20',x:'Para calcular o ITBI, envie o contrato, a minuta ou a escritura (PDF ou foto).'},
+    {f:'in',t:'07:23',x:'',file:'escritura_lote14_quadraB.pdf'},
+    {f:'bot',t:'07:24',x:'Recebemos seu documento. Em breve um atendente enviará sua guia de ITBI.'}
+   ]},
+  {id:103,unread:0,nome:'Pedro Henrique Alves',tel:'(17) 98823-6150',doc:'**.284.551/0001-**',insc:'ISS 4.118',end:'Av. Brasil, 88 – Jd. Primavera',assunto:'ISS',status:'meu',hora:'07:12',
+   debitos:[{d:'ISS fixo 2026 – 4º trim.',v:318.00,late:false}],
+   msgs:[
+    {f:'in',t:'07:05',x:'Oi, o boleto do ISS veio com valor diferente do ano passado'},
+    {f:'sys',t:'07:06',x:'Ana Paula assumiu o atendimento'},
+    {f:'out',t:'07:08',x:'Bom dia, Pedro! Vou verificar o seu cadastro, um momento.'},
+    {f:'in',t:'07:12',x:'Ok, obrigado'}
+   ]},
+  {id:104,unread:0,nome:'Luciana Martins',tel:'(17) 99740-2288',doc:'***.771.903-**',insc:'01.04.0332.002',end:'R. Rio Grande do Sul, 1020',assunto:'IPTU',status:'bot',hora:'07:34',
+   debitos:[{d:'IPTU 2026 – parcela 9/10',v:96.80,late:false}],
+   msgs:[
+    {f:'in',t:'07:33',x:'segunda via iptu'},
+    {f:'bot',t:'07:33',x:'Informe o número da inscrição do imóvel (está no carnê) ou o CPF do proprietário.'},
+    {f:'in',t:'07:34',x:'01.04.0332.002'},
+    {f:'bot',t:'07:34',x:'Encontrei a inscrição 01.04.0332.002. Para confirmar, digite os 3 primeiros dígitos do CPF do proprietário.'}
+   ]},
+  {id:105,unread:0,nome:'Roberto Carlos Nunes',tel:'(17) 99105-7714',doc:'***.330.287-**',insc:'—',end:'—',assunto:'Fora do escopo',status:'enc',hora:'06:58',
+   debitos:[],
+   msgs:[
+    {f:'in',t:'06:57',x:'Queria marcar consulta no posto de saúde'},
+    {f:'bot',t:'06:57',x:'Este canal atende exclusivamente o setor de Tributação no momento. Para a Saúde, procure a unidade do seu bairro.'},
+    {f:'sys',t:'06:58',x:'Conversa encerrada pelo bot'}
+   ]}
+];
+
+const ITBI = {
+  protocolo:'ITBI-2026/0187', contrib:'João Batista Ferreira', docName:'escritura_lote14_quadraB.pdf',
+  comprador:'João Batista Ferreira', vendedor:'Imobiliária Horizonte Ltda.', imovel:'Lote 14, Quadra B – Jd. das Palmeiras',
+  insc:'03.11.0014.000', valorDeclarado:85000, valorVenal:92400, aliquota:2
+};
+
+const S = { user:null, view:'atendimento', filter:'todas', q:'', sel:101, profileOpen:window.innerWidth>1180, mobileOpen:false, hano:'2026', hq:'', hassunto:'', hsel:null, itbiDone:false };
+
+const brl = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const now = () => new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const initials = n => n.split(' ').filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+function toast(t,m){const el=document.getElementById('toast');document.getElementById('toast-t').textContent=t;document.getElementById('toast-m').textContent=m;el.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('show'),3200);}
+
+/* ---------------- Login ---------------- */
+function renderLogin(){
+  root.innerHTML = `
+  <div class="login">
+    <section class="login-art">
+      <div class="brand" style="border:0">
+        <div class="brand-mark">${ICON.mark}</div>
+        <div><div class="brand-name">LegislaGov</div><div class="brand-sub">Atendimento WhatsApp</div></div>
+      </div>
+      <div>
+        <div class="phone-tag">WHATSAPP · (17) 3271-9020</div>
+        <h1>Atendimento da Tributação pelo WhatsApp</h1>
+        <p>O bot responde segunda via e débitos sozinho. Quando o contribuinte pede um atendente, a conversa cai aqui.</p>
+      </div>
+      <div class="brand-sub">Prefeitura Municipal de Neves Paulista · Setor de Tributação</div>
+    </section>
+    <section class="login-form-wrap">
+      <form class="login-form" id="login-form">
+        <h2>Entrar</h2>
+        <p class="sub">Use o login criado pelo administrador.</p>
+        <div class="field"><label for="lg-user">Login</label><input id="lg-user" autocomplete="username" value="ana.moreira"></div>
+        <div class="field"><label for="lg-pass">Senha</label><input id="lg-pass" type="password" autocomplete="current-password" value="demonstracao"></div>
+        <p id="lg-err" class="sub" style="color:var(--brick);margin:0" hidden></p>
+        <button class="btn-primary" type="submit">Entrar</button>
+        <div class="demo-note">Protótipo com dados de exemplo. Logins de teste: <span class="mono">ricardo</span> (admin), <span class="mono">ana.moreira</span> (supervisora), <span class="mono">carlos.dias</span> (atendente). Qualquer senha.</div>
+      </form>
+    </section>
+  </div>`;
+  document.getElementById('login-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const l=document.getElementById('lg-user').value.trim().toLowerCase();
+    const u=USERS.find(x=>x.login===l);
+    const err=document.getElementById('lg-err');
+    if(!u){err.textContent='Login não encontrado. Confira com o administrador.';err.hidden=false;return;}
+    if(!u.ativo){err.textContent='Este login está desativado. Peça ao administrador para reativar.';err.hidden=false;return;}
+    S.user=u; S.view='atendimento'; render();
+  });
+}
+
+/* ---------------- Shell ---------------- */
+function navItems(){
+  const fila=CONVS.filter(c=>c.status==='fila').length;
+  const items=[['atendimento','Conversas',ICON.chat,fila],['historico','Histórico',ICON.clock,0],['itbi','ITBI',ICON.doc,S.itbiDone?0:1]];
+  if(S.user.perfil!=='Atendente') items.push(['usuarios','Usuários',ICON.users,0],['menus','Menus do bot',ICON.menu,0],['relatorios','Relatórios',ICON.chart,0]);
+  return items;
+}
+function renderShell(inner,flush){
+  root.innerHTML = `
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">${ICON.mark}</div><div><div class="brand-name">LegislaGov</div><div class="brand-sub">Atendimento WhatsApp</div></div></div>
+      <div class="status-switch" role="group" aria-label="Seu status">
+        <button class="current" data-st="on">Disponível</button><button data-st="pause">Pausa</button>
+      </div>
+      <nav>${navItems().map(([k,l,i,n])=>`<button class="nav-item ${S.view===k?'active':''}" data-view="${k}">${i}<span>${l}</span>${n?`<span class="count">${n}</span>`:''}</button>`).join('')}</nav>
+      <div class="sidebar-foot">
+        <div class="user-chip"><div class="avatar">${initials(S.user.nome)}</div><div><strong>${esc(S.user.nome)}</strong>${S.user.perfil}</div></div>
+        <button class="logout-btn" id="logout">${ICON.out.replace('<svg','<svg width="13" height="13"')}Sair</button>
+        <div class="sidebar-org" style="margin-top:12px;font-size:11.5px">Tributação · Neves Paulista — SP</div>
+      </div>
+    </aside>
+    <main class="main ${flush?'flush':''}" id="main">${inner}</main>
+  </div>`;
+  root.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{S.view=b.dataset.view;S.mobileOpen=false;render();});
+  root.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{root.querySelectorAll('[data-st]').forEach(x=>x.classList.toggle('current',x===b));toast('Status',b.dataset.st==='on'?'Você está disponível para novos atendimentos.':'Em pausa: novas conversas vão para outros atendentes.');});
+  document.getElementById('logout').onclick=()=>{S.user=null;render();};
+}
+
+/* ---------------- Atendimento (aparência WhatsApp) ---------------- */
+const STATUS_LBL = {fila:'Aguardando atendente',bot:'Com o bot',meu:'Em atendimento',enc:'Encerrada'};
+const FILTERS = [['todas','Todas'],['fila','Fila'],['meu','Minhas'],['bot','No bot'],['enc','Encerradas']];
+const TICK = '<svg class="tick" viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1 6.5l3.5 3.5L11 2.5M7.5 9.8l.8.7L16.5 2"/></svg>';
+
+function filteredConvs(){
+  const q=(S.q||'').toLowerCase();
+  return CONVS.filter(c=>(S.filter==='todas'||c.status===S.filter)&&(!q||(c.nome+' '+c.tel+' '+c.insc).toLowerCase().includes(q)));
+}
+function emptyList(){
+  if(S.q) return `<div class="empty">Nenhuma conversa encontrada para “${esc(S.q)}”. Conversas antigas ficam no Histórico.</div>`;
+  return `<div class="empty">${S.filter==='fila'?'Ninguém aguardando agora. Novas conversas aparecem aqui quando o contribuinte escolhe “Falar com atendente”.':'Nenhuma conversa neste filtro.'}</div>`;
+}
+function renderAtendimento(){
+  const c=CONVS.find(x=>x.id===S.sel);
+  const inner=`<div class="wa ${S.mobileOpen?'open':''} ${S.profileOpen&&c?'with-info':''}" id="wa">
+    <section class="wa-list" aria-label="Lista de conversas">
+      <header class="wa-list-head"><h1>Conversas</h1><button class="wa-icon" id="simular" title="Simular nova mensagem" aria-label="Simular nova mensagem">${ICON.plus}</button></header>
+      <label class="wa-search">${ICON.search}<input id="wa-q" placeholder="Pesquisar nome, telefone ou inscrição" value="${esc(S.q||'')}" autocomplete="off"></label>
+      <div class="wa-filters" role="group" aria-label="Filtrar conversas">${FILTERS.map(([k,l])=>{const n=k==='todas'||k==='enc'?0:CONVS.filter(x=>x.status===k).length;return `<button class="${S.filter===k?'on':''}" data-filter="${k}">${l}${n?` <span>${n}</span>`:''}</button>`;}).join('')}</div>
+      <div class="wa-items"></div>
+    </section>
+    ${c?waChat(c):`<section class="wa-chat wa-blank"><div><div class="brand-mark big">${ICON.mark}</div><h2>Atendimento WhatsApp</h2><p>Escolha uma conversa à esquerda para responder.</p><p class="mono" style="font-size:12px">(17) 3271-9020</p></div></section>`}
+    ${c&&S.profileOpen?waInfo(c):''}
+  </div>`;
+  renderShell(inner,true);
+  renderItems();
+  bindAtendimento(c);
+}
+function renderItems(){
+  const el=document.querySelector('.wa-items'); if(!el) return;
+  const list=filteredConvs();
+  el.innerHTML=list.length?list.map(waItem).join(''):emptyList();
+  el.querySelectorAll('[data-conv]').forEach(b=>b.onclick=()=>{S.sel=+b.dataset.conv;const c=CONVS.find(x=>x.id===S.sel);if(c)c.unread=0;S.mobileOpen=true;render();});
+}
+function lastPreview(c){
+  const last=[...c.msgs].reverse().find(m=>m.f!=='sys');
+  if(!last) return '';
+  const txt=last.file?'Documento: '+last.file:last.x.split('\n')[0];
+  const out=last.f==='out'||last.f==='bot';
+  return `${out?TICK:''}${last.f==='bot'?'<b>Bot:</b>&nbsp;':''}<span class="ellip">${esc(txt)}</span>`;
+}
+function waItem(c){
+  return `<button class="wa-item ${c.id===S.sel?'sel':''}" data-conv="${c.id}">
+    <span class="wa-av ${c.status}" aria-hidden="true">${initials(c.nome)}</span>
+    <span class="wa-item-body">
+      <span class="wa-row"><span class="wa-name">${esc(c.nome)}</span><span class="wa-time ${c.unread?'new':''}">${c.hora}</span></span>
+      <span class="wa-row"><span class="wa-prev">${lastPreview(c)}</span>${c.unread?`<span class="wa-badge" aria-label="${c.unread} não lidas">${c.unread}</span>`:''}</span>
+      <span class="wa-tags"><span class="wa-st ${c.status}">${STATUS_LBL[c.status]}</span> · ${c.assunto}</span>
+    </span>
+  </button>`;
+}
+function waMsg(m){
+  if(m.f==='sys') return `<div class="wa-sys"><span>${esc(m.x)} · ${m.t}</span></div>`;
+  const out=m.f!=='in';
+  const who=m.f==='bot'?'<span class="wa-who bot">Bot automático</span>':m.f==='out'?`<span class="wa-who">${esc(m.by||'Atendente')}</span>`:'';
+  return `<div class="wa-msg ${out?'out':'in'} ${m.f==='bot'?'bot':''}">${who}${m.x?`<span class="wa-txt">${esc(m.x)}</span>`:''}${m.file?`<span class="wa-file">${ICON.pdf}<span><strong>${esc(m.file)}</strong><small>PDF · documento</small></span></span>`:''}<span class="wa-meta">${m.t}${out?TICK:''}</span></div>`;
+}
+function waMsgs(msgs,day){return `<div class="wa-day"><span>${day}</span></div>`+msgs.map(waMsg).join('');}
+function waChat(c){
+  const mine=c.status==='meu';
+  const first=S.user.nome.split(' ')[0];
+  return `<section class="wa-chat" aria-label="Conversa com ${esc(c.nome)}">
+    <header class="wa-chat-head">
+      <button class="wa-icon wa-back" id="back" aria-label="Voltar para a lista">${ICON.back}</button>
+      <button class="wa-who-btn" id="open-info" title="Ver dados do contribuinte"><span class="wa-av ${c.status}" aria-hidden="true">${initials(c.nome)}</span><span><strong>${esc(c.nome)}</strong><small>${c.tel} · ${c.assunto} · ${STATUS_LBL[c.status]}</small></span></button>
+      <div class="wa-head-actions">
+        ${c.status==='fila'||c.status==='bot'?'<button class="btn-primary" id="assumir">Assumir</button>':''}
+        ${mine?'<button class="btn-secondary" id="transferir">Transferir</button><button class="btn-secondary" id="encerrar">Encerrar</button>':''}
+        <button class="wa-icon" id="toggle-info" aria-label="Dados do contribuinte">${ICON.info}</button>
+      </div>
+    </header>
+    <div class="wa-msgs" id="msgs">${waMsgs(c.msgs,'Hoje')}</div>
+    ${mine?`<div class="wa-compose-wrap">
+      <div class="quick">
+        <button data-q="Bom dia! Sou ${esc(first)}, do setor de Tributação. Como posso ajudar?">Saudação</button>
+        <button data-q="O parcelamento de débitos pode ser feito pelo REFIS municipal. Vou gerar a simulação para você.">Parcelamento</button>
+        <button data-q="Para emitir a guia, preciso do número da inscrição do imóvel, que está no carnê do IPTU.">Pedir inscrição</button>
+      </div>
+      <form class="wa-compose" id="compose">
+        <button type="button" class="wa-icon" id="attach" aria-label="Enviar 2ª via em PDF" title="Enviar 2ª via em PDF">${ICON.clip}</button>
+        <input id="compose-input" placeholder="Digite uma mensagem" autocomplete="off">
+        <button class="wa-send" type="submit" aria-label="Enviar">${ICON.send}</button>
+      </form>
+    </div>`:`<div class="wa-locked">${c.status==='enc'?'Conversa encerrada. Ela fica guardada no Histórico.':c.status==='bot'?'O bot está atendendo. Clique em Assumir se precisar intervir.':'Clique em Assumir para responder este contribuinte.'}</div>`}
+  </section>`;
+}
+function waInfo(c){
+  const total=c.debitos.reduce((s,d)=>s+d.v,0);
+  const past=HIST.filter(h=>h.tel===c.tel);
+  return `<aside class="wa-info" aria-label="Dados do contribuinte">
+    <div class="wa-info-head"><button class="wa-icon" id="close-info" aria-label="Fechar">${ICON.close}</button>Dados do contribuinte</div>
+    <div class="wa-info-top"><span class="wa-av ${c.status}" aria-hidden="true">${initials(c.nome)}</span><h3>${esc(c.nome)}</h3><div class="mono" style="font-size:12.5px;color:var(--ink-soft)">${c.tel}</div></div>
+    <div class="wa-info-body">
+      <div class="sec-label">Cadastro</div>
+      <dl class="kv"><dt>CPF/CNPJ</dt><dd class="mono">${c.doc}</dd><dt>Inscrição</dt><dd class="mono">${c.insc}</dd><dt>Endereço</dt><dd>${esc(c.end)}</dd></dl>
+      <div class="sec-label">Débitos em aberto</div>
+      ${c.debitos.length?c.debitos.map(d=>`<div class="debt ${d.late?'late':''}"><span>${esc(d.d)}${d.late?' · vencida':''}</span><span class="amt">${brl(d.v)}</span></div>`).join('')+`<div class="debt" style="font-weight:600;border:0"><span>Total</span><span class="amt">${brl(total)}</span></div>`:'<div class="empty" style="padding:6px 0">Nenhum débito encontrado.</div>'}
+      <div class="api-note"><span class="dot"></span>Consulta Betha · exemplo</div>
+      <div class="side-btns">
+        ${c.debitos.length?`<button class="btn-brass" id="enviar-guia"${c.status!=='meu'?' disabled style="opacity:.5;cursor:not-allowed" title="Assuma a conversa para enviar"':''}>Enviar 2ª via pelo WhatsApp</button>`:''}
+        ${c.assunto==='ITBI'?'<button class="btn-secondary" data-goto="itbi">Abrir ficha do ITBI</button>':''}
+      </div>
+      <div class="sec-label">Conversas anteriores</div>
+      ${past.length?past.map(h=>`<button class="wa-past" data-hist="${h.id}"><span>${h.assunto} · ${esc(h.resumo)}</span><span>${fmtData(h.data,true)}</span></button>`).join(''):'<div class="empty" style="padding:6px 0">Primeiro contato deste número.</div>'}
+    </div>
+  </aside>`;
+}
+function scrollMsgs(){const m=document.getElementById('msgs');if(m)m.scrollTop=m.scrollHeight;}
+function sendFromAgent(c,x,file){c.msgs.push({f:'out',t:now(),x,by:S.user.nome.split(' ')[0],...(file?{file}:{})});c.hora=now();}
+function bindAtendimento(c){
+  root.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{S.filter=b.dataset.filter;render();});
+  const q=document.getElementById('wa-q'); if(q) q.oninput=()=>{S.q=q.value;renderItems();};
+  document.getElementById('simular').onclick=simular;
+  scrollMsgs();
+  if(!c) return;
+  const back=document.getElementById('back'); if(back) back.onclick=()=>{S.mobileOpen=false;render();};
+  const openInfo=()=>{S.profileOpen=!S.profileOpen;render();};
+  document.getElementById('open-info').onclick=openInfo;
+  document.getElementById('toggle-info').onclick=openInfo;
+  const ci=document.getElementById('close-info'); if(ci) ci.onclick=()=>{S.profileOpen=false;render();};
+  root.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{S.view=b.dataset.goto;render();});
+  root.querySelectorAll('[data-hist]').forEach(b=>b.onclick=()=>{const h=HIST.find(x=>x.id==b.dataset.hist);S.view='historico';S.hsel=h.id;S.hano=h.data.slice(0,4);S.hq='';S.hassunto='';render();});
+  const as=document.getElementById('assumir'); if(as) as.onclick=()=>{c.status='meu';c.unread=0;c.msgs.push({f:'sys',t:now(),x:`${S.user.nome.split(' ')[0]} assumiu o atendimento`});render();toast('Atendimento assumido',`${c.nome} agora está com você.`);};
+  const en=document.getElementById('encerrar'); if(en) en.onclick=()=>{c.status='enc';c.msgs.push({f:'bot',t:now(),x:'Atendimento encerrado. Como você avalia este atendimento? Responda de 1 a 5.'});render();toast('Conversa encerrada','Ela foi guardada no Histórico.');};
+  const tr=document.getElementById('transferir'); if(tr) tr.onclick=()=>openTransfer(c);
+  root.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const i=document.getElementById('compose-input');i.value=b.dataset.q;i.focus();});
+  const f=document.getElementById('compose'); if(f) f.onsubmit=e=>{e.preventDefault();const v=document.getElementById('compose-input').value.trim();if(!v)return;sendFromAgent(c,v);render();document.getElementById('compose-input')?.focus();};
+  const guia=()=>{if(!c.debitos.length){toast('Sem débitos','Este contribuinte não tem guia em aberto para enviar.');return;}sendFromAgent(c,`Segue a 2ª via. A linha digitável e o PIX copia-e-cola estão no PDF.\nTotal: ${brl(c.debitos.reduce((s,d)=>s+d.v,0))}`,`2via_${c.assunto.toLowerCase().replace(/\W+/g,'')}_${c.insc.replace(/\W/g,'')}.pdf`);render();toast('2ª via enviada',`PDF entregue a ${c.nome} pelo WhatsApp.`);};
+  const at=document.getElementById('attach'); if(at) at.onclick=guia;
+  const g=document.getElementById('enviar-guia'); if(g&&c.status==='meu') g.onclick=guia;
+}
+function openTransfer(c){
+  const opts=USERS.filter(u=>u.ativo&&u.id!==S.user.id&&u.perfil!=='Admin');
+  const ov=document.createElement('div');ov.className='modal-overlay';
+  ov.innerHTML=`<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tr-h"><h2 id="tr-h">Transferir conversa</h2><p style="margin:0;color:var(--ink-soft);font-size:12.5px">${esc(c.nome)} vai para outro atendente com o histórico completo.</p>
+  <div class="field"><label for="tr-to">Para</label><select id="tr-to">${opts.map(u=>`<option value="${u.id}">${esc(u.nome)} · ${u.online?'online':'offline'}</option>`).join('')}</select></div>
+  <div class="field"><label for="tr-note">Observação interna</label><input id="tr-note" placeholder="Ex.: contribuinte quer parcelar IPTU 2025"></div>
+  <div class="modal-actions"><button class="btn-secondary" id="tr-cancel">Cancelar</button><button class="btn-primary" id="tr-ok">Transferir</button></div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#tr-cancel').onclick=()=>ov.remove();
+  ov.querySelector('#tr-ok').onclick=()=>{const u=USERS.find(x=>x.id==ov.querySelector('#tr-to').value);c.msgs.push({f:'sys',t:now(),x:`Transferida para ${u.nome.split(' ')[0]}`});c.status='fila';ov.remove();render();toast('Conversa transferida',`${c.nome} foi para ${u.nome}.`);};
+}
+let simCount=0;
+function simular(){
+  const pool=[
+    {nome:'Sebastiana Rodrigues',tel:'(17) 99231-5508',assunto:'Taxa de Licença',x:'Preciso da guia da taxa de licença do meu comércio'},
+    {nome:'Antônio Gomes',tel:'(17) 98810-3367',assunto:'Água e Esgoto',x:'Minha conta de água veio alta'},
+    {nome:'Fernanda Lima',tel:'(17) 99654-1190',assunto:'Receitas Diversas',x:'Quero pagar a taxa de 2ª via de certidão'}
+  ];
+  const p=pool[simCount++%pool.length]; const t=now();
+  const c={id:200+simCount,nome:p.nome,tel:p.tel,doc:'***.***.***-**',insc:'—',end:'—',assunto:p.assunto,status:'fila',hora:t,unread:2,debitos:[],
+    msgs:[{f:'in',t,x:p.x},{f:'bot',t,x:p.assunto==='Água e Esgoto'?'Água e Esgoto ainda está no sistema antigo. Vou encaminhar você para um atendente.':'Vou encaminhar você para um atendente. Aguarde um momento.'}]};
+  CONVS.unshift(c); render();
+  toast('Nova mensagem',`${p.nome} · ${p.assunto}`);
+}
+
+/* ---------------- Histórico ---------------- */
+const DIAS=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+function fmtData(d,curto){const [a,m,dia]=d.split('-');if(curto)return `${dia}/${m}/${a.slice(2)}`;const w=new Date(+a,+m-1,+dia).getDay();return `${dia}/${m}/${a} · ${DIAS[w]}`;}
+const HIST=[
+  {id:901,data:'2026-11-12',nome:'Maria Aparecida Souza',tel:'(17) 99612-4471',insc:'01.02.0145.001',assunto:'IPTU',atendente:'Bot',resumo:'2ª via parcela 8',
+   msgs:[{f:'in',t:'14:02',x:'segunda via do iptu'},{f:'bot',t:'14:02',x:'Informe a inscrição do imóvel ou o CPF do proprietário.'},{f:'in',t:'14:03',x:'01.02.0145.001'},{f:'bot',t:'14:03',x:'Segue a 2ª via da parcela 8/10. Vencimento 10/11/2026.',file:'2via_iptu_010201450001.pdf'},{f:'sys',t:'14:03',x:'Resolvida pelo bot'}]},
+  {id:902,data:'2026-11-12',nome:'Paulo Sérgio Teixeira',tel:'(17) 99402-8811',insc:'ISS 2.907',assunto:'ISS',atendente:'Carlos',resumo:'dúvida sobre alíquota',
+   msgs:[{f:'in',t:'10:15',x:'Qual a alíquota do ISS para serviço de manutenção?'},{f:'sys',t:'10:16',x:'Carlos assumiu o atendimento'},{f:'out',t:'10:18',by:'Carlos',x:'Bom dia, Paulo. Para manutenção (item 14.01) a alíquota municipal é 3%.'},{f:'in',t:'10:19',x:'Obrigado!'},{f:'sys',t:'10:20',x:'Encerrada por Carlos'}]},
+  {id:903,data:'2026-11-11',nome:'Cláudia Regina Prado',tel:'(17) 99733-0045',insc:'03.11.0009.000',assunto:'ITBI',atendente:'Ana Paula',resumo:'guia ITBI emitida',
+   msgs:[{f:'in',t:'09:40',x:'Preciso do ITBI da casa que comprei'},{f:'bot',t:'09:40',x:'Envie o contrato, a minuta ou a escritura (PDF ou foto).'},{f:'in',t:'09:44',x:'',file:'contrato_compra_venda.pdf'},{f:'sys',t:'10:02',x:'Ana Paula assumiu o atendimento'},{f:'out',t:'10:15',by:'Ana Paula',x:'Sua guia de ITBI está pronta. Valor: R$ 2.140,00.',file:'guia_itbi_2026_0181.pdf'},{f:'sys',t:'10:16',x:'Encerrada por Ana Paula'}]},
+  {id:904,data:'2026-11-10',nome:'Maria Aparecida Souza',tel:'(17) 99612-4471',insc:'01.02.0145.001',assunto:'IPTU',atendente:'Juliana',resumo:'atualização de endereço',
+   msgs:[{f:'in',t:'15:30',x:'Mudei de endereço, o carnê precisa ir pro novo'},{f:'sys',t:'15:31',x:'Juliana assumiu o atendimento'},{f:'out',t:'15:33',by:'Juliana',x:'Para alterar o endereço de entrega, envie uma foto do comprovante de residência.'},{f:'in',t:'15:40',x:'',file:'comprovante_residencia.jpg'},{f:'out',t:'15:45',by:'Juliana',x:'Endereço atualizado. Os próximos carnês vão para a R. São Paulo, 412.'},{f:'sys',t:'15:46',x:'Encerrada por Juliana'}]},
+  {id:905,data:'2026-11-09',nome:'Roberto Carlos Nunes',tel:'(17) 99105-7714',insc:'—',assunto:'Fora do escopo',atendente:'Bot',resumo:'pedido para a Saúde',
+   msgs:[{f:'in',t:'08:12',x:'Tem vacina da gripe no posto?'},{f:'bot',t:'08:12',x:'Este canal atende exclusivamente o setor de Tributação no momento. Para a Saúde, procure a unidade do seu bairro.'},{f:'sys',t:'08:12',x:'Encerrada pelo bot'}]},
+  {id:906,data:'2025-12-18',nome:'Pedro Henrique Alves',tel:'(17) 98823-6150',insc:'ISS 4.118',assunto:'ISS',atendente:'Ana Paula',resumo:'guia ISS fixo 2025',
+   msgs:[{f:'in',t:'11:05',x:'Preciso da guia do ISS fixo de 2025'},{f:'sys',t:'11:06',x:'Ana Paula assumiu o atendimento'},{f:'out',t:'11:09',by:'Ana Paula',x:'Segue a guia do ISS fixo 2025.',file:'guia_iss_2025_4118.pdf'},{f:'sys',t:'11:10',x:'Encerrada por Ana Paula'}]}
+];
+function histList(){
+  const q=(S.hq||'').toLowerCase();
+  return HIST.filter(h=>h.data.startsWith(S.hano||'2026')&&(!S.hassunto||h.assunto===S.hassunto)&&(!q||(h.nome+' '+h.tel+' '+h.insc+' '+h.resumo).toLowerCase().includes(q)))
+    .sort((a,b)=>b.data.localeCompare(a.data)||b.id-a.id);
+}
+function renderHistorico(){
+  const list=histList();
+  if(!list.find(h=>h.id===S.hsel)) S.hsel=list[0]?.id;
+  const h=HIST.find(x=>x.id===S.hsel);
+  const anos=[...new Set(HIST.map(x=>x.data.slice(0,4)))].sort().reverse();
+  const assuntos=[...new Set(HIST.map(x=>x.assunto))].sort();
+  let lastDay='', items='';
+  list.forEach(x=>{if(x.data!==lastDay){items+=`<div class="wa-group">${fmtData(x.data)}</div>`;lastDay=x.data;}
+    items+=`<button class="wa-item ${x.id===S.hsel?'sel':''}" data-h="${x.id}"><span class="wa-av" aria-hidden="true">${initials(x.nome)}</span><span class="wa-item-body"><span class="wa-row"><span class="wa-name">${esc(x.nome)}</span><span class="wa-time">${x.msgs[0].t}</span></span><span class="wa-row"><span class="wa-prev"><span class="ellip">${x.assunto} · ${esc(x.resumo)}</span></span></span><span class="wa-tags">Atendido por ${esc(x.atendente)}</span></span></button>`;});
+  renderShell(`<div class="wa ${S.mobileOpen?'open':''}">
+    <section class="wa-list" aria-label="Histórico de conversas">
+      <header class="wa-list-head"><h1>Histórico</h1></header>
+      <label class="wa-search">${ICON.search}<input id="h-q" placeholder="Pesquisar nome, telefone ou inscrição" value="${esc(S.hq||'')}" autocomplete="off"></label>
+      <div class="wa-hfilters">
+        <select id="h-ano" aria-label="Ano">${anos.map(a=>`<option ${a===(S.hano||'2026')?'selected':''}>${a}</option>`).join('')}</select>
+        <select id="h-assunto" aria-label="Assunto"><option value="">Todos os assuntos</option>${assuntos.map(a=>`<option ${a===S.hassunto?'selected':''}>${a}</option>`).join('')}</select>
+      </div>
+      <div class="wa-items">${items||'<div class="empty">Nenhuma conversa arquivada com esses filtros.</div>'}</div>
+    </section>
+    ${h?`<section class="wa-chat" aria-label="Conversa arquivada">
+      <header class="wa-chat-head">
+        <button class="wa-icon wa-back" id="back" aria-label="Voltar para a lista">${ICON.back}</button>
+        <div class="wa-who-btn"><span class="wa-av" aria-hidden="true">${initials(h.nome)}</span><span><strong>${esc(h.nome)}</strong><small>${h.tel} · ${h.assunto} · inscrição ${h.insc}</small></span></div>
+      </header>
+      <div class="wa-msgs" id="msgs">${waMsgs(h.msgs,fmtData(h.data))}</div>
+      <div class="wa-readonly"><span>Conversa arquivada · atendida por ${esc(h.atendente)} · somente leitura</span><button class="mini-btn" id="h-copy">Copiar conversa</button></div>
+    </section>`:`<section class="wa-chat wa-blank"><div><div class="brand-mark big">${ICON.clock}</div><h2>Histórico</h2><p>Escolha uma conversa arquivada.</p></div></section>`}
+  </div>`,true);
+  const hq=document.getElementById('h-q'); hq.oninput=()=>{S.hq=hq.value;const pos=hq.selectionStart;renderHistorico();const n=document.getElementById('h-q');n.focus();n.setSelectionRange(pos,pos);};
+  document.getElementById('h-ano').onchange=e=>{S.hano=e.target.value;S.hsel=null;renderHistorico();};
+  document.getElementById('h-assunto').onchange=e=>{S.hassunto=e.target.value;S.hsel=null;renderHistorico();};
+  root.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{S.hsel=+b.dataset.h;S.mobileOpen=true;renderHistorico();});
+  const back=document.getElementById('back'); if(back) back.onclick=()=>{S.mobileOpen=false;renderHistorico();};
+  const cp=document.getElementById('h-copy'); if(cp) cp.onclick=()=>{
+    const txt=`${h.nome} · ${h.tel} · ${fmtData(h.data)}\n`+h.msgs.map(m=>`[${m.t}] ${m.f==='in'?h.nome.split(' ')[0]:m.f==='bot'?'Bot':m.f==='sys'?'Sistema':m.by}: ${m.x||''}${m.file?' ('+m.file+')':''}`).join('\n');
+    navigator.clipboard.writeText(txt).then(()=>toast('Conversa copiada','Cole em um ofício, e-mail ou processo.')).catch(()=>toast('Não foi possível copiar','Seu navegador bloqueou a área de transferência.'));
+  };
+  scrollMsgs();
+}
+
+/* ---------------- ITBI ---------------- */
+function renderItbi(){
+  const base=Math.max(ITBI.valorDeclarado,ITBI.valorVenal);
+  const imposto=base*ITBI.aliquota/100;
+  renderShell(`
+  <div class="page-head"><div><div class="eyebrow mono">${ITBI.protocolo}</div><h1 class="page-title">ITBI · ${esc(ITBI.contrib)}</h1><p class="page-sub">Documento recebido pelo WhatsApp às 07:23. A IA leu a escritura e preencheu a ficha; confira antes de emitir.</p></div>
+  <span class="chip ${S.itbiDone?'chip-done':'chip-wait'}"><span class="dot"></span>${S.itbiDone?'Guia enviada':'Aguardando conferência'}</span></div>
+  <div class="itbi-layout">
+    <div class="card"><h2>Documento enviado</h2><p class="sub mono">${ITBI.docName}</p>
+      <div class="doc-preview">ESCRITURA PÚBLICA DE VENDA E COMPRA que fazem, como outorgante vendedora, <mark>${ITBI.vendedor}</mark>, e como outorgado comprador, <mark>${ITBI.comprador}</mark>, do imóvel constituído pelo <mark>${ITBI.imovel}</mark>, cadastrado na Prefeitura sob a inscrição <mark>${ITBI.insc}</mark>, pelo preço certo e ajustado de <mark>${brl(ITBI.valorDeclarado)}</mark>, pago neste ato…</div>
+    </div>
+    <div class="card"><h2>Ficha de cálculo</h2><p class="sub">Campos em destaque no documento foram extraídos pela IA.</p>
+      <div class="ai-flag">⚑ <span>Valor venal do cadastro (${brl(ITBI.valorVenal)}) é maior que o valor declarado. Pela regra municipal a base de cálculo é o maior dos dois.</span></div>
+      <div class="extracted">
+        <div class="field"><label for="it-c">Comprador</label><input id="it-c" value="${esc(ITBI.comprador)}"></div>
+        <div class="field"><label for="it-v">Vendedor</label><input id="it-v" value="${esc(ITBI.vendedor)}"></div>
+        <div class="field"><label for="it-i">Inscrição</label><input id="it-i" class="mono" value="${ITBI.insc}"></div>
+        <div class="field"><label for="it-d">Valor declarado</label><input id="it-d" class="mono" value="${brl(ITBI.valorDeclarado)}"></div>
+      </div>
+      <div class="calc">
+        <span>Valor venal (Betha)</span><span class="v">${brl(ITBI.valorVenal)}</span>
+        <span>Base de cálculo</span><span class="v">${brl(base)}</span>
+        <span>Alíquota</span><span class="v">${ITBI.aliquota}%</span>
+        <span class="total">ITBI a pagar</span><span class="v total">${brl(imposto)}</span>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap">
+        <button class="btn-secondary" id="it-pend">Pedir documento</button>
+        <button class="btn-primary" id="it-ok" ${S.itbiDone?'disabled style="opacity:.5"':''}>Emitir guia e enviar</button>
+      </div>
+    </div>
+  </div>`);
+  document.getElementById('it-ok').onclick=()=>{if(S.itbiDone)return;S.itbiDone=true;const c=CONVS.find(x=>x.id===102);c.msgs.push({f:'out',t:now(),by:S.user.nome.split(' ')[0],x:`Sua guia de ITBI está pronta. Valor: ${brl(imposto)}. Após o pagamento, o comprovante libera a transferência no cartório.`,file:'guia_itbi_2026_0187.pdf'});c.status='enc';render();toast('Guia de ITBI enviada',`${brl(imposto)} · ${ITBI.contrib}`);};
+  document.getElementById('it-pend').onclick=()=>toast('Pedido enviado','O bot pediu a matrícula atualizada do imóvel ao contribuinte.');
+}
+
+/* ---------------- Usuários ---------------- */
+function renderUsuarios(){
+  renderShell(`
+  <div class="page-head"><div><div class="eyebrow">ADMINISTRAÇÃO</div><h1 class="page-title">Usuários do atendimento</h1><p class="page-sub">Cada atendente entra com login e senha próprios. No primeiro acesso, a senha precisa ser trocada.</p></div>
+  <button class="btn-primary" id="novo">Novo atendente</button></div>
+  <div class="banner"><strong>Separado do LegislaGov.</strong> Estes logins valem só para o ZapGov e não alteram os usuários da Câmara.</div>
+  <div class="card"><div class="table-wrap"><table class="docket">
+    <thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Situação</th><th>Atendendo</th><th></th></tr></thead>
+    <tbody>${USERS.map(u=>`<tr>
+      <td><strong>${esc(u.nome)}</strong></td><td class="mono">${u.login}</td><td>${u.perfil}</td>
+      <td>${!u.ativo?'<span class="chip chip-wait"><span class="dot"></span>Desativado</span>':u.online?'<span class="chip chip-me"><span class="dot"></span>Online</span>':'<span class="chip chip-topic">Offline</span>'}</td>
+      <td class="mono">${u.atend}</td>
+      <td style="white-space:nowrap"><button class="mini-btn" data-reset="${u.id}">Redefinir senha</button> <button class="mini-btn" data-tog="${u.id}">${u.ativo?'Desativar':'Reativar'}</button></td>
+    </tr>`).join('')}</tbody></table></div></div>`);
+  document.getElementById('novo').onclick=openNovoUser;
+  root.querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>{const u=USERS.find(x=>x.id==b.dataset.reset);toast('Senha redefinida',`${u.nome} recebe uma senha temporária e troca no próximo login.`);});
+  root.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{const u=USERS.find(x=>x.id==b.dataset.tog);if(u.id===S.user.id){toast('Ação bloqueada','Você não pode desativar o próprio login.');return;}u.ativo=!u.ativo;u.online=false;render();toast(u.ativo?'Login reativado':'Login desativado',u.nome);});
+}
+function openNovoUser(){
+  const ov=document.createElement('div');ov.className='modal-overlay';
+  ov.innerHTML=`<form class="modal-card" role="dialog" aria-modal="true" aria-labelledby="nu-h" id="nu-form"><h2 id="nu-h">Novo atendente</h2>
+  <div class="field"><label for="nu-nome">Nome completo</label><input id="nu-nome" required></div>
+  <div class="field"><label for="nu-login">Login</label><input id="nu-login" placeholder="nome.sobrenome" required></div>
+  <div class="field"><label for="nu-perfil">Perfil</label><select id="nu-perfil"><option>Atendente</option><option>Supervisor</option><option>Admin</option></select></div>
+  <div class="field"><label for="nu-pass">Senha inicial</label><input id="nu-pass" type="password" minlength="8" placeholder="Mínimo 8 caracteres" required></div>
+  <p id="nu-err" style="color:var(--brick);font-size:12.5px;margin:0" hidden></p>
+  <div class="modal-actions"><button type="button" class="btn-secondary" id="nu-cancel">Cancelar</button><button class="btn-primary" type="submit">Criar login</button></div></form>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#nu-cancel').onclick=()=>ov.remove();
+  ov.querySelector('#nu-form').onsubmit=e=>{e.preventDefault();
+    const nome=ov.querySelector('#nu-nome').value.trim(),login=ov.querySelector('#nu-login').value.trim().toLowerCase();
+    if(USERS.some(u=>u.login===login)){const er=ov.querySelector('#nu-err');er.textContent='Este login já existe. Escolha outro.';er.hidden=false;return;}
+    USERS.push({id:Date.now(),nome,login,perfil:ov.querySelector('#nu-perfil').value,ativo:true,online:false,atend:0});
+    ov.remove();render();toast('Login criado',`${nome} já pode entrar como ${login}.`);};
+}
+
+/* ---------------- Menus do bot ---------------- */
+const MENU=[
+  {k:'1',l:'Tributação',sub:[
+    {k:'1',l:'IPTU',sub:[{k:'1',l:'Segunda via',a:'API Betha'},{k:'2',l:'Consultar débitos',a:'API Betha'},{k:'9',l:'Falar com atendente',a:'fila'}]},
+    {k:'2',l:'ISS',sub:[{k:'1',l:'Segunda via',a:'API Betha'},{k:'2',l:'Consultar débitos',a:'API Betha'},{k:'9',l:'Falar com atendente',a:'fila'}]},
+    {k:'3',l:'Taxa de Licença',sub:[{k:'1',l:'Segunda via',a:'API Betha'},{k:'2',l:'Consultar débitos',a:'API Betha'},{k:'9',l:'Falar com atendente',a:'fila'}]},
+    {k:'4',l:'ITBI',sub:[{k:'1',l:'Calcular ITBI (enviar escritura)',a:'IA + atendente'},{k:'9',l:'Falar com atendente',a:'fila'}]},
+    {k:'5',l:'Receitas Diversas',sub:[{k:'1',l:'Emitir guia',a:'API Betha'},{k:'9',l:'Falar com atendente',a:'fila'}]},
+    {k:'6',l:'Água e Esgoto',off:true,a:'sistema antigo · vai direto para atendente'},
+    {k:'9',l:'Falar com atendente',a:'fila'}
+  ]}
+];
+function treeHtml(items){return `<ul>${items.map(i=>`<li class="${i.off?'off':''}"><span class="opt"><span class="k">${i.k}</span><span>${esc(i.l)}</span>${i.a?`<span class="act">· ${i.a}</span>`:''}</span>${i.sub?treeHtml(i.sub):''}</li>`).join('')}</ul>`;}
+function renderMenus(){
+  renderShell(`
+  <div class="page-head"><div><div class="eyebrow">CONFIGURAÇÃO</div><h1 class="page-title">Menus do bot</h1><p class="page-sub">O que o contribuinte vê ao mandar mensagem para (17) 3271-9020.</p></div></div>
+  <div class="grid-2">
+    <div class="card"><h2>Estrutura</h2><p class="sub">Opções esmaecidas ainda não estão automatizadas.</p><div class="tree">${treeHtml(MENU)}</div></div>
+    <div class="stack">
+      <div class="card"><h2>Mensagens fixas</h2><p class="sub">Textos que o bot e a IA usam.</p>
+        <div class="field"><label for="m-ola">Boas-vindas</label><textarea id="m-ola">Olá! Este é o atendimento digital da Prefeitura de Neves Paulista. Escolha o setor:</textarea></div>
+        <div class="field" style="margin-top:12px"><label for="m-fora">Fora do escopo (IA)</label><textarea id="m-fora">Este canal atende exclusivamente o setor de Tributação no momento.</textarea></div>
+        <div class="field" style="margin-top:12px"><label for="m-hor">Fora do horário</label><textarea id="m-hor">Nosso atendimento humano funciona de segunda a sexta, das 8h às 17h. Segunda via e débitos continuam disponíveis aqui a qualquer hora.</textarea></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn-primary" id="m-save">Salvar textos</button></div>
+      </div>
+    </div>
+  </div>`);
+  document.getElementById('m-save').onclick=()=>toast('Textos salvos','O bot passa a usar as novas mensagens.');
+}
+
+/* ---------------- Relatórios ---------------- */
+function renderRelatorios(){
+  const temas=[['IPTU',142],['ITBI',37],['ISS',29],['Taxa de Licença',21],['Receitas Diversas',14],['Água e Esgoto',58]];
+  const max=Math.max(...temas.map(t=>t[1]));
+  renderShell(`
+  <div class="page-head"><div><div class="eyebrow">ÚLTIMOS 30 DIAS · DADOS DE EXEMPLO</div><h1 class="page-title">Relatórios</h1><p class="page-sub">Quanto o bot resolve sozinho e onde a equipe gasta tempo.</p></div></div>
+  <div class="stat-row">
+    <div><strong class="mono">301</strong><span>conversas</span></div>
+    <div><strong class="mono">64%</strong><span>resolvidas pelo bot</span></div>
+    <div><strong class="mono">6 min</strong><span>espera média por atendente</span></div>
+    <div><strong class="mono">4,6</strong><span>nota de satisfação (1 a 5)</span></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><h2>Assuntos</h2><p class="sub">Conversas por opção do menu.</p>
+      <div class="bars">${temas.map(([l,n])=>`<div class="bar-row"><span>${l}</span><div class="bar-track"><div class="bar-fill" style="width:${n/max*100}%"></div></div><span class="n">${n}</span></div>`).join('')}</div>
+    </div>
+    <div class="card"><h2>Por atendente</h2><p class="sub">Atendimentos encerrados no período.</p>
+      <div class="table-wrap"><table class="docket" style="min-width:0"><thead><tr><th>Atendente</th><th style="text-align:right">Atend.</th><th style="text-align:right">Tempo médio</th></tr></thead>
+      <tbody><tr><td>Ana Paula Moreira</td><td class="mono" style="text-align:right">46</td><td class="mono" style="text-align:right">7 min</td></tr>
+      <tr><td>Carlos Henrique Dias</td><td class="mono" style="text-align:right">39</td><td class="mono" style="text-align:right">9 min</td></tr>
+      <tr><td>Juliana Rocha</td><td class="mono" style="text-align:right">23</td><td class="mono" style="text-align:right">8 min</td></tr></tbody></table></div>
+    </div>
+  </div>`);
+}
+
+/* ---------------- Router ---------------- */
+const root=document.getElementById('root');
+function render(){
+  if(!S.user) return renderLogin();
+  ({atendimento:renderAtendimento,historico:renderHistorico,itbi:renderItbi,usuarios:renderUsuarios,menus:renderMenus,relatorios:renderRelatorios}[S.view]||renderAtendimento)();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelector('.modal-overlay')?.remove();});
+render();
+</script>
+
+<script>
+/* App instalável: registra o service worker (abre rápido e atualiza sozinho) */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/atendimento/sw.js', {scope:'/atendimento/'}).catch(()=>{});
+</script>
+
+<script>
+/* Instalação: aparece quando o navegador permite instalar ou quando veio da Área do cliente */
+(function(){
+  const pediu = new URLSearchParams(location.search).has('instalar');
+  const inst = document.getElementById('inst'), ok = document.getElementById('inst-ok');
+  const instalado = () => matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
+  let evento = null;
+  if (instalado()) return;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); evento = e; ok.hidden = false; inst.hidden = false; });
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('inst-t').textContent = 'Programa instalado';
+    document.getElementById('inst-m').textContent = 'Procure “Atendimento” na área de trabalho ou no menu Iniciar.';
+    ok.hidden = true; inst.hidden = false; setTimeout(() => inst.hidden = true, 6000);
+  });
+  ok.onclick = async () => { if (!evento) return; evento.prompt(); const r = await evento.userChoice; if (r.outcome === 'accepted') { evento = null; } };
+  document.getElementById('inst-x').onclick = () => inst.hidden = true;
+  if (pediu) setTimeout(() => { if (!evento && !instalado()) {
+    document.getElementById('inst-t').textContent = 'Instale pelo menu do navegador';
+    document.getElementById('inst-m').textContent = 'No Chrome ou Edge: clique no ícone de instalar na barra de endereço, ou em ⋮ › Instalar Atendimento. Se não aparecer, o programa já está instalado neste computador.';
+    ok.hidden = true; inst.hidden = false;
+  } }, 1500);
+})();
+</script>
+</body>
+</html>
