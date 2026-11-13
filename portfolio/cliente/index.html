@@ -5,235 +5,184 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Área do cliente — LegislaGov</title>
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#0a1222">
-<link rel="icon" href="../img/icone.png">
-<link rel="apple-touch-icon" href="../img/icone-180.png">
+<meta name="theme-color" content="#0b0c0e">
+<link rel="icon" href="../atendimento/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../estilo.css?v=4">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>try{if(localStorage.getItem("lgw_tema")==="claro")document.documentElement.dataset.tema="claro"}catch(e){}</script>
 <style>
-/* Área do cliente: login à esquerda sobre o azul do site; depois, a lista de sistemas liberados */
+/* Área do cliente: mesmo padrão do painel LegislaGov (preto, Inter, cantos arredondados) */
+:root{
+  --bg:#0a0a0b; --card:#111214; --ink:#f3f4f6; --soft:#9a9fa6; --line:#1f2125; --line-2:#2c2f34;
+  --primary:#f2f3f5; --on-primary:#0b0c0e; --accent:#39bdf6; --green:#3fcf8e; --amber:#e5a823;
+  --font:Inter,'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif; color-scheme:dark;
+}
+:root[data-tema="claro"]{--bg:#f4f5f7;--card:#fff;--ink:#0e1116;--soft:#5b6270;--line:#e7e9ed;--line-2:#d6d9df;--primary:#0b0c0e;--on-primary:#fff;--accent:#0a9bd8;--green:#14915a;--amber:#b9800c;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
 [hidden]{display:none!important}
-body{min-height:100vh;display:flex;flex-direction:column}
-.topo .cx{height:64px}
-.topo .sair{display:flex;align-items:center;gap:12px;color:#cdd6e6;font-size:14px}
-.topo .sair b{color:#fff;font-weight:600}
-.topo .sair .btn{min-height:38px;padding:0 14px;font-size:14px}
-.acesso{flex:1;background:radial-gradient(900px 500px at 88% -10%,rgba(91,124,255,.26),transparent 60%),radial-gradient(700px 420px at -5% 110%,rgba(37,194,232,.16),transparent 60%),var(--navy);color:#fff}
-.acesso .cx{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;padding:72px 0}
-.acesso h1{font-size:clamp(32px,4.4vw,50px);font-weight:700}
-.acesso h1 em{font-style:normal;background:linear-gradient(90deg,var(--ciano-claro),#a9b9ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-.acesso .ac-sub{color:#b9c5d9;font-size:18px;max-width:520px;margin:20px 0 26px}
-.ac-passos{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-width:520px}
-.ac-passos li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;color:#b9c5d9;font-size:15px}
-.ac-passos li span{width:34px;height:34px;border-radius:10px;background:rgba(37,194,232,.12);border:1px solid rgba(37,194,232,.3);color:var(--ciano-claro);display:flex;align-items:center;justify-content:center;font:600 14px var(--disp)}
-.ac-passos b{color:#fff;font-weight:600}
-.cartao-login{background:var(--branco);color:var(--tinta);border-radius:20px;padding:34px;box-shadow:0 40px 90px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:16px}
-.cartao-login h2{font-size:26px}
-.cartao-login .leg{color:var(--suave);font-size:14.5px;margin-top:-8px}
-.campo{display:flex;flex-direction:column;gap:6px}
-.campo label{font-weight:600;font-size:13.5px}
-.campo input{font:400 16px var(--sans);padding:13px 14px;border:1px solid var(--linha);border-radius:12px;background:var(--fundo);color:var(--tinta)}
-.campo input:focus{outline:none;border-color:var(--ciano);box-shadow:0 0 0 3px rgba(37,194,232,.2)}
-.aviso{font-size:14px;border-radius:12px;padding:11px 14px;line-height:1.5}
-.aviso.erro{background:#fff1f3;color:#b4233a;border:1px solid #ffd0d7}
-.aviso.demo{background:var(--fundo);color:var(--suave);border:1px dashed #c8d1df;font-size:13.5px}
-.cartao-login .btn{width:100%}
-.btn:disabled{opacity:.6;cursor:wait;transform:none}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit}
+button,input{font-family:var(--font);font-size:14.5px;color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:12px 18px;font-weight:600;text-decoration:none;cursor:pointer;background:var(--primary);color:var(--on-primary)}
+.btn:hover{opacity:.9}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn-linha{background:transparent;color:var(--ink);border:1px solid var(--line-2)}
+.btn-linha:hover{background:rgba(127,127,127,.08);opacity:1}
+.btn-azul{background:var(--accent);color:#06121c}
 
-.painel{flex:1;padding:48px 0 72px}
-.painel-cab{margin-bottom:28px}
-.painel-cab .olho{font:600 13px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:#1a8fb0}
-.painel-cab h1{font-size:clamp(28px,3.4vw,38px);margin:6px 0 8px}
-.painel-cab p{color:var(--suave)}
-.faixa-demo{background:#fff8e8;border:1px solid #f6dfa6;color:#7a5a12;border-radius:12px;padding:12px 16px;font-size:14px;margin-bottom:22px}
-.sistemas{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;align-items:start}
-.sistema{background:var(--branco);border:1px solid var(--linha);border-radius:var(--raio);box-shadow:0 10px 30px rgba(10,18,34,.06);overflow:hidden}
-.sis-cab{display:flex;gap:16px;align-items:center;padding:24px 24px 20px;border-bottom:1px solid var(--linha)}
+.login{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 16px;background:radial-gradient(1100px 520px at 50% -8%,#1b1c1f 0%,#0a0a0b 55%,#000 100%);color:#f3f4f6}
+.cartao{width:100%;max-width:410px;background:#0d0e10;border:1px solid #24262a;border-radius:18px;box-shadow:0 30px 90px rgba(0,0,0,.65);padding:30px;display:flex;flex-direction:column;gap:16px}
+.voltar{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:#c9ccd1;text-decoration:none}
+.voltar:hover{color:#fff}
+.logo{display:flex;flex-direction:column;align-items:center;gap:8px;padding-bottom:18px;border-bottom:1px solid #24262a}
+.logo img{width:270px;height:auto}
+.logo span{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#39bdf6;font-weight:600}
+.campo{display:flex;flex-direction:column;gap:6px}
+.campo label{font-size:13px;color:#9a9fa6;font-weight:500}
+.campo input{background:#141517;border:1px solid #2c2f34;border-radius:10px;padding:12px 13px;color:#f3f4f6}
+.campo input:focus{outline:none;border-color:#6b7078;box-shadow:0 0 0 3px rgba(255,255,255,.07)}
+.cartao .btn{height:46px;background:#f2f3f5;color:#0b0c0e}
+.erro{color:#f0646f;font-size:13.5px;margin:0}
+.aviso{font-size:13px;color:#d6c38c;background:#141209;border:1px solid #3a3220;border-radius:10px;padding:10px 12px;line-height:1.5}
+.rodape-cartao{text-align:center;font-size:12px;color:#7d828a}
+.rodape-cartao b{color:#e6e7e9}.rodape-cartao b i,.marca-i{font-style:normal;color:#39bdf6}
+
+.topo{background:#0b0c0e;border-bottom:1px solid rgba(255,255,255,.08);color:#e6e7e9}
+.topo .cx{display:flex;align-items:center;justify-content:space-between;gap:16px;height:66px}
+.topo img{height:48px;width:auto;display:block}
+.quem{display:flex;align-items:center;gap:12px;font-size:13.5px}
+.quem .av{width:34px;height:34px;border-radius:50%;background:#1d1f23;border:1px solid #30333a;display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:12.5px}
+.quem strong{display:block;font-weight:600}
+.quem span{color:#8792a3;font-size:12px}
+.topo .btn-linha{color:#e6e7e9;border-color:#2a2d33;padding:8px 14px}
+.cx{width:min(1120px,100% - 32px);margin-inline:auto}
+.painel{flex:1;padding:40px 0 64px;display:flex;flex-direction:column;gap:24px}
+.cab small{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.cab h1{font-size:clamp(26px,3vw,34px);margin:6px 0;letter-spacing:-.02em;font-weight:700}
+.cab p{margin:0;color:var(--soft)}
+.sistemas{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:start}
+.sis{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.sis-cab{display:flex;gap:16px;align-items:center;padding:22px;border-bottom:1px solid var(--line)}
 .sis-cab img{width:60px;height:60px;border-radius:14px;flex:none}
-.sis-cab h2{font-size:21px}
-.sis-cab small{display:block;color:var(--suave);font-size:14px;margin-top:2px}
-.sis-corpo{padding:20px 24px 24px;display:flex;flex-direction:column;gap:18px}
-.ficha{display:grid;grid-template-columns:auto 1fr;gap:8px 20px;font-size:14.5px;margin:0}
-.ficha dt{color:var(--suave)}
+.sis-cab h2{font-size:20px;margin:0;font-weight:700;letter-spacing:-.01em}
+.sis-cab small{display:block;color:var(--soft);font-size:13.5px}
+.sis-corpo{padding:20px 22px 22px;display:flex;flex-direction:column;gap:18px}
+.ficha{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 20px;font-size:14px;margin:0}
+.ficha dt{color:var(--soft)}
 .ficha dd{margin:0}
-.ac-selo{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px}
-.ac-selo::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
-.ac-selo.ok{background:#e6f9f0;color:#13804f}
-.ac-selo.breve{background:#fff3dc;color:#9a6a0e}
-.ac-acoes{display:flex;gap:10px;flex-wrap:wrap}
-.ac-btn-claro{background:var(--fundo);color:var(--tinta);border-color:var(--linha)}
-.ac-btn-claro:hover{background:#e9edf4}
-.como{margin:0;padding-left:20px;color:var(--suave);font-size:14.5px;display:grid;gap:6px}
-.como b{color:var(--tinta);font-weight:600}
-.lado{display:grid;gap:20px}
-.sistema.trancado .sis-cab img{filter:grayscale(1);opacity:.6}
-.sistema p{color:var(--suave);font-size:14.5px}
-@media (max-width:980px){.acesso .cx,.sistemas{grid-template-columns:1fr}.acesso .cx{gap:32px;padding:44px 0}.topo .sair span{display:none}}
-@media (max-width:640px){.cartao-login{padding:24px}.sis-cab,.sis-corpo{padding-left:18px;padding-right:18px}}
+.selo{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px}
+.selo::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.selo.ok{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green)}
+.selo.breve{background:color-mix(in srgb,var(--amber) 14%,transparent);color:var(--amber)}
+.acoes{display:flex;gap:10px;flex-wrap:wrap}
+.passos{margin:0;padding-left:20px;color:var(--soft);font-size:14px;display:grid;gap:6px}
+.passos b{color:var(--ink);font-weight:600}
+.lado{display:grid;gap:18px}
+.sis.trancado .sis-cab img{filter:grayscale(1);opacity:.55}
+.sis p{margin:0;color:var(--soft);font-size:14px}
+.pe{border-top:1px solid var(--line);color:var(--soft);font-size:12.5px}
+.pe .cx{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 0}
+.tema{background:none;border:1px solid var(--line-2);color:var(--soft);border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer}
+@media (max-width:900px){.sistemas{grid-template-columns:1fr}.quem>div{display:none}.topo img{height:32px}}
+@media (max-width:480px){.cartao{padding:22px}.logo img{width:220px}}
 </style>
 </head>
 <body>
-<header class="topo">
-  <div class="cx">
-    <a class="marca" href="../index.html" aria-label="LegislaGov, início"><img src="../img/logo.png" alt="LegislaGov" width="160" height="36"></a>
-    <div class="sair" id="topo-login"><a class="btn btn-sec" href="../index.html">Voltar ao site</a></div>
-    <div class="sair" id="topo-painel" hidden><span>Olá, <b id="u-nome">—</b></span><button class="btn btn-sec" id="sair" type="button">Sair</button></div>
-  </div>
-</header>
 
 <!-- ============ LOGIN ============ -->
-<main class="acesso" id="tela-login">
-  <div class="cx">
-    <div>
-      <h1>Área do <em>cliente</em></h1>
-      <p class="ac-sub">Baixe e instale os sistemas LegislaGov nos computadores do seu setor. Cada servidor vê só o que o administrador liberou.</p>
-      <ol class="ac-passos">
-        <li><span>1</span><div><b>Entre com seu login</b><br>O mesmo e-mail e senha do LegislaGov.</div></li>
-        <li><span>2</span><div><b>Escolha o sistema</b><br>Aparecem os sistemas liberados para você.</div></li>
-        <li><span>3</span><div><b>Instale neste computador</b><br>Ícone na área de trabalho e atualização automática.</div></li>
-      </ol>
-    </div>
-    <form class="cartao-login" id="form-login" autocomplete="on">
-      <h2>Entrar</h2>
-      <p class="leg">Acesso restrito a clientes LegislaGov.</p>
-      <div class="campo"><label for="login">E-mail</label><input id="login" autocomplete="username" required></div>
-      <div class="campo"><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required></div>
-      <div class="aviso erro" id="erro" hidden></div>
-      <button class="btn btn-pri" id="btn-entrar" type="submit">Entrar</button>
-      <div class="aviso demo" id="aviso-demo" hidden>Fase de testes: entre com <b>Ricardo</b> e a senha de teste combinada. Este acesso só mostra dados de exemplo e será desligado quando o login oficial entrar.</div>
-    </form>
-  </div>
+<main class="login" id="tela-login">
+  <form class="cartao" id="form-login" autocomplete="on">
+    <a class="voltar" href="../index.html"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Voltar para o site</a>
+    <div class="logo"><img src="logo-legislagov.png" alt="LegislaGov — Gestão legislativa municipal"><span>Área do cliente</span></div>
+    <div class="aviso" id="sem-servidor" hidden>A Área do cliente funciona no endereço oficial, no servidor da Amazon. Neste endereço o login não está disponível.</div>
+    <div class="campo"><label for="login">Usuário</label><input id="login" autocomplete="username" placeholder="Seu usuário" required></div>
+    <div class="campo"><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" placeholder="••••••••" required></div>
+    <p class="erro" id="erro" hidden></p>
+    <button class="btn" id="btn-entrar" type="submit">Entrar</button>
+    <div class="rodape-cartao">Desenvolvido por <b>Legisla<i>Gov</i></b> · legislagov.com.br</div>
+  </form>
 </main>
 
 <!-- ============ SISTEMAS ============ -->
-<main class="painel" id="tela-painel" hidden>
-  <div class="cx">
-    <div class="painel-cab">
-      <div class="olho">Área do cliente</div>
-      <h1>Seus sistemas</h1>
-      <p>Instale uma vez em cada computador. As atualizações chegam sozinhas.</p>
+<div id="tela-painel" hidden style="display:flex;flex-direction:column;flex:1">
+  <header class="topo">
+    <div class="cx">
+      <a href="../index.html"><img src="logo-legislagov.png" alt="LegislaGov"></a>
+      <div class="quem"><span class="av" id="u-ini">—</span><div><strong id="u-nome">—</strong><span id="u-perfil">—</span></div><button class="btn btn-linha" id="sair" type="button">Sair</button></div>
     </div>
-    <div class="faixa-demo" id="faixa-demo" hidden>Você entrou com o acesso de teste. Os sistemas abrem com dados de exemplo.</div>
+  </header>
+  <main class="cx painel">
+    <div class="cab"><small>Área do cliente</small><h1>Seus sistemas</h1><p>Instale uma vez em cada computador do setor. As atualizações chegam sozinhas.</p></div>
     <div class="sistemas">
-      <article class="sistema">
-        <div class="sis-cab">
-          <img src="../atendimento/icons/icon-192.png" alt="">
-          <div><h2>Atendimento WhatsApp</h2><small>Tributação · (17) 3271-9020</small></div>
-        </div>
+      <article class="sis">
+        <div class="sis-cab"><img src="../atendimento/icons/icon-192.png" alt=""><div><h2>Atendimento WhatsApp</h2><small>Tributação · (17) 3271-9020</small></div></div>
         <div class="sis-corpo">
           <dl class="ficha">
-            <dt>Situação</dt><dd><span class="ac-selo ok">Liberado para você</span></dd>
-            <dt>Versão</dt><dd>1.0 · teste</dd>
+            <dt>Situação</dt><dd><span class="selo ok">Liberado para você</span></dd>
+            <dt>Versão</dt><dd>1.1</dd>
             <dt>Funciona em</dt><dd>Windows 10 e 11, no Google Chrome ou Microsoft Edge</dd>
             <dt>Tamanho</dt><dd>menos de 1 MB</dd>
           </dl>
-          <div class="ac-acoes">
-            <a class="btn btn-pri" href="../atendimento/?instalar=1" target="_blank" rel="noopener">Instalar neste computador</a>
-            <a class="btn ac-btn-claro" href="../atendimento/" target="_blank" rel="noopener">Abrir no navegador</a>
+          <div class="acoes">
+            <a class="btn btn-azul" href="../atendimento/?instalar=1" target="_blank" rel="noopener">Instalar neste computador</a>
+            <a class="btn btn-linha" href="../atendimento/" target="_blank" rel="noopener">Abrir no navegador</a>
           </div>
-          <ol class="como">
+          <ol class="passos">
             <li>Clique em <b>Instalar neste computador</b>. O programa abre numa aba nova.</li>
             <li>No aviso do topo do programa, clique em <b>Instalar</b> e confirme.</li>
-            <li>O ícone <b>Atendimento</b> aparece na área de trabalho e no menu Iniciar.</li>
+            <li>O ícone <b>Atendimento</b> aparece na área de trabalho e no menu Iniciar. O login é o mesmo desta página.</li>
           </ol>
         </div>
       </article>
       <div class="lado">
-        <article class="sistema trancado">
-          <div class="sis-cab">
-            <img src="../img/icone.png" alt="">
-            <div><h2>Sistema Legislativo</h2><small>Câmara e Executivo</small></div>
-          </div>
-          <div class="sis-corpo">
-            <span class="ac-selo breve">Em breve nesta área</span>
-            <p>Continua no endereço da sua Câmara (ex.: neves.legislagov.com.br) até a migração.</p>
-          </div>
+        <article class="sis trancado">
+          <div class="sis-cab"><img src="../atendimento/icons/icon-192.png" alt=""><div><h2>Sistema Legislativo</h2><small>Câmara e Executivo</small></div></div>
+          <div class="sis-corpo"><span class="selo breve">Em breve nesta área</span><p>Continua no endereço da sua Câmara (ex.: neves.legislagov.com.br).</p></div>
         </article>
-        <article class="sistema">
-          <div class="sis-corpo">
-            <h2 style="font-size:18px">Precisa liberar alguém?</h2>
-            <p>Quem dá acesso é o administrador do município, no próprio sistema, em <b>Usuários</b>.</p>
-          </div>
-        </article>
+        <article class="sis"><div class="sis-corpo"><h2 style="font-size:17px;margin:0">Precisa liberar alguém?</h2><p>O administrador cria os logins no próprio Atendimento, em <b>Equipe</b>.</p></div></article>
       </div>
     </div>
-  </div>
-</main>
+  </main>
+  <footer class="pe"><div class="cx"><span>© 2026 Legisla<span class="marca-i">Gov</span> · Área do cliente</span><button class="tema" id="tema" type="button">Aparência</button></div></footer>
+</div>
 
-<footer class="rodape">
-  <div class="cx">
-    <img src="../img/logo.png" alt="LegislaGov" width="124" height="28">
-    <span>© 2026 LegislaGov · legislagov.com.br · Área do cliente</span>
-  </div>
-</footer>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
-/* Login oficial: mesmo projeto Supabase do painel LegislaGov (chave pública).
-   Só LÊ a tabela zapgov.usuarios — nada das tabelas da Câmara é alterado. */
-const SUPABASE_URL = 'https://wtyrdvnunkozgrhcupzl.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_ZezoteXl_GQcfD_OxISdeg_eFNdYWK6';
-
-/* FASE DE TESTES: acesso de teste com dados de exemplo.
-   Quando o banco zapgov estiver criado no Supabase, troque para false. */
-const ACESSO_TESTE = true;
-const CONTAS_TESTE = { ricardo: { senha: '123456', nome: 'Ricardo' } };
-
+/* Login pelo servidor do LegislaGov na Amazon (mesmo banco e mesmos usuários do Atendimento).
+   A senha nunca fica nesta página: é conferida no servidor. */
 const $ = id => document.getElementById(id);
-const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-if (ACESSO_TESTE) $('aviso-demo').hidden = false;
-
-function mostrar(nome, teste){
-  $('u-nome').textContent = nome;
-  $('faixa-demo').hidden = !teste;
-  $('tela-login').hidden = true; $('topo-login').hidden = true;
-  $('tela-painel').hidden = false; $('topo-painel').hidden = false;
-  try { sessionStorage.setItem('lg_cliente', JSON.stringify({ nome, teste })); } catch (e) {}
+async function api(path, body){
+  const o = { headers:{ 'X-LG':'1' }, credentials:'same-origin' };
+  if (body !== undefined) { o.method='POST'; o.headers['Content-Type']='application/json'; o.body=JSON.stringify(body); }
+  const r = await fetch(path, o); let d = {}; try { d = await r.json(); } catch (e) {}
+  if (!r.ok || d.ok === false) { const x = new Error(d.erro || 'O servidor não respondeu como esperado.'); x.status = r.status; throw x; }
+  return d;
 }
-
-async function verificarAcesso(user){
-  const { data, error } = await sb.schema('zapgov').from('usuarios').select('nome,ativo').eq('user_id', user.id).maybeSingle();
-  if (error) {
-    const semBanco = /schema|relation|does not exist|PGRST106|42P01/i.test((error.message || '') + (error.code || ''));
-    throw new Error(semBanco ? 'O login oficial ainda está sendo configurado. Use o acesso de teste por enquanto.' : 'Não foi possível verificar seu acesso: ' + error.message);
-  }
-  if (!data) throw new Error('Seu login existe, mas nenhum sistema foi liberado para você. Fale com o administrador.');
-  if (!data.ativo) throw new Error('Seu acesso está desativado. Fale com o administrador.');
-  return data.nome;
+function mostrar(eu){
+  $('u-nome').textContent = eu.nome; $('u-perfil').textContent = eu.admin ? 'Administrador' : 'Atendente';
+  $('u-ini').textContent = (eu.nome || '?').split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+  $('tela-login').hidden = true; $('tela-painel').hidden = false;
 }
-
 $('form-login').onsubmit = async e => {
   e.preventDefault();
-  const login = $('login').value.trim(), senha = $('senha').value;
-  const erro = $('erro'), btn = $('btn-entrar');
-  erro.hidden = true; btn.disabled = true; btn.textContent = 'Entrando…';
+  const btn = $('btn-entrar'), erro = $('erro'); erro.hidden = true; btn.disabled = true; btn.textContent = 'Entrando…';
   try {
-    const t = ACESSO_TESTE && CONTAS_TESTE[login.toLowerCase()];
-    if (t) { if (t.senha !== senha) throw new Error('Senha incorreta.'); return mostrar(t.nome, true); }
-    if (!login.includes('@')) throw new Error('Digite o e-mail cadastrado no LegislaGov.');
-    if (!sb) throw new Error('Sem conexão com o servidor de login. Verifique a internet e tente de novo.');
-    const { data, error } = await sb.auth.signInWithPassword({ email: login, password: senha });
-    if (error) throw new Error(/invalid/i.test(error.message) ? 'E-mail ou senha incorretos.' : error.message);
-    mostrar(await verificarAcesso(data.user), false);
+    await api('/api/login', { usuario: $('login').value.trim(), senha: $('senha').value });
+    mostrar((await api('/api/whatsapp/conversas')).eu);
   } catch (x) {
-    if (sb) await sb.auth.signOut().catch(() => {});
-    erro.textContent = x.message; erro.hidden = false;
+    erro.textContent = x.status === 404 || x.status === 405 || x.status === 501 ? 'O login não está disponível neste endereço.' : x.message; erro.hidden = false;
   } finally { btn.disabled = false; btn.textContent = 'Entrar'; }
 };
-
-$('sair').onclick = async () => {
-  try { sessionStorage.removeItem('lg_cliente'); } catch (e) {}
-  if (sb) await sb.auth.signOut().catch(() => {});
-  $('tela-painel').hidden = true; $('topo-painel').hidden = true;
-  $('tela-login').hidden = false; $('topo-login').hidden = false; $('senha').value = '';
-};
-
+$('sair').onclick = async () => { try { await api('/api/logout', {}); } catch (e) {} $('tela-painel').hidden = true; $('tela-login').hidden = false; $('senha').value = ''; };
+$('tema').onclick = () => { const claro = document.documentElement.dataset.tema !== 'claro'; if (claro) document.documentElement.dataset.tema = 'claro'; else delete document.documentElement.dataset.tema; try { localStorage.setItem('lgw_tema', claro ? 'claro' : 'escuro'); } catch (e) {} };
 (async () => {
-  try { const s = JSON.parse(sessionStorage.getItem('lg_cliente')); if (s && (!s.teste || ACESSO_TESTE)) return mostrar(s.nome, s.teste); } catch (e) {}
-  if (!sb) return;
-  const { data } = await sb.auth.getSession();
-  if (data.session) { try { mostrar(await verificarAcesso(data.session.user), false); } catch (e) { await sb.auth.signOut(); } }
+  try {
+    const r = await fetch('/api/whatsapp/conversas', { headers:{ 'X-LG':'1' }, credentials:'same-origin' });
+    const d = await r.json().catch(() => null);
+    if (!d) { $('sem-servidor').hidden = false; return; }
+    if (d.ok) mostrar(d.eu);
+  } catch (e) { $('sem-servidor').hidden = false; }
 })();
 </script>
 </body>

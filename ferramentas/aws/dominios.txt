@@ -5,3 +5,6 @@
 #           sistema = câmara que comprou só o sistema: abre direto no painel
 teste.legislagov.com.br        teste               site
 neves.legislagov.com.br        neves-paulista-sp   site
+# site LegislaGov + Área do cliente + Atendimento WhatsApp (modo portfolio: pasta portfolio/)
+legislagov.com.br              prefeitura-neves-sp portfolio
+www.legislagov.com.br          prefeitura-neves-sp portfolio

@@ -8,8 +8,10 @@ Site estático (uma página) com apresentação da empresa, soluções, projetos
 - Antes de usar o domínio definitivo: remover `<meta name="robots" content="noindex">` e o `robots.txt`.
 
 ## Área do cliente e Atendimento WhatsApp
-- `cliente/` — Área do cliente: login (Supabase do LegislaGov) e instalação dos sistemas.
-  Enquanto o login oficial não está pronto, `ACESSO_TESTE = true` em `cliente/index.html`
-  libera um acesso de teste com dados de exemplo. Trocar para `false` depois de criar o banco.
-- `atendimento/` — programa Atendimento WhatsApp (app instalável pelo navegador; protótipo com dados de exemplo).
-- Banco: `ferramentas/zapgov/zapgov.sql` (esquema separado `zapgov`; não altera as tabelas da Câmara).
+- Publicação: servidor da Amazon (Lightsail). Os endereços `legislagov.com.br` e `www.legislagov.com.br`
+  estão em `ferramentas/aws/dominios.txt` no modo `portfolio`: o `server.py` entrega esta pasta e o
+  Caddy cuida do HTTPS. Para testar antes de mudar o domínio: `teste.legislagov.com.br/cliente/`.
+- `cliente/` — Área do cliente: login pelo servidor (`/api/login`, mesma tabela de usuários) e instalação.
+- `atendimento/` — programa Atendimento WhatsApp (app instalável). No servidor usa `/api/whatsapp/*`
+  (`lgwhats.py`); aberto fora dele, mostra a demonstração com dados de exemplo.
+- Banco: tabelas `wa_*` no mesmo SQLite do servidor; conversas encerradas guardadas por 5 anos.

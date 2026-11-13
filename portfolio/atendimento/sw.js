@@ -2,12 +2,13 @@
    Guarda a "casca" do app para abrir rápido. As páginas sempre buscam a
    versão nova na rede primeiro; o cache só é usado se a internet cair.
    Para forçar atualização em todas as máquinas, troque a VERSAO. */
-const VERSAO = 'atendimento-v1';
+const VERSAO = 'atendimento-v2';
 const CASCA = [
   '/atendimento/',
   '/atendimento/manifest.webmanifest',
   '/atendimento/icons/icon-192.png',
-  '/atendimento/icons/icon-512.png'
+  '/atendimento/icons/icon-512.png',
+  '/atendimento/logo-legislagov.png'
 ];
 
 self.addEventListener('install', e => {
@@ -26,7 +27,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== location.origin) return; // Supabase e APIs nunca passam pelo cache
+  if (url.origin !== location.origin || url.pathname.startsWith('/api/')) return; // dados e login nunca ficam guardados no aparelho
   e.respondWith(
     fetch(req)
       .then(res => {

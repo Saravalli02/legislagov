@@ -37,6 +37,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from http.cookies import SimpleCookie
 
 import lgapi
+import lgwhats
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
 PORTA = int(os.environ.get("PORT", "8000"))
@@ -531,9 +532,27 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
 
     def do_GET(self):
+        if lgwhats.rota(self, "GET", camara_do_host):
+            return
         if self._api("GET"):
             return
         caminho = self.path.split("?", 1)[0].split("#", 1)[0]
+        # site LegislaGov (legislagov.com.br): pasta portfolio. Área do cliente e Atendimento WhatsApp
+        # também abrem no endereço de testes, para testar antes de o domínio principal apontar para cá.
+        camara_h, modo_h = camara_do_host(self.headers.get("Host"))
+        partes_h = [p for p in caminho.split("/") if p]
+        if modo_h == "portfolio" or (camara_h == "teste" and partes_h and partes_h[0] in ("cliente", "atendimento")):
+            if ".." in caminho or (partes_h and partes_h[-1] in ("README.md", "robots.txt") and modo_h != "portfolio"):
+                self.send_error(404)
+                return
+            if caminho in ("/cliente", "/atendimento"):
+                self.send_response(301)
+                self.send_header("Location", caminho + "/")
+                self.end_headers()
+                return
+            self.directory = os.path.join(PASTA, "portfolio")
+            super().do_GET()
+            return
         if lgapi.ativo() and caminho in ("/", "/index.html") and camara_do_host(self.headers.get("Host"))[1] == "sistema":
             self.send_response(302)
             self.send_header("Location", "/painel/")
@@ -598,6 +617,8 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        if lgwhats.rota(self, "POST", camara_do_host):
+            return
         if self._api("POST"):
             return
         caminho = self.path.split("?", 1)[0]
