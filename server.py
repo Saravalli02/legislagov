@@ -489,6 +489,18 @@ class Handler(SimpleHTTPRequestHandler):
                         with lgapi._trava:
                             lgapi.gravar_usuarios(camara, json.loads(valor), u)
                         return self._json(200, {"ok": True, "versao": 0, "valor": json.dumps(lgapi.usuarios(camara), ensure_ascii=False)})
+                    if chave == lgapi.AUDITORIA:   # registro de ações: só acrescenta; quem não é administrador não recebe o conteúdo
+                        pode, motivo = lgapi.pode_gravar_valor(camara, chave, u, valor)
+                        if not pode:
+                            return self._json(403, {"ok": False, "erro": "Sem permissão: " + motivo})
+                        junto, mudou = lgapi.mesclar_auditoria(camara, valor, u)
+                        versao = None
+                        if mudou:
+                            _ok, _a, versao = lgapi.gravar(camara, chave, junto, None, u["usuario"])
+                        resp = {"ok": True}
+                        if lgapi.Quem(camara, u).adm:
+                            resp.update({"versao": versao, "valor": junto})
+                        return self._json(200, resp)
                     with lgapi._trava:
                         # versão antiga: primeiro junta (409); só depois confere a permissão sobre o que mudou
                         r0 = lgapi._db().execute("SELECT valor, versao FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()

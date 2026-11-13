@@ -318,6 +318,8 @@ _tentativas = {}
 _falhas_conta = {}     # (câmara, login) -> horários das senhas erradas (de qualquer endereço)
 _alertado = {}         # (câmara, login, tipo) -> último aviso
 ALERTAS = "lg_alertas_seg_v1"
+AUDITORIA = "legislagov_audit_v1"      # registro de ações feito pelas telas: só acrescenta, só o administrador lê
+REGISTRO_SRV = "lg_registro_srv_v1"    # registro do servidor (entradas, bloqueios, recusas), só leitura, para o administrador
 ALERTA_APOS = 5        # senhas erradas em 15 minutos para avisar
 
 
@@ -660,8 +662,10 @@ class Quem:
 
 def _regra(chave, q):
     """True/False: pode gravar a informação inteira. 'votos' / 'manuais': confere o que mudou."""
-    if chave == ALERTAS:
+    if chave in (ALERTAS, REGISTRO_SRV):
         return False   # só o servidor escreve
+    if chave == AUDITORIA:
+        return "auditoria" if q.edita_algo else False   # todos acrescentam; ninguém apaga nem muda
     if q.adm:
         return True
     if chave in ("lg_seed_perfis_v2", "legislagov_users_v1"):
@@ -771,6 +775,8 @@ def pode_gravar_valor(camara, chave, u, valor_txt):
     antigo = q._ler(chave)
     if r == "votos":
         return (_so_proprio_voto(antigo, novo, q.vereador["id"]), "o vereador só registra a própria presença e o próprio voto")
+    if r == "auditoria":
+        return (isinstance(novo, list), "valor inválido")
     if r == "transp_leg":
         return (_so_automaticos(antigo, novo), "só quem publica na Transparência altera os documentos")
     if r == "manuais":
@@ -785,6 +791,8 @@ def pode_ler(camara, chave, u, q=None):
         return True
     if chave == ALERTAS:
         return "proprio"
+    if chave == AUDITORIA:
+        return None   # registro de ações: só o administrador
     if chave == "legislagov_users_v1":
         return None
     if chave == "lgf_v1":
@@ -795,6 +803,32 @@ def pode_ler(camara, chave, u, q=None):
 
 
 # ---------------------------------------------------------------- dados
+def mesclar_auditoria(camara, valor_txt, u):
+    """Junta as ações novas ao registro existente. Nada é apagado; quem fez é carimbado pelo servidor."""
+    try:
+        novo = json.loads(valor_txt)
+    except Exception:
+        novo = []
+    r = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, AUDITORIA)).fetchone()
+    try:
+        velho = json.loads(r["valor"]) if r else []
+    except Exception:
+        velho = []
+    ids = {str(x.get("id")) for x in velho if isinstance(x, dict)}
+    acrescentar = []
+    for x in novo if isinstance(novo, list) else []:
+        if isinstance(x, dict) and str(x.get("id")) not in ids:
+            x = dict(x)
+            x["usuario"], x["email"], x["registradoEm"] = u.get("nome", ""), u.get("usuario", ""), agora()   # não dá para assinar por outro
+            acrescentar.append(x); ids.add(str(x.get("id")))
+    return json.dumps((acrescentar + [x for x in velho if isinstance(x, dict)])[:5000], ensure_ascii=False), bool(acrescentar)
+
+
+def registro_servidor(camara, n=500):
+    lin = _db().execute("SELECT id, quando, usuario, acao, detalhe, ip FROM registro WHERE camara=? ORDER BY id DESC LIMIT ?", (camara, n)).fetchall()
+    return json.dumps([dict(x) for x in lin], ensure_ascii=False)
+
+
 def _so_meus(valor_txt, login_):
     try:
         v = json.loads(valor_txt)
@@ -837,6 +871,8 @@ def carregar(camara, u):
             out[r["chave"]] = [_publico(r["chave"], r["valor"]), r["versao"]]
     if u:
         out[CHAVE_USUARIOS] = [json.dumps(usuarios(camara), ensure_ascii=False), 0]
+    if u and q.adm:
+        out[REGISTRO_SRV] = [registro_servidor(camara), 0]
     return out, seq
 
 

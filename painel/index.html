@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<script src="../assets/sincronia.js?v=202611121711"></script>
+<script src="../assets/sincronia.js?v=202611130731"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="app/app-192.png">
@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="LegislaGov">
-<script src="app/instalar.js?v=202611121711" defer></script>
+<script src="app/instalar.js?v=202611130731" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LegislaGov — Câmara Municipal</title>
 <link rel="icon" type="image/png" href="logo-legislagov.png">
@@ -1256,9 +1256,16 @@ async function iniciarApp() {
   document.getElementById('app').style.display = 'none';
 }
 
-function getAuditLogs() { try { return JSON.parse(localStorage.getItem(AUDIT_KEY)) || []; } catch (e) { return []; } }
+function getAuditLocal() { try { return JSON.parse(localStorage.getItem(AUDIT_KEY)) || []; } catch (e) { return []; } }
+// tela do administrador: ações das telas + registro do próprio servidor (entradas, bloqueios, recusas)
+function getAuditLogs() {
+  const t = x => { const n = parseInt(String(x.id || ''), 10); return n > 1e12 ? n : 0; };
+  let a = getAuditLocal().map(x => ({ ...x, _t: t(x) }));
+  try { const srv = JSON.parse(localStorage.getItem('lg_registro_srv_v1') || '[]'); a = a.concat(srv.map(x => ({ id: 'srv-' + x.id, _t: new Date(x.quando).getTime(), data: new Date(x.quando).toLocaleString('pt-BR'), usuario: x.usuario, email: x.usuario, municipio: municipioAtual, acao: x.acao + ' (servidor)', detalhes: (x.detalhe || '—') + (x.ip ? ' · endereço ' + x.ip : '') }))); } catch (e) { }
+  return a.sort((x, y) => y._t - x._t);
+}
 function registrarLog(acao, detalhes) {
-  const logs = getAuditLogs();
+  const logs = getAuditLocal();
   logs.unshift({ id: Date.now() + '-' + Math.random().toString(36).slice(2,7), data: new Date().toLocaleString('pt-BR'), usuario: usuarioAtual ? usuarioAtual.nome : 'Sistema', email: usuarioAtual ? usuarioAtual.email : 'sistema', municipio: municipioAtual, acao, detalhes: detalhes || '—' });
   try { localStorage.setItem(AUDIT_KEY, JSON.stringify(logs.slice(0, 500))); } catch (e) {}
 }
@@ -3127,20 +3134,20 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
-<script src="../assets/transparencia-catalogo.js?v=202611121711"></script>
-<script src="lgt-publicacoes.js?v=202611121711"></script>
-<script src="lgok-confirmar.js?v=202611121711"></script>
-<script src="lgf-financeiro.js?v=202611121711"></script>
-<script src="lgs-assinatura.js?v=202611121711"></script>
-<script src="lgvr-vereador.js?v=202611121711"></script>
-<script src="lgcm-comissoes.js?v=202611121711"></script>
-<script src="lgcg-cargos.js?v=202611121711"></script>
-<script src="lgux-facil.js?v=202611121711"></script>
-<script src="../assets/leis-comum.js?v=202611121711"></script>
-<script src="../assets/tv.js?v=202611121711"></script>
-<script src="lgpl-plenario.js?v=202611121711"></script>
-<script src="lgfx-funcoes.js?v=202611121711"></script>
-<script src="lgav-avisos.js?v=202611121711"></script>
-<script src="lgsc-site.js?v=202611121711"></script>
-<script src="lgtr-treinamento.js?v=202611121711"></script>
+<script src="../assets/transparencia-catalogo.js?v=202611130731"></script>
+<script src="lgt-publicacoes.js?v=202611130731"></script>
+<script src="lgok-confirmar.js?v=202611130731"></script>
+<script src="lgf-financeiro.js?v=202611130731"></script>
+<script src="lgs-assinatura.js?v=202611130731"></script>
+<script src="lgvr-vereador.js?v=202611130731"></script>
+<script src="lgcm-comissoes.js?v=202611130731"></script>
+<script src="lgcg-cargos.js?v=202611130731"></script>
+<script src="lgux-facil.js?v=202611130731"></script>
+<script src="../assets/leis-comum.js?v=202611130731"></script>
+<script src="../assets/tv.js?v=202611130731"></script>
+<script src="lgpl-plenario.js?v=202611130731"></script>
+<script src="lgfx-funcoes.js?v=202611130731"></script>
+<script src="lgav-avisos.js?v=202611130731"></script>
+<script src="lgsc-site.js?v=202611130731"></script>
+<script src="lgtr-treinamento.js?v=202611130731"></script>
 </body></html>
