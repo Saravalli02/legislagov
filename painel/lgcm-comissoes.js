@@ -240,6 +240,7 @@
       return `<li class="f-${f}"><b>Comissão de ${esc(n)}</b><span>${esc(FASE_TXT[f])}${t.relator ? ' · relator(a) ' + esc(nomeV(t.relator)) : ''}${t.parecer ? ' · ' + esc(CONCL[t.parecer.conclusao][0].toLowerCase()) : ''}${t.resultado ? ' (' + esc(t.resultado.placar) + ')' : ''}</span>${t.parecer ? `<button type="button" class="lgt-mini" onclick="lgcmVerParecer('${p.id}','${esc(n)}')">Parecer</button>` : ''}</li>`; }).join('')}</ol>`;
   };
 
+  window.lgcmMinhas = v => { try { return minhasComissoes(v); } catch (e) { return []; } };
   window.lgcmCardInicio = function (v) {
     const esc = A().esc; const pend = lgcmPendencias(v); const minhas = minhasComissoes(v); if (!minhas.length) return '';
     return `<div class="lgt-card lgcm-ini"><div class="lgvr-card-cab"><h3>${A().ic('comissoes')} Minhas comissões</h3><button class="lgt-mini" type="button" onclick="lgvrAbrir('comissoes')">Abrir</button></div>

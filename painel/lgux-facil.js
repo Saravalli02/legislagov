@@ -126,11 +126,13 @@
 
   // rodapé com o site da LegislaGov no fim de todas as telas (também no celular e no app)
   function rodape() {
-    const main = document.querySelector('#app > main') || document.querySelector('#app main'); if (!main || main.querySelector(':scope > .lgux-rodape')) return;
+    const main = document.querySelector('#app > main') || document.querySelector('#app main'); if (!main) return;
+    const ja = main.querySelector(':scope > .lgux-rodape'); if (ja) { if (main.lastElementChild !== ja) main.appendChild(ja); return; }   // telas criadas depois ficam acima do rodapé
     const u = 'https://legislagov.com.br', ln = (h, t) => `<a href="${u}${h}" target="_blank" rel="noopener">${t}</a>`;
     main.insertAdjacentHTML('beforeend', `<footer class="lgux-rodape"><span>Desenvolvido por ${ln('/', '<b>Legisla<i>Gov</i></b>')} · ${ln('/', 'legislagov.com.br')}</span><span>Conheça também: ${ln('/produtos.html#site', 'Site e Transparência')} · ${ln('/produtos.html#email', 'E-mail institucional')} · ${ln('/produtos.html#app', 'App no celular')}</span></footer>`);
   }
 
+  try { new MutationObserver(() => rodape()).observe(document.querySelector('#app main') || document.body, { childList: true }); } catch (e) { }
   function iniciar() {
     const nav = document.querySelector('nav.lgv31-nav');
     if (nav && !nav.__lgux) { nav.__lgux = true; new MutationObserver(() => { if (!nav.querySelector('.lgux-mais')) setTimeout(organizar, 0); marcar(); }).observe(nav, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] }); }

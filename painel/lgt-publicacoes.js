@@ -587,7 +587,8 @@
     .lgt-modal-cab{position:sticky;top:0;z-index:2;background:var(--lg28-panel);padding:14px 16px}
     .lgt-campos{padding:16px}
     .lgt-modal-rod{position:sticky;bottom:0;background:var(--lg28-panel);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
-    .lgt-modal-rod .lgt-btn{flex:1;justify-content:center}
+    .lgt-modal-rod{flex-wrap:wrap}.lgt-modal-rod>*{flex:1 1 calc(50% - 4px);min-width:0;margin:0!important;white-space:normal;min-height:46px}.lgt-modal-rod>.primario{order:-1;flex-basis:100%;min-height:52px;font-size:16px}
+    .lgt-modal-rod .lgt-btn{flex:1 1 calc(50% - 4px);justify-content:center;text-align:center}.lgt-modal-rod .lgt-btn.primario{order:-1;flex-basis:100%}
     .lgt .letterhead .lgt-acoes{width:100%}
     .lgt .letterhead .lgt-acoes .lgt-btn{flex:1;justify-content:center}
     .lgt-filtros label{flex:1 1 140px}

@@ -189,30 +189,51 @@
   }
   const fmtSessao = s => `${s.quando.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })} às ${s.quando.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 
-  /* ---- início ---- */
+  /* ---- início (simples: o que fazer agora + atalhos grandes) ---- */
+  function saudacao() { const h = new Date().getHours(); return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
+  const ICO_TAREFA = x => /assin|coautoria|rascunho|autógrafo|promulg/i.test(x.titulo) ? 'assinar' : /despach/i.test(x.titulo) ? 'despacho' : /comiss|parecer/i.test(x.titulo) ? 'comissoes' : /presen|vot|sess|veto/i.test(x.titulo) ? 'votacao' : /segur|conta/i.test(x.titulo) ? 'cadeado' : /mensag/i.test(x.titulo) ? 'mensagens' : 'notificacoes';
+  const VERBO = { assinar: 'Assinar', despacho: 'Despachar', votacao: 'Abrir', comissoes: 'Abrir', cadeado: 'Ver', mensagens: 'Ler', notificacoes: 'Ver' };
   function tInicio(a) {
     const v = a.v, c = comp(), pres = v.id === c.presidente, prot = listaProt();
     const minhas = prot.filter(p => ehMinha(p, v)); const tram = minhas.filter(p => !['concluido', 'rejeitado', 'devolvido'].includes(p.status));
     const pend = pendentesAssinatura(v); const prox = sessoes()[0];
-    const movs = minhas.flatMap(p => (p.timeline || []).map(t => ({ p, t }))).slice(-60).reverse().slice(0, 6);
+    const movs = minhas.flatMap(p => (p.timeline || []).map(t => ({ p, t }))).slice(-60).reverse().slice(0, 3);
     const despachar = prot.filter(p => p.status === 'protocolado').length, naPauta = prot.filter(p => p.status === 'votacao' && !p.resultado).length;
-    $('#view-lgvr-inicio').innerHTML = faixaDemo(a) + (window.lgavCardPendencias ? lgavCardPendencias() : '') + (window.lgplCardVereador ? lgplCardVereador(a) : '') +
-      `<div class="lgvr-hero"><div class="lgvr-av">${esc(v.nome.split(' ').map(x => x[0]).slice(0, 2).join(''))}</div><div><small>${pres ? 'Presidente da Câmara Municipal' : 'Vereador(a)'} · ${esc(v.partido)}</small><h1>${esc(v.completo || v.nome)}</h1><p>Gabinete do Vereador · Legislatura 2025–2028</p></div>
-        <div class="lgt-acoes">${btn(ic('materias') + ' Nova propositura', "lgvrNova()")}</div></div>
-      <div class="lgvr-kpis"><button type="button" onclick="lgvrAbrir('proposituras')"><b>${minhas.length}</b><span>minhas proposituras</span></button><button type="button" onclick="lgvrAbrir('proposituras')"><b>${tram.length}</b><span>em tramitação</span></button><button type="button" class="${pend.total ? 'k-alerta' : ''}" onclick="lgvrAbrir('assinar')"><b>${pend.total}</b><span>aguardando sua assinatura</span></button><button type="button" onclick="lgvrAbrir('sessoes')"><b>${prox ? prox.quando.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'}</b><span>próxima sessão</span></button></div>
-      ${window.lgcmCardInicio ? lgcmCardInicio(v) : ''}
-      ${pres ? `<div class="lgt-card lgvr-pres"><div class="lgvr-card-cab"><h3>${ic('despacho')} Presidência</h3><span class="lgvr-sub">Funções exclusivas do Presidente</span></div><div class="lgvr-pres-g">
-        <button type="button" onclick="lgvrAbrir('despacho')"><b>${despachar}</b><span>proposições aguardando seu despacho</span></button>
-        <button type="button" onclick="lgvrAbrir('pauta')"><b>${naPauta}</b><span>na Ordem do Dia</span></button>
-        <button type="button" onclick="lgvrAbrir('autografos')"><b>${pend.pres.length}</b><span>autógrafos e promulgações</span></button>
-        <button type="button" onclick="lgvrAbrir('atos')"><b>${dados().atos.length}</b><span>atos da Presidência</span></button></div></div>` : ''}
-      <div class="lgvr-grade">
-        <div class="lgt-card"><div class="lgvr-card-cab"><h3>Andamento das minhas proposituras</h3><button class="lgt-mini" type="button" onclick="lgvrAbrir('proposituras')">Ver todas</button></div>
-          ${movs.length ? `<ol class="lgvr-tempo">${movs.map(({ p, t }) => `<li><span>${esc(t.date)}</span><b><a href="#" onclick="event.preventDefault();lgvrVer('${p.id}')">${esc(p.numero)}</a> · ${esc(t.label)}</b><small>${esc(p.ementa).slice(0, 90)}</small></li>`).join('')}</ol>` : '<p class="lgt-p">Nenhuma propositura protocolada ainda. Use “Nova propositura” para começar.</p>'}</div>
-        <div class="lgt-card"><div class="lgvr-card-cab"><h3>Próximas sessões</h3><button class="lgt-mini" type="button" onclick="lgvrAbrir('sessoes')">Pauta</button></div>
-          ${sessoes().slice(0, 3).map(s => `<div class="lgvr-sessao"><div class="lgvr-dia"><b>${s.quando.getDate()}</b><span>${s.quando.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span></div><div><b>${esc(s.titulo)}</b><small>${esc(fmtSessao(s))} · ${esc(s.local)}</small></div></div>`).join('') || '<p class="lgt-p">Nenhuma sessão agendada.</p>'}
-          ${pend.total ? `<div class="lgvr-aviso">${ic('assinar')}<span><b>${pend.total} documento(s) aguardando sua assinatura</b><small>Baixe o PDF, assine no gov.br e devolva para protocolar.</small></span><button class="lgt-mini" type="button" onclick="lgvrAbrir('assinar')">Assinar</button></div>` : ''}</div>
-      </div>`;
+    const fazer = window.lgavParaFazer ? lgavParaFazer() : [];
+    const comPend = window.lgcmPendencias ? lgcmPendencias(v).length : 0;
+    const membroCom = window.lgcmMinhas ? lgcmMinhas(v).length > 0 : false;
+    const dia = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const prim = esc(String(v.nome || '').split(' ')[0]);
+    const tile = (icone, titulo, sub, fn, alerta) => `<button type="button" class="lgvs-tile${alerta ? ' alerta' : ''}" onclick="${fn}"><span class="lgvs-ic">${ic(icone)}</span><b>${titulo}</b><small>${sub}</small></button>`;
+    const quandoProx = prox ? `${prox.quando.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '')} às ${prox.quando.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : '';
+    $('#view-lgvr-inicio').innerHTML = faixaDemo(a) + `<div class="lgvs">
+      <header class="lgvs-ola"><p>${esc(dia)}</p><h1>${saudacao()}, ${prim}</h1><span>${pres ? 'Presidente da Câmara' : 'Vereador(a)'}${v.partido ? ' · ' + esc(v.partido) : ''}</span></header>
+      ${window.lgplCardVereador ? lgplCardVereador(a) : ''}
+      <section class="lgvs-fazer${fazer.length ? '' : ' ok'}" aria-labelledby="lgvs-fazer-t">
+        ${fazer.length ? `<h2 id="lgvs-fazer-t">Para você fazer agora <span class="lgvs-num">${fazer.length}</span></h2>
+          <ul>${fazer.slice(0, 5).map(o => `<li><button type="button" onclick="lgavIr('p',${o.i})"><span class="lgvs-ic">${ic(ICO_TAREFA(o.x))}</span><span class="lgvs-txt"><b>${esc(o.x.titulo)}</b>${o.x.texto ? `<small>${esc(String(o.x.texto).slice(0, 90))}</small>` : ''}${o.x.prazo && o.x.prazo.cor === 'vermelho' ? '<em>Prazo vencido</em>' : o.x.prazo && o.x.prazo.cor === 'amarelo' ? '<em class="am">Prazo perto do fim</em>' : ''}</span><span class="lgvs-ir">${VERBO[ICO_TAREFA(o.x)] || 'Abrir'}</span></button></li>`).join('')}</ul>
+          ${fazer.length > 5 ? `<button type="button" class="lgvs-mais" onclick="lgavTela()">Ver as ${fazer.length} tarefas</button>` : ''}`
+        : `<h2 id="lgvs-fazer-t"><span class="lgvs-ic">${ic('check')}</span> Tudo em dia</h2><p>Nada esperando por você agora. Quando chegar algo para assinar, votar ou responder, aparece aqui.</p>`}
+      </section>
+      <button type="button" class="lgvs-nova" data-edita onclick="lgvrNova()"><span>+</span> Escrever nova propositura</button>
+      <h2 class="lgvs-h">O que você quer fazer?</h2>
+      <nav class="lgvs-grade" aria-label="Atalhos do Portal do Vereador">
+        ${tile('materias', 'Minhas proposituras', tram.length ? `${tram.length} em andamento` : minhas.length ? `${minhas.length} no total` : 'Nenhuma ainda', "lgvrAbrir('proposituras')")}
+        ${tile('votacao', 'Sessões e votação', prox ? 'Próxima: ' + esc(quandoProx) : 'Nenhuma marcada', "lgvrAbrir('sessoes')")}
+        ${tile('assinar', 'Assinar documentos', pend.total ? `${pend.total} esperando você` : 'Nada para assinar', "lgvrAbrir('assinar')", pend.total)}
+        ${membroCom || comPend ? tile('comissoes', 'Minhas comissões', comPend ? `${comPend} esperando você` : 'Nada pendente', "lgvrAbrir('comissoes')", comPend) : ''}
+        ${tile('busca', 'Todas as matérias', 'Ver onde cada uma está', "lgvrAbrir('materias')")}
+        ${tile('mensagens', 'Mensagens', 'Falar com a Secretaria', "window.lgv10Open&&lgv10Open('inbox')")}
+      </nav>
+      ${pres ? `<h2 class="lgvs-h">Presidência</h2><nav class="lgvs-grade" aria-label="Funções do Presidente">
+        ${tile('despacho', 'Despachar proposições', despachar ? `${despachar} esperando` : 'Nada a despachar', "lgvrAbrir('despacho')", despachar)}
+        ${tile('lista', 'Ordem do Dia', naPauta ? `${naPauta} na pauta` : 'Pauta vazia', "lgvrAbrir('pauta')")}
+        ${tile('assinar', 'Autógrafos', pend.pres.length ? `${pend.pres.length} para assinar` : 'Nada pendente', "lgvrAbrir('autografos')", pend.pres.length)}
+        ${tile('editor', 'Atos da Presidência', `${dados().atos.length} publicados`, "lgvrAbrir('atos')")}
+      </nav>` : ''}
+      ${movs.length ? `<section class="lgvs-novas"><h2 class="lgvs-h">Novidades das suas proposituras</h2><ol>${movs.map(({ p, t }) => `<li><button type="button" onclick="lgvrVer('${p.id}')"><small>${esc(t.date)}</small><b>${esc(p.numero)}: ${esc(t.label)}</b><span>${esc(p.ementa).slice(0, 80)}</span></button></li>`).join('')}</ol></section>` : ''}
+      <aside class="lgvs-ajuda"><b>Ficou com alguma dúvida?</b><div><button type="button" onclick="window.lgtrAbrir&&lgtrAbrir()">Ver como usar</button><button type="button" onclick="window.lgv10Open&&lgv10Open('compose')">Pedir ajuda à Secretaria</button></div></aside>
+    </div>`;
   }
 
   /* ---- minhas proposituras ---- */
@@ -649,6 +670,54 @@
   const css = document.createElement('style'); css.id = 'lgvr-style'; css.textContent = `
   html.lgvr-consulta .lgvr [data-edita],html.lgvr-consulta .lgt-modal [data-edita]{display:none!important}
   .lgvr-n[hidden]{display:none!important}
+
+  /* ---- Início simples do vereador (celular primeiro) ---- */
+  .lgvs{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:18px;font-size:16px;color:var(--lg28-ink)}
+  .lgvs h2{margin:0;font-size:19px!important;font-weight:750;letter-spacing:-.01em;color:var(--lg28-ink)}
+  .lgvs-ola{padding:6px 2px 0}
+  .lgvs-ola p{margin:0 0 4px;color:var(--lg28-muted);font-size:15px}
+  .lgvs-ola p::first-letter{text-transform:uppercase}
+  .lgvs-ola h1{margin:0!important;font-size:30px!important;line-height:1.15;font-weight:800;letter-spacing:-.02em}
+  .lgvs-ola span{display:block;margin-top:6px;color:var(--lg28-muted);font-size:15px}
+  .lgvs-ic{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:44px;height:44px;border-radius:12px;background:var(--lgvs-ic-bg,rgba(139,156,255,.14));color:var(--lgvs-acc,#8b9cff)}
+  .lgvs-ic .lgv31-ic,.lgvs-ic svg{width:24px!important;height:24px!important;flex-basis:24px!important}
+  .lgvs-fazer{border-radius:18px;border:2px solid var(--lgvs-alerta,#e2aa1c);background:var(--lg28-panel);padding:18px 16px}
+  .lgvs-fazer h2{display:flex;align-items:center;gap:10px}
+  .lgvs-num{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 8px;border-radius:14px;background:var(--lgvs-alerta,#e2aa1c);color:#1a1300;font-size:15px;font-weight:800}
+  .lgvs-fazer ul{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .lgvs-fazer li button{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--lg28-inset);border:1px solid var(--lg28-stroke);cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .lgvs-fazer li button:focus-visible,.lgvs-tile:focus-visible,.lgvs-nova:focus-visible,.lgvs-novas button:focus-visible,.lgvs-ajuda button:focus-visible{outline:3px solid var(--lgvs-acc,#8b9cff);outline-offset:2px}
+  .lgvs-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .lgvs-txt b{font-size:16px;line-height:1.3;font-weight:700}
+  .lgvs-txt small{font-size:14px;color:var(--lg28-muted);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .lgvs-txt em{font-style:normal;font-size:13px;font-weight:700;color:#c53030}.lgvs-txt em.am{color:#b7791f}
+  .lgvs-ir{flex:0 0 auto;padding:10px 14px;border-radius:10px;background:var(--lgvs-acc,#8b9cff);color:var(--lgvs-acc-ink,#0b0c0e);font-weight:750;font-size:15px}
+  .lgvs-mais{all:unset;display:block;margin:12px auto 0;padding:10px 14px;color:var(--lgvs-acc,#8b9cff);font-weight:700;cursor:pointer}
+  .lgvs-fazer.ok{border-color:var(--lgvs-ok,#2fbf71);background:var(--lgvs-ok-bg,rgba(47,191,113,.08))}
+  .lgvs-fazer.ok .lgvs-ic{width:36px;height:36px;background:var(--lgvs-ok,#2fbf71);color:#fff}
+  .lgvs-fazer.ok p{margin:8px 0 0;color:var(--lg28-muted);font-size:15px;line-height:1.45}
+  .lgvs-nova{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;padding:0 18px;border-radius:16px;background:var(--lgvs-acc,#8b9cff);color:var(--lgvs-acc-ink,#0b0c0e);font-size:18px;font-weight:750;cursor:pointer;text-align:center}
+  .lgvs-nova span{font-size:26px;line-height:1;font-weight:500}
+  .lgvs-h{margin-top:6px!important}
+  .lgvs-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .lgvs-tile{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:132px;padding:16px 14px;border-radius:16px;border:1px solid var(--lg28-stroke);background:var(--lg28-panel);cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .lgvs-tile b{margin-top:6px;font-size:17px;line-height:1.25;font-weight:750}
+  .lgvs-tile small{font-size:14px;line-height:1.35;color:var(--lg28-muted)}
+  .lgvs-tile.alerta{border:2px solid var(--lgvs-alerta,#e2aa1c)}.lgvs-tile.alerta small{color:var(--lgvs-alerta-txt,#e2aa1c);font-weight:700}
+  .lgvs-tile:active,.lgvs-fazer li button:active{transform:scale(.985)}
+  .lgvs-grade>.lgvs-tile:last-child:nth-child(odd){grid-column:1/-1;min-height:0;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:14px;row-gap:2px;align-items:center}
+  .lgvs-grade>.lgvs-tile:last-child:nth-child(odd) .lgvs-ic{grid-row:1/3}.lgvs-grade>.lgvs-tile:last-child:nth-child(odd) b{margin:0}
+  .lgvs-novas ol{list-style:none;margin:10px 0 0;padding:0;border-radius:16px;border:1px solid var(--lg28-stroke);background:var(--lg28-panel);overflow:hidden}
+  .lgvs-novas li+li{border-top:1px solid var(--lg28-stroke)}
+  .lgvs-novas button{all:unset;box-sizing:border-box;width:100%;display:flex;flex-direction:column;gap:3px;padding:14px 16px;cursor:pointer}
+  .lgvs-novas small{color:var(--lg28-muted);font-size:13px}.lgvs-novas b{font-size:15.5px;line-height:1.35}.lgvs-novas span{color:var(--lg28-muted);font-size:14px}
+  .lgvs-ajuda{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:16px;background:var(--lg28-inset);border:1px dashed var(--lg28-stroke)}
+  .lgvs-ajuda b{font-size:16px}.lgvs-ajuda div{display:flex;flex-wrap:wrap;gap:10px}
+  .lgvs-ajuda button{all:unset;box-sizing:border-box;flex:1 1 160px;text-align:center;padding:12px 14px;border-radius:12px;border:1px solid var(--lg28-stroke);background:var(--lg28-panel);font-weight:700;font-size:15px;cursor:pointer}
+  html[data-lgv31-layout="simples"] .lgvs{--lgvs-acc:#1f4e79;--lgvs-acc-ink:#fff;--lgvs-ic-bg:#e8eff6;--lgvs-alerta:#d69e2e;--lgvs-alerta-txt:#975a16;--lgvs-ok:#2f855a;--lgvs-ok-bg:#f0faf4}
+  html[data-lgv31-layout="simples"] .lgvs-num{background:#d69e2e;color:#fff}
+  @media (max-width:520px){.lgvs-grade{grid-template-columns:1fr 1fr;gap:10px}.lgvs-tile{min-height:124px;padding:14px 12px}.lgvs-ola h1{font-size:27px!important}}
+  @media (prefers-reduced-motion:reduce){.lgvs-tile:active,.lgvs-fazer li button:active{transform:none}}
   .lgvr-n{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#e2aa1c;color:#111;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
   .lgvr-demo-faixa{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;border-radius:10px;border:1px dashed rgba(139,156,255,.6);background:rgba(139,156,255,.08);font-size:13px;color:var(--lg28-ink)}
   .lgvr-demo-faixa > span{display:inline-flex;align-items:center;gap:6px}.lgvr-demo-faixa .lgv31-ic{width:16px;height:16px;flex-basis:16px}

@@ -244,6 +244,7 @@
     const ativos = l.filter(x => !x.info);
     return `<ul class="lgav-pend">${l.slice(0, limite || 99).map(it).join('') || '<li class="lgav-vazio">Nada pendente com você agora.</li>'}</ul>${limite && l.length > limite ? `<button class="lgt-mini" type="button" onclick="lgavTela()">Ver todas (${l.length})</button>` : ''}`;
   }
+  window.lgavParaFazer = function () { try { cacheP = minhas(); return cacheP.map((x, i) => ({ x, i })).filter(o => !o.x.info); } catch (e) { return []; } };
   window.lgavCardPendencias = function () {
     const l = minhas(); const ativos = l.filter(x => !x.info);
     if (!ativos.length) return '';
