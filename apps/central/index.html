@@ -4,67 +4,86 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#10233d">
+<meta name="theme-color" content="#0b1220">
 <title>LegislaGov Central</title>
 <link rel="apple-touch-icon" href="icone-180.png">
 <link rel="icon" href="icone-192.png">
 <script>(function(){var b=location.pathname.replace(/[^/]*$/,'');var l=document.createElement('link');l.rel='manifest';l.href='/api/central/manifest.json?b='+encodeURIComponent(b);document.head.appendChild(l)})();</script>
 <script src="qr.js" defer></script>
+<script>(function(){var t='';try{t=localStorage.getItem('lgc_tema')||''}catch(e){}if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'escuro':'claro';document.documentElement.dataset.tema=t})();</script>
 <style>
-:root{--fundo:#f3f5f8;--papel:#fff;--tinta:#16202c;--sub:#5d6b7b;--linha:#dde3ea;--azul:#10233d;--azul2:#1f4e79;--ok:#1d7a46;--aviso:#8a6200;--erro:#b42318}
+:root{--fundo:#f4f6f9;--papel:#ffffff;--papel2:#f8fafc;--tinta:#111827;--sub:#5b6676;--linha:#e2e7ee;--forte:#0b1220;--acento:#1683c4;--acento-ink:#fff;--ok:#17703f;--ok-bg:#e2f5ea;--erro:#b42318;--sombra:0 1px 2px rgba(16,24,40,.06),0 6px 18px rgba(16,24,40,.06);--topo:#ffffffcc;--chip:#eef2f6;--demo:#fff6dc;--demo-ink:#6b4f00;--demo-borda:#ecd38a}
+:root[data-tema=escuro]{--fundo:#06080d;--papel:#0f141c;--papel2:#131a24;--tinta:#e8edf4;--sub:#93a0b3;--linha:#1e2733;--forte:#ffffff;--acento:#2bb6ea;--acento-ink:#04121b;--ok:#4fd18b;--ok-bg:#0f2a1d;--erro:#ff7a70;--sombra:none;--topo:#06080dcc;--chip:#18202b;--demo:#2a2210;--demo-ink:#f5d27a;--demo-borda:#5c4a1c}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--fundo);color:var(--tinta);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-button,input,select{font:inherit}
-.topo{background:var(--azul);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px}
-.marca{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;font-size:17px}
-.marca img{width:30px;height:30px;border-radius:8px}
-.marca small{display:block;font-weight:500;font-size:12px;color:#b9c8da;letter-spacing:0}
-.topo .esp{flex:1}
-.topo button{background:transparent;border:1px solid #ffffff40;color:#fff;border-radius:9px;padding:7px 12px;cursor:pointer}
-.topo button:hover{background:#ffffff14}
-main{max-width:1080px;margin:0 auto;padding:24px 20px 60px}
-h1{font-size:26px;margin:4px 0 4px;letter-spacing:-.02em}
-h2{font-size:18px;margin:34px 0 10px}
-.sub{color:var(--sub);margin:0 0 20px}
-.sist{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-.card{background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
-.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--cor)}
-.card h3{margin:0;font-size:17px}
-.card p{margin:0;color:var(--sub);font-size:14px;flex:1}
-.links{display:flex;flex-direction:column;gap:6px}
+html,body{margin:0;background:var(--fundo);color:var(--tinta);font:15px/1.5 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+a{color:inherit}
+.topo{position:sticky;top:0;z-index:20;background:var(--topo);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--linha)}
+.topo-in{max-width:1120px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:14px}
+.marca{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;font-size:16px;color:var(--forte);text-decoration:none}
+.marca img{height:30px;width:auto}
+.marca span b{color:var(--acento);font-weight:700}
+.marca small{display:block;font-weight:500;font-size:11.5px;color:var(--sub);letter-spacing:0}
+.esp{flex:1}
+.quem{font-size:13.5px;color:var(--sub);white-space:nowrap}
+.tbtn{height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--linha);background:var(--papel);color:var(--tinta);cursor:pointer;font-size:13.5px;font-weight:600}
+.tbtn:hover{border-color:var(--sub)}
+.tema{display:inline-flex;border:1px solid var(--linha);border-radius:999px;padding:3px;background:var(--papel)}
+.tema button{border:0;background:transparent;height:28px;padding:0 11px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer}
+.tema button[aria-pressed=true]{background:var(--forte);color:var(--fundo)}
+main{max-width:1120px;margin:0 auto;padding:34px 24px 70px}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px;letter-spacing:-.025em;color:var(--forte)}
+h2{font-size:13px;margin:40px 0 12px;color:var(--sub);font-weight:600;letter-spacing:.02em}
+.sub{color:var(--sub);margin:0;max-width:62ch}
+.sist{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:26px}
+.card{background:var(--papel);border:1px solid var(--linha);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--sombra);transition:border-color .15s}
+.card:hover{border-color:color-mix(in srgb,var(--cor) 55%,var(--linha))}
+.cab{display:flex;gap:14px;align-items:flex-start}
+.selo{width:52px;height:52px;flex:0 0 52px;border-radius:13px;display:grid;place-items:center;background:color-mix(in srgb,var(--cor) 12%,var(--papel));border:1px solid color-mix(in srgb,var(--cor) 25%,var(--linha))}
+.selo img{height:34px;width:auto}
+.card h3{margin:2px 0 3px;font-size:16.5px;color:var(--forte);letter-spacing:-.01em}
+.card p{margin:0;color:var(--sub);font-size:13.5px;line-height:1.45}
+.abrir{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:46px;padding:0 16px;border-radius:11px;background:var(--forte);color:var(--fundo);font-weight:650;text-decoration:none;font-size:14.5px;margin-top:auto}
+.abrir:hover{filter:brightness(1.15)}
+.abrir svg{width:16px;height:16px;flex:0 0 16px}
+.outros{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+.outros a{color:var(--sub);text-decoration:none;border-bottom:1px solid var(--linha)}
+.outros a:hover{color:var(--tinta);border-color:var(--sub)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 14px;border-radius:10px;border:1px solid var(--linha);background:var(--papel);color:var(--tinta);font-weight:600;cursor:pointer;text-decoration:none;text-align:center}
-.btn:hover{border-color:var(--azul2)}
-.btn.pri{background:var(--azul2);border-color:var(--azul2);color:#fff}
-.btn.pri:hover{filter:brightness(1.1)}
-.btn.demo{background:#fff8e1;border-color:#e9cf7a;color:#5a4500}
+.btn:hover{border-color:var(--sub)}
+.btn.pri{background:var(--forte);border-color:var(--forte);color:var(--fundo)}
+.btn.pri:hover{filter:brightness(1.15)}
+.btn.demo{background:var(--demo);border-color:var(--demo-borda);color:var(--demo-ink)}
 .btn.perigo{color:var(--erro)}
-.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #1f4e7966;outline-offset:2px}
-.demos{display:flex;flex-direction:column;gap:8px}
-.demo-l{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
-.demo-l b{font-size:15px}.demo-l small{color:var(--sub);display:block}
-.demo-l .acoes{grid-row:1/3;grid-column:2;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.st{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;margin-left:6px;vertical-align:1px}
-.st.on{background:#e2f5ea;color:var(--ok)}.st.off{background:#eef0f3;color:var(--sub)}
-.vazio{border:1px dashed var(--linha);border-radius:12px;padding:22px;text-align:center;color:var(--sub)}
-.entrar{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.entrar form{background:var(--papel);border:1px solid var(--linha);border-radius:16px;padding:28px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,.abrir:focus-visible,.tema button:focus-visible,.tbtn:focus-visible{outline:3px solid color-mix(in srgb,var(--acento) 55%,transparent);outline-offset:2px}
+.demos{display:flex;flex-direction:column;border:1px solid var(--linha);border-radius:14px;background:var(--papel);overflow:hidden}
+.demo-l{padding:14px 18px;display:grid;grid-template-columns:1fr auto;gap:3px 16px;align-items:center;border-top:1px solid var(--linha)}
+.demo-l:first-child{border-top:0}
+.demo-l b{font-size:15px;color:var(--forte)}.demo-l small{color:var(--sub);display:block;font-size:13px}
+.demo-l .acoes{grid-row:1/4;grid-column:2;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.st{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:2px}
+.st.on{background:var(--ok-bg);color:var(--ok)}.st.off{background:var(--chip);color:var(--sub)}
+.vazio{border:1px dashed var(--linha);border-radius:14px;padding:24px;text-align:center;color:var(--sub);background:var(--papel)}
+.entrar{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px}
+.entrar form{background:var(--papel);border:1px solid var(--linha);border-radius:18px;padding:30px;width:100%;max-width:390px;display:flex;flex-direction:column;gap:13px;box-shadow:var(--sombra)}
 .entrar h1{font-size:22px}
-label{display:flex;flex-direction:column;gap:5px;font-weight:600;font-size:14px}
-input,select{height:46px;border:1px solid var(--linha);border-radius:10px;padding:0 12px;font-size:16px;background:#fff;color:var(--tinta)}
+label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
+input,select{height:46px;border:1px solid var(--linha);border-radius:10px;padding:0 12px;font-size:16px;background:var(--papel2);color:var(--tinta)}
 .msg{color:var(--erro);font-weight:600;min-height:1.2em;margin:0}
 .dica{color:var(--sub);font-size:13px;margin:0}
-.fundo{position:fixed;inset:0;background:#0c1626aa;display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
-.modal{background:var(--papel);border-radius:16px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:22px;display:flex;flex-direction:column;gap:12px}
-.modal h2{margin:0;font-size:19px}
+.fundo{position:fixed;inset:0;background:rgba(3,6,12,.66);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{background:var(--papel);border:1px solid var(--linha);border-radius:18px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:12px}
+.modal h2{margin:0;font-size:19px;color:var(--forte);letter-spacing:-.01em}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--linha);background:#fff;font-weight:600;cursor:pointer;color:var(--tinta)}
-.chip[aria-pressed=true]{background:var(--azul2);border-color:var(--azul2);color:#fff}
+.chip{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--linha);background:var(--papel);font-weight:600;cursor:pointer;color:var(--tinta)}
+.chip[aria-pressed=true]{background:var(--forte);border-color:var(--forte);color:var(--fundo)}
 .rod{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}
 .link{display:flex;gap:6px}.link input{flex:1;font-size:14px}
 .qr{align-self:center;padding:10px;background:#fff;border:1px solid var(--linha);border-radius:12px}
 .qr svg{display:block;width:200px;height:200px}
-.fim{color:var(--sub);font-size:12.5px;text-align:center;margin-top:40px}
-@media(max-width:640px){.topo{padding:12px 14px}.topo .nome{display:none}main{padding:18px 14px 50px}h1{font-size:22px}.demo-l{grid-template-columns:1fr}.demo-l .acoes{grid-row:auto;grid-column:auto;justify-content:flex-start}.rod .btn{flex:1}}
+.fim{color:var(--sub);font-size:12.5px;text-align:center;margin-top:48px}
+@media(max-width:960px){.sist{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.topo-in{padding:10px 14px;gap:8px}.quem,.marca small{display:none}main{padding:22px 14px 50px}h1{font-size:23px}.sist{grid-template-columns:1fr}.demo-l{grid-template-columns:1fr}.demo-l .acoes{grid-row:auto;grid-column:auto;justify-content:flex-start}.rod .btn{flex:1}.tbtn{padding:0 9px}}
 </style>
 </head>
 <body>
@@ -93,18 +112,24 @@ async function tela(){
   try{P=await api('eu')}catch(e){if(e.message!=='sessao'){$('#app').innerHTML=`<div class="entrar"><div class="vazio">Sem conexão com o servidor. <button class="btn" onclick="tela()">Tentar de novo</button></div></div>`}return}
   const s=P.sessao, nome=(s.nome||'').split(' ')[0];
   const ativas=P.demos.filter(d=>d.ativa), velhas=P.demos.filter(d=>!d.ativa).slice(0,15);
-  $('#app').innerHTML=`<header class="topo"><div class="marca"><img src="icone-192.png" alt=""><div>LegislaGov Central<small>Área restrita</small></div></div><div class="esp"></div><span class="nome">${esc(s.nome)}</span><button id="senhaBt">Trocar senha</button><button id="sairBt">Sair</button></header>
+  const seta='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
+  $('#app').innerHTML=`<header class="topo"><div class="topo-in"><span class="marca"><img src="em-camara.png" alt=""><span>Legisla<b>Gov</b> Central<small>Área restrita</small></span></span><div class="esp"></div>
+    <span class="quem">${esc(s.nome)}</span>${seletorTema()}<button class="tbtn" id="senhaBt">Senha</button><button class="tbtn" id="sairBt">Sair</button></div></header>
   <main>
-    <h1>Olá, ${esc(nome)}. Qual sistema você quer abrir?</h1>
-    <p class="sub">Os sistemas abrem em outra aba. Para mostrar a um cliente, crie uma demonstração: ela tem prazo e para de funcionar sozinha.</p>
-    <div class="sist">${P.sistemas.map(x=>`<section class="card" style="--cor:${esc(x.cor)}"><h3>${esc(x.nome)}</h3><p>${esc(x.desc)}</p>
-      <div class="links">${x.links.map((l,i)=>`<a class="btn ${i?'':'pri'}" href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}
-      ${x.demo?`<button class="btn demo" data-demo="${esc(x.id)}">Criar demonstração</button>`:''}</div></section>`).join('')}</div>
+    <h1>Olá, ${esc(nome)}.</h1>
+    <p class="sub">Escolha o sistema. Cada um abre em outra aba. Para mostrar a um cliente, use “Criar demonstração”: tem prazo e para de funcionar sozinha.</p>
+    <div class="sist">${P.sistemas.map(x=>`<section class="card" style="--cor:${esc(x.cor)}" aria-labelledby="t-${esc(x.id)}">
+      <div class="cab"><div class="selo"><img src="${esc(x.icone)}" alt=""></div><div><h3 id="t-${esc(x.id)}">${esc(x.nome)}</h3><p>${esc(x.desc)}</p></div></div>
+      ${x.demo?`<button class="btn demo" data-demo="${esc(x.id)}">Criar demonstração</button>`:''}
+      <a class="abrir" href="${esc(x.abrir[1])}" target="_blank" rel="noopener"><span>${esc(x.abrir[0])}</span>${seta}</a>
+      ${(x.outros||[]).length?`<div class="outros">${x.outros.map(l=>`<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>`:''}
+    </section>`).join('')}</div>
     <h2>Demonstrações ativas</h2>
-    <div class="demos">${ativas.length?ativas.map(linhaDemo).join(''):'<div class="vazio">Nenhuma demonstração ativa. Use "Criar demonstração" no sistema que quer mostrar.</div>'}</div>
+    <div class="${ativas.length?'demos':''}">${ativas.length?ativas.map(linhaDemo).join(''):'<div class="vazio">Nenhuma demonstração ativa. Use “Criar demonstração” no sistema que quer mostrar.</div>'}</div>
     ${velhas.length?`<h2>Encerradas</h2><div class="demos">${velhas.map(linhaDemo).join('')}</div>`:''}
     <p class="fim">LegislaGov · este site não é governamental.</p>
   </main>`;
+  ligarTema();
   $('#sairBt').onclick=sair;$('#senhaBt').onclick=trocarSenha;
   document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>novaDemo(b.dataset.demo));
   document.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>mostrarDemo(P.demos.find(d=>d.id===b.dataset.ver)));
@@ -167,14 +192,17 @@ function trocarSenha(){
   });
 }
 function alertar(t){modal(`<h2>${esc(t)}</h2><div class="rod"><button class="btn pri" id="ok">Ok</button></div>`,f=>$('#ok',f).onclick=fechar)}
+function seletorTema(){const t=document.documentElement.dataset.tema;return `<div class="tema" role="group" aria-label="Aparência"><button type="button" data-tema="claro" aria-pressed="${t==='claro'}">Claro</button><button type="button" data-tema="escuro" aria-pressed="${t==='escuro'}">Escuro</button></div>`}
+function ligarTema(){document.querySelectorAll('[data-tema]').forEach(b=>b.onclick=()=>{document.documentElement.dataset.tema=b.dataset.tema;try{localStorage.setItem('lgc_tema',b.dataset.tema)}catch(e){}document.querySelectorAll('[data-tema]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tema===b.dataset.tema));const m=document.querySelector('meta[name=theme-color]');if(m)m.content=b.dataset.tema==='escuro'?'#06080d':'#f4f6f9'})}
 function telaEntrar(){
-  $('#app').innerHTML=`<div class="entrar"><form id="fe" autocomplete="on"><div class="marca" style="color:var(--azul)"><img src="icone-192.png" alt="">LegislaGov Central</div>
+  $('#app').innerHTML=`<div class="entrar">${seletorTema()}<form id="fe" autocomplete="on"><span class="marca"><img src="em-camara.png" alt=""><span>Legisla<b>Gov</b> Central</span></span>
     <h1>Área restrita</h1><p class="dica">No primeiro acesso, use o mesmo usuário e senha do painel da Câmara.</p>
     <label>Usuário<input id="eu" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
     <label>Senha<input id="es" type="password" autocomplete="current-password" required></label>
     <p class="msg" id="em" role="alert">${esc(MSG)}</p>
     <button class="btn pri" id="eb" type="submit">Entrar</button>
     <p class="dica" style="text-align:center">Este site não é governamental.</p></form></div>`;
+  ligarTema();
   $('#fe').onsubmit=async e=>{e.preventDefault();const bt=$('#eb');bt.disabled=true;
     try{const r=await api('entrar',{metodo:'POST',corpo:{usuario:$('#eu').value.trim(),senha:$('#es').value}});TOKEN=r.token;try{localStorage.setItem('lgc_token',TOKEN)}catch(x){}MSG='';tela()}
     catch(x){$('#em').textContent=x.message;bt.disabled=false}};

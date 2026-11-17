@@ -36,18 +36,26 @@ CAMARA_SENHA = "neves-paulista-sp"   # de onde vem a senha no primeiro acesso
 PRAZOS = {2: "2 horas", 24: "1 dia", 72: "3 dias", 168: "7 dias"}
 
 SISTEMAS = [
-    {"id": "camara", "nome": "LegislaGov Câmara", "desc": "Painel da Câmara Municipal de Neves Paulista: matérias, protocolo, sessões, transparência.",
-     "links": [["Câmara de Neves Paulista", "https://neves.legislagov.com.br/painel/"], ["Site da Câmara", "https://neves.legislagov.com.br/"],
-               ["Ambiente de teste", "https://teste.legislagov.com.br/painel/"]], "demo": False, "cor": "#1f4e79"},
-    {"id": "rural", "nome": "LegislaGov Rural", "desc": "App da horta: rotas, vendedores, troco, trocas, fiado, despesas e rastreio.",
-     "links": [["Abrir o Rural", "https://rural.legislagov.com.br/"], ["Pelo endereço de teste", "https://teste.legislagov.com.br/rural/"]], "demo": True, "cor": "#2e7d32"},
-    {"id": "email", "nome": "Painel de e-mails", "desc": "Caixas de e-mail institucionais: criar, trocar senha, avisos. Pronto para ligar ao provedor.",
-     "links": [["Abrir o painel", "https://email.legislagov.com.br/"], ["Pelo endereço de teste", "https://teste.legislagov.com.br/email/"]], "demo": False, "cor": "#5b4b8a"},
-    {"id": "atendimento", "nome": "Atendimento WhatsApp", "desc": "Conversas do WhatsApp da Câmara e da Prefeitura, com atendentes.",
-     "links": [["Abrir o atendimento", "https://teste.legislagov.com.br/cliente/"]], "demo": False, "cor": "#128c4a"},
-    {"id": "site", "nome": "Site LegislaGov", "desc": "Página da empresa, produtos e área do cliente.",
-     "links": [["legislagov.com.br", "https://legislagov.com.br/"]], "demo": False, "cor": "#37474f"},
+    {"id": "camara", "nome": "LegislaGov Câmara", "icone": "em-camara.png", "cor": "#22b8e6",
+     "desc": "Matérias, protocolo, sessões, Portal do Vereador e Transparência.",
+     "abrir": ["Abrir o painel de Neves Paulista", "https://neves.legislagov.com.br/painel/"],
+     "outros": [["Site da Câmara", "https://neves.legislagov.com.br/"], ["Ambiente de teste", "https://teste.legislagov.com.br/painel/"]], "demo": False},
+    {"id": "rural", "nome": "LegislaGov Rural", "icone": "em-rural.png", "cor": "#3fae4f",
+     "desc": "Rotas, vendedores, troco, trocas, fiado, despesas e rastreio da horta.",
+     "abrir": ["Abrir o Rural", "https://rural.legislagov.com.br/"],
+     "outros": [["Pelo endereço de teste", "https://teste.legislagov.com.br/rural/"]], "demo": True},
+    {"id": "email", "nome": "Painel de e-mails", "icone": "em-email.png", "cor": "#7a4fd6",
+     "desc": "Caixas de e-mail institucionais: criar, trocar senha e mandar avisos.",
+     "abrir": ["Abrir o painel de e-mails", "https://email.legislagov.com.br/"],
+     "outros": [["Pelo endereço de teste", "https://teste.legislagov.com.br/email/"]], "demo": False},
+    {"id": "atendimento", "nome": "Atendimento WhatsApp", "icone": "em-atendimento.png", "cor": "#1fa86a",
+     "desc": "Conversas do WhatsApp da Câmara e da Prefeitura, com atendentes.",
+     "abrir": ["Abrir o atendimento", "https://teste.legislagov.com.br/cliente/"], "outros": [], "demo": False},
+    {"id": "site", "nome": "Site LegislaGov", "icone": "em-site.png", "cor": "#7b8796",
+     "desc": "Página da empresa, produtos e planos.",
+     "abrir": ["Abrir o site", "https://legislagov.com.br/"], "outros": [], "demo": False},
 ]
+
 
 _pronto = {"ok": False, "limpo": 0.0}
 
