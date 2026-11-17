@@ -50,7 +50,7 @@ PUBLICAS = re.compile(r"^(lg_seed_perfis_v2|lgv_camara_v1|lgv11_agenda_v1|lgt_si
 # o site pode acrescentar itens (não pode ler o conteúdo completo)
 ENVIO_PUBLICO = {"lgo_v1", "site_mensagens", "site_inscricoes", "lgc_inscricoes_v1"}
 # só administrador / Procuradoria gravam
-SO_GESTOR = {"lgt_areas_v1"}
+SO_GESTOR = {"lgt_areas_v1", "lg_ips_confiaveis_v1"}
 CAMPOS_PESSOAIS = {"nome", "email", "telefone", "cpf", "endereco", "anexo", "anexos", "arquivo", "contato", "ip", "origemIp"}
 
 CARGOS_UNICOS = {"diretora", "contabil", "tesoureira", "procurador"}
@@ -386,6 +386,11 @@ def gravar_usuarios(camara, lista, autor):
                     d.pop(k, None)
         if antigo.get("perfil") == "admin" and autor.get("perfil") != "admin":
             continue
+        for k in ("falhasSenha", "bloqueada", "trocarSenha"):   # só o servidor muda
+            if k in antigo:
+                d[k] = antigo[k]
+            else:
+                d.pop(k, None)
         if json.dumps(d, sort_keys=True) != json.dumps(_sem_senha({k: v for k, v in antigo.items() if k not in ("id", "usuario", "camara")}), sort_keys=True):
             c.execute("UPDATE usuarios SET dados=? WHERE id=?", (json.dumps(d, ensure_ascii=False), antigo["id"]))
             _marcar_usuarios(camara)
@@ -453,30 +458,165 @@ def _alertar(camara, login_, ip, n, tipo):
         print("alerta externo:", repr(e), flush=True)
 
 
+BLOQUEIO_APOS = 3          # senhas erradas seguidas: a conta fica bloqueada até criar senha nova
+BLOQUEIO_ADMIN_MIN = 30    # administrador: bloqueio por tempo (para nunca ficar sem nenhum administrador)
+IP_FALHAS_MAX = 10         # senhas erradas de um mesmo endereço (qualquer usuário) em 15 min: endereço bloqueado 1 h
+_ip_falhas = {}
+_ip_bloqueado = {}
+
+
+def ips_confiaveis(camara=None):
+    """Endereços da própria Câmara (internet fixa do prédio): não entram no bloqueio por endereço.
+    Vêm de LG_IPS_CONFIAVEIS (servidor) e da lista que o administrador grava no painel (lg_ips_confiaveis_v1)."""
+    ips = {x.strip() for x in os.environ.get("LG_IPS_CONFIAVEIS", "").replace(";", ",").split(",") if x.strip()}
+    if camara:
+        r = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave='lg_ips_confiaveis_v1'", (camara,)).fetchone()
+        if r:
+            try:
+                ips |= {str(x.get("ip") if isinstance(x, dict) else x).strip() for x in json.loads(r["valor"]) or []}
+            except Exception:
+                pass
+    return ips
+
+
+def ip_bloqueado(ip, camara=None):
+    ate = _ip_bloqueado.get(ip, 0)
+    return ate > time.time() and ip not in ips_confiaveis(camara)
+
+
+def _falha_ip(ip, camara):
+    if ip in ips_confiaveis(camara):
+        return
+    h = [t for t in _ip_falhas.get(ip, []) if time.time() - t < 900] + [time.time()]
+    _ip_falhas[ip] = h
+    if len(h) >= IP_FALHAS_MAX:
+        _ip_bloqueado[ip] = time.time() + 3600
+        registrar(camara, "sistema", "Endereço bloqueado", f"{ip}: {len(h)} senhas erradas em 15 min (vários usuários)", ip)
+
+
+def _gravar_dados_usuario(uid, fn):
+    r = _db().execute("SELECT dados FROM usuarios WHERE id=?", (uid,)).fetchone()
+    d = json.loads(r["dados"]) if r else {}
+    fn(d)
+    _db().execute("UPDATE usuarios SET dados=? WHERE id=?", (json.dumps(d, ensure_ascii=False), uid))
+
+
+def bloqueio(u):
+    """Mensagem se a conta está bloqueada (ou '' se não está)."""
+    b = (u or {}).get("bloqueada")
+    if not b:
+        return ""
+    if u.get("perfil") == "admin":
+        if time.time() < float(b.get("ate") or 0):
+            return f"Conta bloqueada por segurança depois de {BLOQUEIO_APOS} senhas erradas. Tente de novo em {int((float(b['ate']) - time.time()) // 60) + 1} minuto(s) ou use “Esqueci minha senha”."
+        return ""
+    return f"Conta bloqueada por segurança depois de {BLOQUEIO_APOS} senhas erradas. Use “Esqueci minha senha” ou peça ao administrador uma senha nova."
+
+
 def login(camara, usuario, senha, ip):
+    if ip_bloqueado(ip, camara):
+        return None, "Muitas tentativas erradas a partir desta internet. Tente de novo em 1 hora."
     chave = (ip, camara, str(usuario).lower())
-    hist = [t for t in _tentativas.get(chave, []) if time.time() - t < 900]
-    if len(hist) >= 8:
-        _alertar(camara, str(usuario).strip(), ip, len(hist), "bloqueio")
-        return None, "Muitas tentativas. Espere 15 minutos e tente de novo."
     r = _db().execute("SELECT id, senha FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, str(usuario).strip())).fetchone()
+    u0 = _usuario(r["id"]) if r else None
+    msg = bloqueio(u0)
+    if msg:
+        registrar(camara, usuario, "Login recusado (conta bloqueada)", "", ip)
+        return None, msg
     if not r or not confere_senha(str(senha), r["senha"]):
-        _tentativas[chave] = hist + [time.time()]
-        kc = (camara, str(usuario).strip().lower())
-        fc = [t for t in _falhas_conta.get(kc, []) if time.time() - t < 900] + [time.time()]
-        _falhas_conta[kc] = fc
+        _falha_ip(ip, camara)
         registrar(camara, usuario, "Login recusado", "", ip)
-        if len(fc) >= ALERTA_APOS:
-            _alertar(camara, str(usuario).strip(), ip, len(fc), "tentativas")
+        if r:
+            n = int(u0.get("falhasSenha") or 0) + 1
+            def marcar(d):
+                d["falhasSenha"] = n
+                if n >= BLOQUEIO_APOS:
+                    d["bloqueada"] = {"em": agora(), "ip": ip, "ate": time.time() + BLOQUEIO_ADMIN_MIN * 60 if u0.get("perfil") == "admin" else None}
+                    d["falhasSenha"] = 0
+            _gravar_dados_usuario(r["id"], marcar)
+            _marcar_usuarios(camara)
+            if n >= BLOQUEIO_APOS:
+                registrar(camara, "sistema", "Conta bloqueada", f"{usuario}: {n} senhas erradas seguidas", ip)
+                _alertar(camara, str(usuario).strip(), ip, n, "bloqueio")
+                return None, bloqueio(_usuario(r["id"])) or "Conta bloqueada por segurança."
+            return None, f"Usuário ou senha incorretos. Depois de {BLOQUEIO_APOS} erros seguidos a conta é bloqueada (restam {BLOQUEIO_APOS - n})."
         return None, "Usuário ou senha incorretos."
-    u = _usuario(r["id"])
+    u = u0
     if u.get("pendente"):
         return None, "Seu cadastro ainda está aguardando liberação do administrador."
     if u.get("ativo") is False:
         return None, "Este usuário está desativado. Fale com o administrador."
+    if u.get("falhasSenha") or u.get("bloqueada"):
+        _gravar_dados_usuario(u["id"], lambda d: (d.pop("falhasSenha", None), d.pop("bloqueada", None)))
+        _marcar_usuarios(camara)
     _tentativas.pop(chave, None)
     registrar(camara, u["usuario"], "Login", "", ip)
     return u, ""
+
+
+def nova_senha_pelo_admin(camara, autor, uid, senha):
+    """Administrador (ou Procuradoria) cria uma senha nova para alguém: desbloqueia e encerra as sessões da pessoa."""
+    if not eh_gestor(autor):
+        return "Somente o administrador ou a Procuradoria criam senha para outra pessoa."
+    alvo = _usuario(uid)
+    if not alvo or alvo.get("camara") != camara:
+        return "Usuário não encontrado."
+    if alvo.get("perfil") == "admin" and autor.get("perfil") != "admin":
+        return "Somente um administrador muda a senha de outro administrador."
+    if len(str(senha or "")) < 8:
+        return "A senha precisa ter pelo menos 8 caracteres."
+    _db().execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(senha)), uid))
+    _gravar_dados_usuario(uid, lambda d: (d.pop("falhasSenha", None), d.pop("bloqueada", None), d.__setitem__("trocarSenha", True)))
+    _db().execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))
+    _marcar_usuarios(camara)
+    registrar(camara, autor.get("usuario"), "Senha nova criada pelo administrador", alvo.get("usuario"))
+    return ""
+
+
+# ---------------------------------------------------------------- esqueci minha senha (link por e-mail)
+def _tabela_redefinir():
+    _db().execute("CREATE TABLE IF NOT EXISTS redefinir(token TEXT PRIMARY KEY, usuario_id TEXT NOT NULL, camara TEXT NOT NULL, expira REAL NOT NULL, usado REAL)")
+
+
+def pedir_redefinicao(camara, login_, base_url, ip):
+    """Sempre responde igual (não revela se o usuário existe). Envia o link se a pessoa tem e-mail cadastrado."""
+    import lgenvio
+    if ip_bloqueado(ip, camara):
+        return
+    _falha_ip(ip, camara)   # conta como tentativa: impede usar o "esqueci" para encher a caixa de alguém
+    r = _db().execute("SELECT id FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, str(login_).strip())).fetchone()
+    u = _usuario(r["id"]) if r else None
+    email = str((u or {}).get("email") or "").strip()
+    if not u or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        registrar(camara, str(login_)[:40], "Esqueci a senha: sem e-mail cadastrado", "", ip)
+        return
+    _tabela_redefinir()
+    t = secrets.token_urlsafe(32)
+    _db().execute("INSERT INTO redefinir(token, usuario_id, camara, expira) VALUES(?,?,?,?)", (_resumo(t), u["id"], camara, time.time() + 3600))
+    link = base_url.rstrip("/") + "/painel/index.html?redefinir=" + t
+    nome = (u.get("nome") or u["usuario"]).split(" ")[0]
+    texto = (f"Olá, {nome}.\n\nRecebemos um pedido para criar uma senha nova no painel da Câmara (usuário {u['usuario']}).\n"
+             f"Para criar a senha nova, abra este link em até 1 hora:\n{link}\n\n"
+             "Se não foi você, ignore este e-mail: a sua senha continua a mesma.\n\nLegislaGov — mensagem automática, não responda.")
+    threading.Thread(target=lgenvio.enviar, args=(email, "Criar senha nova — painel da Câmara", texto), daemon=True).start()
+    registrar(camara, u["usuario"], "Esqueci a senha: link enviado" if lgenvio.configurado() else "Esqueci a senha: envio de e-mail não configurado", email.split("@")[-1], ip)
+
+
+def redefinir_com_link(camara, token, nova, ip):
+    _tabela_redefinir()
+    r = _db().execute("SELECT * FROM redefinir WHERE token=?", (_resumo(str(token or "")),)).fetchone()
+    if not r or r["usado"] or r["expira"] < time.time() or r["camara"] != camara:
+        return "Este link já foi usado ou venceu. Peça um novo em “Esqueci minha senha”."
+    if len(str(nova or "")) < 8:
+        return "A senha precisa ter pelo menos 8 caracteres."
+    _db().execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(nova)), r["usuario_id"]))
+    _gravar_dados_usuario(r["usuario_id"], lambda d: (d.pop("falhasSenha", None), d.pop("bloqueada", None), d.pop("trocarSenha", None)))
+    _db().execute("UPDATE redefinir SET usado=? WHERE token=?", (time.time(), r["token"]))
+    _db().execute("DELETE FROM sessoes WHERE usuario_id=?", (r["usuario_id"],))
+    _marcar_usuarios(camara)
+    u = _usuario(r["usuario_id"])
+    registrar(camara, (u or {}).get("usuario", "?"), "Senha nova criada pelo link do e-mail", "", ip)
+    return ""
 
 
 def trocar_senha(u, atual, nova):
@@ -486,6 +626,7 @@ def trocar_senha(u, atual, nova):
     if len(str(nova)) < 8:
         return "A nova senha precisa ter pelo menos 8 caracteres."
     _db().execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(nova)), u["id"]))
+    _gravar_dados_usuario(u["id"], lambda d: d.pop("trocarSenha", None))
     _db().execute("DELETE FROM sessoes WHERE usuario_id=?", (u["id"],))
     registrar(u["camara"], u["usuario"], "Senha trocada")
     return ""

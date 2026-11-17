@@ -43,6 +43,8 @@ SISTEMAS = [
      "links": [["Abrir o Rural", "https://rural.legislagov.com.br/"], ["Pelo endereço de teste", "https://teste.legislagov.com.br/rural/"]], "demo": True, "cor": "#2e7d32"},
     {"id": "email", "nome": "Painel de e-mails", "desc": "Caixas de e-mail institucionais: criar, trocar senha, avisos. Pronto para ligar ao provedor.",
      "links": [["Abrir o painel", "https://email.legislagov.com.br/"], ["Pelo endereço de teste", "https://teste.legislagov.com.br/email/"]], "demo": False, "cor": "#5b4b8a"},
+    {"id": "atendimento", "nome": "Atendimento WhatsApp", "desc": "Conversas do WhatsApp da Câmara e da Prefeitura, com atendentes.",
+     "links": [["Abrir o atendimento", "https://teste.legislagov.com.br/cliente/"]], "demo": False, "cor": "#128c4a"},
     {"id": "site", "nome": "Site LegislaGov", "desc": "Página da empresa, produtos e área do cliente.",
      "links": [["legislagov.com.br", "https://legislagov.com.br/"]], "demo": False, "cor": "#37474f"},
 ]
@@ -125,7 +127,7 @@ def entrar(c, login, senha, ip=""):
         dentro = agora - u["janela"] < 900
         falhas = (u["falhas"] if dentro else 0) + 1
         c.execute("UPDATE ct_usuarios SET falhas=?, janela=?, bloqueio=? WHERE id=?",
-                  (falhas, u["janela"] if dentro else agora, agora + 900 if falhas >= 6 else 0, u["id"]))
+                  (falhas, u["janela"] if dentro else agora, agora + 1800 if falhas >= 3 else 0, u["id"]))
         _log(c, login, "Senha errada", "", ip)
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
     c.execute("UPDATE ct_usuarios SET falhas=0, bloqueio=0 WHERE id=?", (u["id"],))

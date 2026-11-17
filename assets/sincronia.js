@@ -274,7 +274,10 @@
   function trocarSenha() {
     let m = document.getElementById('lgsync-senha'); if (m) m.remove();
     document.body.insertAdjacentHTML('beforeend', `<div id="lgsync-senha" role="dialog" aria-modal="true" aria-labelledby="lgsync-senha-t"><form>
-      <h2 id="lgsync-senha-t">Trocar minha senha</h2>
+      <h2 id="lgsync-senha-t">Minha senha e e-mail</h2>
+      <label>E-mail para recuperar a senha<span style="display:flex;gap:6px"><input type="email" name="email" autocomplete="email" value="${String((eu && eu.email) || '').replace(/"/g, '&quot;')}" placeholder="seu.email@exemplo.com" style="flex:1"><button type="button" data-email>Salvar</button></span></label>
+      <p class="ok-email" hidden style="color:#1d7a46;margin:0">E-mail salvo. Se esquecer a senha, o link chega nele.</p>
+      <h3 style="margin:10px 0 0;font-size:15px">Trocar a senha</h3>
       <label>Senha atual<input type="password" name="atual" autocomplete="current-password" required></label>
       <label>Nova senha (mínimo 8 caracteres)<input type="password" name="nova" autocomplete="new-password" minlength="8" required></label>
       <label>Repita a nova senha<input type="password" name="nova2" autocomplete="new-password" minlength="8" required></label>
@@ -282,6 +285,12 @@
       <div class="acoes"><button type="button" data-x>Cancelar</button><button type="submit" class="pri">Trocar senha</button></div></form></div>`);
     m = document.getElementById('lgsync-senha'); const f = m.querySelector('form'), er = m.querySelector('.erro');
     m.querySelector('[data-x]').onclick = () => m.remove();
+    m.querySelector('[data-email]').onclick = async () => {
+      const em = m.querySelector('[name=email]').value.trim();
+      const r = await api('/api/meu-email', { email: em });
+      if (!r.ok) { er.textContent = r.erro || 'Não foi possível salvar.'; er.hidden = false; return; }
+      er.hidden = true; m.querySelector('.ok-email').hidden = false; if (eu) eu.email = em;
+    };
     f.querySelector('input').focus();
     f.onsubmit = async e => {
       e.preventDefault(); const d = Object.fromEntries(new FormData(f));
@@ -331,7 +340,7 @@
       const poe = () => { if (document.querySelector('.lgsync-trocar')) return;
         const sair_ = [...document.querySelectorAll('button, a')].find(b => /^\s*Sair\s*$/.test(b.textContent || '') && b.offsetParent);
         if (!sair_) return; const b = sair_.cloneNode(true); b.removeAttribute('onclick'); b.removeAttribute('href'); b.classList.add('lgsync-trocar');
-        b.querySelectorAll('svg').forEach(s => s.remove()); b.textContent = 'Trocar minha senha'; b.onclick = e => { e.preventDefault(); trocarSenha(); };
+        b.querySelectorAll('svg').forEach(s => s.remove()); b.textContent = 'Minha senha e e-mail'; b.onclick = e => { e.preventDefault(); trocarSenha(); };
         sair_.parentNode.insertBefore(b, sair_); };
       setInterval(poe, 2000);
       status();

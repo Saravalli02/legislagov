@@ -131,7 +131,7 @@ def entrar(c, login, senha):
         dentro = agora - u["janela"] < 900
         falhas = (u["falhas"] if dentro else 0) + 1
         c.execute("UPDATE em_usuarios SET falhas=?, janela=?, bloqueio=? WHERE id=?",
-                  (falhas, u["janela"] if dentro else agora, agora + 900 if falhas >= 8 else 0, u["id"]))
+                  (falhas, u["janela"] if dentro else agora, agora + 1800 if falhas >= 3 else 0, u["id"]))
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
     c.execute("UPDATE em_usuarios SET falhas=0, bloqueio=0 WHERE id=?", (u["id"],))
     return 200, {"ok": True, "token": _nova_sessao(c, u["id"]), "sessao": _sessao_pub(u)}

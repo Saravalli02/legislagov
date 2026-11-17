@@ -312,7 +312,7 @@ def entrar(c, empresa, login, senha):
     if not lgapi.confere_senha(str(senha or ""), u["senha"]):
         dentro = agora - u["janela"] < 900
         falhas = (u["falhas"] if dentro else 0) + 1
-        bloqueio = agora + 900 if falhas >= 8 else 0
+        bloqueio = agora + 1800 if falhas >= 3 else 0
         c.execute("UPDATE rural_usuarios SET falhas=?, janela=?, bloqueio=? WHERE id=?", (falhas, u["janela"] if dentro else agora, bloqueio, u["id"]))
         if bloqueio:
             return 429, {"ok": False, "erro": "Muitas tentativas erradas. Espere 15 minutos e tente de novo."}

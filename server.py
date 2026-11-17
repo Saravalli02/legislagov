@@ -310,6 +310,53 @@ def camara_do_host(host):
     return _dominios["mapa"].get(h) or (os.environ.get("LG_CAMARA_PADRAO", "teste"), "site")
 
 
+# ------------------------------------------------------------------ limite de pedidos por endereço (IP)
+# Quem passa de LIMITE_MIN pedidos em 1 minuto fica 5 minutos recebendo "aguarde" (429). Os endereços da
+# própria Câmara (ips confiáveis) não entram. Protege contra robô que tenta derrubar o site com pedidos repetidos.
+LIMITE_MIN = int(os.environ.get("LG_LIMITE_MIN", "900"))
+_lim = {"cont": {}, "bloq": {}, "conf": {}, "limpo": 0.0}
+_lim_trava = threading.Lock()
+
+
+def _confiaveis(camara):
+    agora_ = time.time()
+    c = _lim["conf"].get(camara)
+    if c and agora_ - c[0] < 60:
+        return c[1]
+    try:
+        with lgapi._trava:
+            ips = lgapi.ips_confiaveis(camara) if lgapi.ativo() else set()
+    except Exception:
+        ips = set()
+    _lim["conf"][camara] = (agora_, ips)
+    return ips
+
+
+def excesso(ip, camara):
+    if ip in ("127.0.0.1", "::1", ""):
+        return False
+    agora_ = time.time()
+    with _lim_trava:
+        if agora_ - _lim["limpo"] > 300:
+            _lim["cont"] = {k: v for k, v in _lim["cont"].items() if agora_ - v[0] < 60}
+            _lim["bloq"] = {k: v for k, v in _lim["bloq"].items() if v > agora_}
+            _lim["limpo"] = agora_
+        if _lim["bloq"].get(ip, 0) > agora_:
+            return True
+        ini, n = _lim["cont"].get(ip, (agora_, 0))
+        if agora_ - ini >= 60:
+            ini, n = agora_, 0
+        n += 1
+        _lim["cont"][ip] = (ini, n)
+        passou = n > LIMITE_MIN
+    if passou and ip not in _confiaveis(camara):
+        with _lim_trava:
+            _lim["bloq"][ip] = agora_ + 300
+        print(f"limite: {ip} passou de {LIMITE_MIN} pedidos/min — bloqueado 5 min", flush=True)
+        return True
+    return False
+
+
 class Handler(SimpleHTTPRequestHandler):
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map, ".webmanifest": "application/manifest+json", ".webp": "image/webp"}
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
@@ -385,6 +432,22 @@ class Handler(SimpleHTTPRequestHandler):
     def _ip(self):
         return (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
 
+    def _barrado(self):
+        """True se este endereço passou do limite (e já respondeu 429)."""
+        if not excesso(self._ip(), camara_do_host(self.headers.get("Host"))[0]):
+            return False
+        corpo = "Muitos acessos seguidos deste endereço. Aguarde alguns minutos e tente de novo.".encode("utf-8")
+        try:
+            self.send_response(429)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Retry-After", "300")
+            self.send_header("Content-Length", str(len(corpo)))
+            self.end_headers()
+            self.wfile.write(corpo)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        return True
+
     def _api(self, metodo):
         """Rotas do banco. Devolve True se respondeu."""
         caminho = self.path.split("?", 1)[0]
@@ -435,7 +498,7 @@ class Handler(SimpleHTTPRequestHandler):
                 usr, erro = lgapi.login(camara, d.get("usuario", ""), d.get("senha", ""), ip)
                 if not usr:
                     return self._json(401, {"ok": False, "erro": erro})
-                return self._json(200, {"ok": True, "id": usr["id"], "provisoria": str(d.get("senha", "")) in ("123456", "admin123")},
+                return self._json(200, {"ok": True, "id": usr["id"], "provisoria": bool(usr.get("trocarSenha")) or str(d.get("senha", "")) in ("123456", "admin123")},
                                   cookie=lgapi.criar_sessao(usr))
             if caminho == "/api/logout" and metodo == "POST":
                 lgapi.encerrar(token)
@@ -448,6 +511,16 @@ class Handler(SimpleHTTPRequestHandler):
                 if not achado:
                     return self._json(404 if u else 401, {"ok": False, "erro": "Arquivo não encontrado ou sem permissão."})
                 return self._arquivo(*achado, publico=not u)
+            if caminho == "/api/senha/esqueci" and metodo == "POST":
+                d = self._corpo(5_000)
+                proto = "https" if self.headers.get("X-Forwarded-Proto") == "https" else "http"
+                lgapi.pedir_redefinicao(camara, str(d.get("usuario", ""))[:60], f"{proto}://{self.headers.get('Host')}", ip)
+                import lgenvio
+                return self._json(200, {"ok": True, "email": lgenvio.configurado()})
+            if caminho == "/api/senha/redefinir" and metodo == "POST":
+                d = self._corpo(5_000)
+                erro = lgapi.redefinir_com_link(camara, d.get("token"), d.get("nova"), ip)
+                return self._json(400 if erro else 200, {"ok": not erro, "erro": erro})
             if caminho == "/api/publico/enviar" and metodo == "POST":
                 d = self._corpo(300_000)
                 erro = lgapi.envio_publico(camara, str(d.get("chave", "")), d.get("itens"), ip)
@@ -458,6 +531,21 @@ class Handler(SimpleHTTPRequestHandler):
                 d = self._corpo(20_000)
                 erro = lgapi.trocar_senha(u, d.get("atual", ""), d.get("nova", ""))
                 return self._json(400 if erro else 200, {"ok": not erro, "erro": erro}, cookie=None if erro else "")
+            if caminho == "/api/meu-ip" and metodo == "GET":
+                return self._json(200, {"ok": True, "ip": ip})
+            if caminho == "/api/meu-email" and metodo == "POST":
+                d = self._corpo(2_000)
+                em = str(d.get("email", "")).strip().lower()[:120]
+                if em and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", em):
+                    return self._json(400, {"ok": False, "erro": "Confira o e-mail."})
+                lgapi._gravar_dados_usuario(u["id"], lambda x: x.__setitem__("email", em) if em else x.pop("email", None))
+                lgapi._marcar_usuarios(camara)
+                lgapi.registrar(camara, u["usuario"], "E-mail de recuperação atualizado", em.split("@")[-1] if em else "removido", ip)
+                return self._json(200, {"ok": True})
+            if caminho == "/api/usuario/senha" and metodo == "POST":
+                d = self._corpo(5_000)
+                erro = lgapi.nova_senha_pelo_admin(camara, u, str(d.get("id", "")), d.get("senha"))
+                return self._json(400 if erro else 200, {"ok": not erro, "erro": erro})
             if caminho == "/api/arquivo" and metodo == "POST":
                 if not lgapi.Quem(camara, u).edita_algo:
                     return self._json(403, {"ok": False, "erro": "Sem permissão para enviar arquivos."})
@@ -541,14 +629,20 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(400, {"ok": False, "erro": "Não foi possível concluir: " + str(erro)[:160]})
 
     def do_PUT(self):
+        if self._barrado():
+            return
         if not self._api("PUT"):
             self.send_error(404)
 
     def do_DELETE(self):
+        if self._barrado():
+            return
         if not self._api("DELETE"):
             self.send_error(404)
 
     def do_GET(self):
+        if self._barrado():
+            return
         if lgwhats.rota(self, "GET", camara_do_host):
             return
         if lgrural.rota(self, "GET"):
@@ -655,6 +749,8 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        if self._barrado():
+            return
         if lgwhats.rota(self, "POST", camara_do_host):
             return
         if lgrural.rota(self, "POST"):
