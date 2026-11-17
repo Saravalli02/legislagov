@@ -18,6 +18,7 @@ cd /opt/legislagov/app
 export LG_CONTEUDO=/var/lib/legislagov/conteudo
 sudo -E -u legislagov python3 ferramentas/importar_siscam.py
 sudo -E -u legislagov python3 ferramentas/importar_site_antigo.py
+sudo -E -u legislagov python3 ferramentas/importar_contas.py || true
 cp ferramentas/aws/importar.versao /var/lib/legislagov/conteudo/.versao
 EOS
 chmod 755 /usr/local/bin/legislagov-importar
