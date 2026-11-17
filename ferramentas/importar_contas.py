@@ -17,6 +17,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 
 ORIGEM = "https://www.camaranevespaulista.sp.gov.br"
@@ -43,7 +44,14 @@ PAGINAS = {
 EXT = r"(?:pdf|PDF|xlsx?|XLSX?|docx?|DOCX?|odt|ods|csv|zip)"
 
 
+def seguro(url):
+    """Endereços do site antigo têm espaço e acento no nome do arquivo: codifica só o caminho."""
+    p = urllib.parse.urlsplit(url)
+    return urllib.parse.urlunsplit((p.scheme, p.netloc, urllib.parse.quote(urllib.parse.unquote(p.path), safe="/"), p.query, p.fragment))
+
+
 def baixar(url, tentativas=3):
+    url = seguro(url)
     for i in range(tentativas):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
