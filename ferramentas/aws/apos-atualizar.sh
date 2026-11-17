@@ -42,6 +42,19 @@ if ! cmp -s "$APP/ferramentas/aws/copia.versao" /var/lib/legislagov/copias/.vers
   systemd-run --unit="legislagov-copia-externa-$(date +%s)" --no-block /bin/bash -c '/usr/local/bin/legislagov-copia > /dev/null 2>&1; /usr/local/bin/legislagov-copia-externa > /var/log/legislagov-copia-externa.log 2>&1' || true
 fi
 
+# relatório de conferência (saúde, banco e inventário) — roda quando relatorio.versao muda
+cat > /usr/local/bin/legislagov-relatorio <<'EOS'
+#!/bin/bash
+set -a; . /etc/legislagov.env; set +a
+exec python3 /opt/legislagov/app/ferramentas/aws/relatorio.py "$@"
+EOS
+chmod 755 /usr/local/bin/legislagov-relatorio
+mkdir -p /var/lib/legislagov/relatorios
+if ! cmp -s "$APP/ferramentas/aws/relatorio.versao" /var/lib/legislagov/relatorios/.versao; then
+  cp "$APP/ferramentas/aws/relatorio.versao" /var/lib/legislagov/relatorios/.versao
+  systemd-run --unit="legislagov-relatorio-$(date +%s)" --no-block /bin/bash -c '/usr/local/bin/legislagov-relatorio > /var/log/legislagov-relatorio.log 2>&1' || true
+fi
+
 # comando para definir senha de usuário direto no servidor
 cat > /usr/local/bin/legislagov-senha <<'EOS'
 #!/bin/bash
