@@ -1432,9 +1432,16 @@ function vVendedorDia(){
   </div>`;
 }
 let MAPA=null, MAPA_CAMADA=null;
-function carregarLeaflet(){return new Promise((ok,erro)=>{if(window.L)return ok();
-  if(!document.getElementById('lfcss')){const c=document.createElement('link');c.id='lfcss';c.rel='stylesheet';c.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.appendChild(c)}
-  const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';s.onload=()=>ok();s.onerror=()=>erro(new Error('mapa'));document.head.appendChild(s)})}
+let leafletPromessa=null;
+function carregarLeaflet(){
+  if(window.L&&document.getElementById('lfcss')&&document.getElementById('lfcss').sheet)return Promise.resolve();
+  if(leafletPromessa)return leafletPromessa;
+  const css=new Promise((ok,erro)=>{let c=document.getElementById('lfcss');if(!c){c=document.createElement('link');c.id='lfcss';c.rel='stylesheet';c.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.appendChild(c)}
+    if(c.sheet)return ok();c.onload=()=>ok();c.onerror=()=>erro(new Error('mapa'))});
+  const js=new Promise((ok,erro)=>{if(window.L)return ok();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';s.onload=()=>ok();s.onerror=()=>erro(new Error('mapa'));document.head.appendChild(s)});
+  leafletPromessa=Promise.all([css,js]).catch(e=>{leafletPromessa=null;throw e});
+  return leafletPromessa;
+}
 function ligarVendedorDia(){desenharMapa(false)}
 async function desenharMapa(atualizacao){
   const el=$('#mapa');if(!el)return;
@@ -1458,6 +1465,7 @@ async function desenharMapa(atualizacao){
   L.circleMarker([ini.lat,ini.lng],{radius:7,color:'#fff',weight:2,fillColor:'#62705f',fillOpacity:1}).addTo(MAPA_CAMADA).bindPopup('Primeiro ponto do dia · '+hora(ini.t));
   pts.filter(p=>p.ev).forEach(p=>L.circleMarker([p.lat,p.lng],{radius:8,color:'#fff',weight:2,fillColor:/^Entrega/.test(p.ev)?'#1f5f8b':'#9a6a00',fillOpacity:1}).addTo(MAPA_CAMADA).bindPopup('<b>'+esc(p.ev)+'</b><br>'+hora(p.t)));
   L.circleMarker([fim.lat,fim.lng],{radius:11,color:'#fff',weight:3,fillColor:'#b3261e',fillOpacity:1}).addTo(MAPA_CAMADA).bindPopup('<b>Última posição</b><br>'+hora(fim.t));
+  MAPA.invalidateSize();
   const vista=ui.mapaVista;
   if(vista&&vista.k===vid+d)MAPA.setView(vista.c,vista.z,{animate:false});else MAPA.fitBounds(L.latLngBounds(ll).pad(0.2),{maxZoom:16});
   let km=0;for(let i=1;i<pts.length;i++)km+=distM(pts[i-1],pts[i])/1000;
