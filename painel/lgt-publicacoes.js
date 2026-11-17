@@ -404,7 +404,7 @@
   .lgt-vazio{text-align:center;padding:36px 16px!important;color:var(--lg28-muted)!important}
   .lgt-vazio b{color:var(--lg28-ink);margin-bottom:4px}
   .lgt-vazio span{display:block;max-width:60ch;margin:0 auto}
-  .lgt-grade2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+  .lgt-grade2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:18px}
   .lgt-card{background:var(--lg28-panel);border:1px solid var(--lg28-stroke);border-radius:12px;padding:18px}
   .lgt-card h3{margin:0 0 8px;font-size:15px!important}
   .lgt-p{color:var(--lg28-muted);font-size:13.5px;margin:0 0 12px}
