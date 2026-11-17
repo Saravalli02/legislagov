@@ -1,0 +1,17 @@
+{
+  "name": "LegislaGov Rural",
+  "short_name": "LG Rural",
+  "description": "Gestão da horta: pedidos, saídas, rotas de entrega e fiado.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6f1",
+  "theme_color": "#2f6b3a",
+  "icons": [
+    {"src": "icone-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icone-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
