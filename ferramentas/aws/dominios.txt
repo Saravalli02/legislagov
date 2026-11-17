@@ -8,3 +8,5 @@ neves.legislagov.com.br        neves-paulista-sp   site
 # site LegislaGov + Área do cliente + Atendimento WhatsApp (modo portfolio: pasta portfolio/)
 legislagov.com.br              prefeitura-neves-sp portfolio
 www.legislagov.com.br          prefeitura-neves-sp portfolio
+# LegislaGov Rural (app da horta: pasta apps/rural, códigos em rural.txt)
+rural.legislagov.com.br        rural               rural

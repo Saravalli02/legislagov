@@ -3,8 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LG Rural">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="robots" content="noindex">
+<script>/* o app instalado abre já na horta certa (o código vai junto no ícone) */
+(function(){var e=new URLSearchParams(location.search).get('e');try{e=e||localStorage.getItem('lgr_empresa')}catch(x){}
+var b=location.pathname.replace(/[^/]*$/,'');var l=document.createElement('link');l.rel='manifest';
+l.href='/api/rural/manifest.json?b='+encodeURIComponent(b)+(e?'&e='+encodeURIComponent(e):'');document.head.appendChild(l)})();</script>
 <meta name="theme-color" content="#2f6b3a">
-<title>Legislagov Rural</title>
+<title>LegislaGov Rural</title>
 <style>
 :root{
   --verde:#2f6b3a;--verde2:#3f8a4c;--verde-cl:#e7f2e8;--fundo:#f4f6f1;--card:#fff;
@@ -107,12 +118,22 @@ body.bloq,html:has(body.bloq){background:#fff}body.bloq nav,body.login nav{displ
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 84px);background:#1d2a1f;color:#fff;
   padding:10px 16px;border-radius:20px;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.grid4 div{background:#f6f8f4;border-radius:10px;padding:7px 6px;text-align:center}
+.grid4 b{display:block;font-size:15px}.grid4 small{font-size:11px;color:var(--sub)}
+.geo{border-radius:12px;padding:10px 12px;font-size:14px;margin:10px 0;display:flex;gap:10px;align-items:center}
+.geo.ok{background:var(--verde-cl);color:var(--verde)}.geo.liga{background:#e8f0f8;color:var(--azul)}.geo.erro{background:var(--verm-cl);color:var(--verm)}
+.geo .btn{width:auto;padding:9px 12px;font-size:14px;margin-left:auto;white-space:nowrap}
+.linha-tempo{list-style:none;margin:0;padding:0}.linha-tempo li{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--borda);font-size:14px}
+.linha-tempo li:first-child{border-top:0}.linha-tempo time{color:var(--sub);font-variant-numeric:tabular-nums;min-width:44px}
+.offline header{background:#5d6b5a}
+#mapa .leaflet-popup-content{font:14px/1.35 system-ui,sans-serif}
 </style>
 </head>
 <body>
 <header>
   <div class="logo">🌱</div>
-  <div><h1>Legislagov Rural</h1><small id="quem">Gestão da horta</small></div>
+  <div style="min-width:0"><h1 id="nomeApp">LegislaGov Rural</h1><small id="quem">Gestão da horta</small></div>
   <div style="margin-left:auto;text-align:right"><button id="badgeLic" style="border:0;background:#ffffff26;color:#fff;border-radius:20px;padding:5px 10px;font-weight:700;font-size:13px">🔑 …</button><div class="sync" id="sync" style="margin-top:3px">carregando…</div></div>
 </header>
 <main id="app"></main>
@@ -177,85 +198,128 @@ function calcSaida(s){
   }));
   const despesas=(s.despesas||[]).reduce((a,d)=>a+num(d.valor),0);
   const fiado=S.fiados.filter(f=>f.saidaId===s.id).reduce((a,f)=>a+num(f.valor),0);
-  const esperado=cobrado-fiado-despesas;
+  const esperado=cobrado-fiado-despesas, troco=num(s.troco), entregar=esperado+troco;
   const contado=s.contado===''||s.contado==null?null:num(s.contado);
-  return {carga,perdas,sobras,trocas,trocaQtd,cobrado,vendido:cobrado,porProd,despesas,fiado,esperado,contado,dif:contado==null?null:contado-esperado};
+  return {carga,perdas,sobras,trocas,trocaQtd,cobrado,vendido:cobrado,porProd,despesas,fiado,esperado,troco,entregar,contado,dif:contado==null?null:contado-entregar};
 }
 function trocaValorPonto(pid,mes){let v=0;S.saidas.filter(x=>(x.data||'').startsWith(mes)).forEach(x=>(x.vendas||[]).filter(vd=>vd.pontoId===pid).forEach(vd=>vd.itens.forEach(it=>v+=num(it.troca)*num((x.itens.find(i=>i.produtoId===it.produtoId)||{}).preco))));return v}
 
-/* ===================== Persistência (banco de dados) ===================== */
-let DB=null, pronto=false, ultimo={base:'',saidas:{},fiados:{},comprovantes:{},pedidos:{}}, recebeuBase=false;
-function marcar(txt){$('#sync').textContent=txt}
-function baseDe(o){const {saidas,fiados,comprovantes,pedidos,...r}=o;return r}
-function salvar(){
-  try{localStorage.setItem('lgrural',JSON.stringify(S))}catch(e){}
-  if(!DB||!recebeuBase){if(!DB)marcar('salvo neste aparelho');return}
-  marcar('salvando…');clearTimeout(salvarTimer);salvarTimer=setTimeout(enviar,400);
+/* ===================== Servidor LegislaGov (tempo real) ===================== */
+const COLS=['vendedores','produtos','pontos','rotas','saidas','fiados','comprovantes','pedidos','custos','funcionarios'];
+const API='/api/rural/';
+let EMP=(()=>{let e=new URLSearchParams(location.search).get('e');try{if(e){e=e.trim().toLowerCase();localStorage.setItem('lgr_empresa',e)}else e=localStorage.getItem('lgr_empresa')}catch(x){}return (e||'').trim().toLowerCase()})();
+let TOKEN='';try{TOKEN=localStorage.getItem('lgr_token_'+EMP)||''}catch(e){}
+let pronto=false, SEQ=0, ultimo={config:{}}, online=true, enviando=false, entradaInfo=null, renderPendente=false;
+COLS.forEach(c=>ultimo[c]={});
+const espera=ms=>new Promise(r=>setTimeout(r,ms));
+function chaveCache(){return 'lgrural:'+EMP+':'+(ui.sess?ui.sess.tipo+':'+ui.sess.id:'')}
+function marcar(txt){const e=$('#sync');if(e)e.textContent=txt}
+function marcarEstado(){const p=TOKEN&&ui.sess?pendentes().length:0;document.body.classList.toggle('offline',!online);
+  marcar(!ui.sess?'':!online?(p?'sem internet · '+p+' a enviar':'sem internet'):p?'enviando…':'✓ em tempo real')}
+async function api(acao,{metodo='GET',corpo=null,q=''}={}){
+  const r=await fetch(API+acao+(q?'?'+q:''),{method:metodo,cache:'no-store',headers:Object.assign({'Content-Type':'application/json'},TOKEN?{Authorization:'Bearer '+TOKEN}:{}),body:corpo?JSON.stringify(corpo):undefined});
+  let d={};try{d=await r.json()}catch(e){}
+  if(r.status===401&&TOKEN&&!['entrar','primeiro'].includes(acao)){sessaoTerminou();throw new Error('sessao')}
+  if(!r.ok){const e=new Error(d.erro||('Erro '+r.status));e.status=r.status;throw e}
+  return d;
+}
+function zerarDados(){S=JSON.parse(JSON.stringify(VAZIO));ultimo={config:{}};COLS.forEach(c=>ultimo[c]={});SEQ=0}
+function guardarCache(){if(!ui.sess)return;try{localStorage.setItem(chaveCache(),JSON.stringify({S,ultimo,SEQ}))}catch(e){}}
+function lerCache(){try{const c=JSON.parse(localStorage.getItem(chaveCache())||'null');if(!c)return false;
+  S=Object.assign(JSON.parse(JSON.stringify(VAZIO)),c.S);ultimo=c.ultimo||{};ultimo.config=ultimo.config||{};COLS.forEach(k=>ultimo[k]=ultimo[k]||{});SEQ=c.SEQ||0;return true}catch(e){return false}}
+function salvar(){guardarCache();if(!ui.sess||!TOKEN)return;marcar('salvando…');clearTimeout(salvarTimer);salvarTimer=setTimeout(enviar,350)}
+const cfgTxt=()=>JSON.stringify(Object.assign({},S.config||{},{id:'geral'}));
+function pendentes(){
+  const docs=[];
+  if(ehGestor()){const j=cfgTxt();if(j!==(ultimo.config.geral||'{"id":"geral"}'))docs.push({col:'config',id:'geral',json:j,base:ultimo.config.geral||null})}
+  for(const col of COLS){const vistos=new Set();
+    for(const x of S[col]){if(!x||!x.id)continue;vistos.add(x.id);const j=JSON.stringify(x);if(ultimo[col][x.id]!==j)docs.push({col,id:x.id,json:j,base:ultimo[col][x.id]||null})}
+    for(const id of Object.keys(ultimo[col]))if(!vistos.has(id))docs.push({col,id,apagar:true,base:ultimo[col][id]})}
+  return docs;
 }
 async function enviar(){
+  if(!TOKEN||!ui.sess)return;
+  if(enviando){clearTimeout(salvarTimer);salvarTimer=setTimeout(enviar,400);return}
+  const docs=pendentes();if(!docs.length){marcarEstado();return}
+  enviando=true;
   try{
-    const b=JSON.stringify(baseDe(S));
-    if(b!==ultimo.base){await DB.doc('app/estado').set({json:b,atualizado:new Date().toISOString()});ultimo.base=b}
-    for(const col of ['saidas','fiados','comprovantes','pedidos']){
-      const vistos=new Set();
-      for(const x of S[col]){vistos.add(x.id);const j=JSON.stringify(x);
-        if(ultimo[col][x.id]!==j){await DB.doc(col+'/'+x.id).set({json:j,atualizado:new Date().toISOString()});ultimo[col][x.id]=j}}
-      for(const id of Object.keys(ultimo[col]))if(!vistos.has(id)){await DB.doc(col+'/'+id).delete();delete ultimo[col][id]}
-    }
-    marcar('✓ sincronizado');
-  }catch(e){marcar('⚠ salvo só no aparelho')}
+    const r=await api('gravar',{metodo:'POST',corpo:{docs}});
+    const recusa=new Set((r.recusados||[]).map(x=>x.col+'/'+x.id));
+    docs.forEach(d=>{if(recusa.has(d.col+'/'+d.id))return;if(d.apagar)delete ultimo[d.col][d.id];else ultimo[d.col][d.id]=d.json});
+    (r.ajustados||[]).forEach(a=>aplicarDoc(a.col,a.id,a.json,true));
+    if((r.recusados||[]).length){r.recusados.forEach(a=>aplicarDoc(a.col,a.id,a.json,true));toast('Essa alteração não é permitida para você');renderSuave()}
+    else if((r.ajustados||[]).length)renderSuave();
+    online=true;guardarCache();
+  }catch(e){if(e.message!=='sessao')online=false}
+  enviando=false;marcarEstado();
+  if(online&&pendentes().length){clearTimeout(salvarTimer);salvarTimer=setTimeout(enviar,500)}
 }
-function docsDe(snap){
-  const arr=snap&&snap.docs?snap.docs:(Array.isArray(snap)?snap:[]);
-  return arr.map(d=>{const v=typeof d.data==='function'?d.data():(d.data&&d.data.json?d.data:d);try{return {raw:v.json,obj:JSON.parse(v.json)}}catch(e){return null}}).filter(Boolean);
+async function enviarAgora(){clearTimeout(salvarTimer);for(let i=0;i<40&&enviando;i++)await espera(150);await enviar()}
+function trocarConteudo(alvo,o){for(const k of Object.keys(alvo))delete alvo[k];Object.assign(alvo,o)}
+function aplicarDoc(col,id,raw,forcar){
+  if(col==='config'){
+    if(raw==null){if(forcar||cfgTxt()===(ultimo.config.geral||'{"id":"geral"}'))S.config={};delete ultimo.config.geral;return}
+    const o=JSON.parse(raw);if(forcar||cfgTxt()===(ultimo.config.geral||'{"id":"geral"}'))S.config=o;ultimo.config.geral=JSON.stringify(o);return}
+  if(!S[col]||!ultimo[col])return;
+  const i=S[col].findIndex(x=>x&&x.id===id);
+  const sujo=i>=0?JSON.stringify(S[col][i])!==ultimo[col][id]:ultimo[col][id]!==undefined;
+  if(raw==null){if(forcar||!sujo){if(i>=0)S[col].splice(i,1)}delete ultimo[col][id];return}
+  const o=JSON.parse(raw);
+  if(forcar||!sujo){if(i>=0)trocarConteudo(S[col][i],o);else S[col].push(o)}
+  ultimo[col][id]=JSON.stringify(o);
 }
-function aplicarColecao(col,snap){
-  const rem=docsDe(snap), novo=[], ids=new Set();
-  rem.forEach(({raw,obj})=>{ids.add(obj.id);const loc=S[col].find(x=>x.id===obj.id);
-    // mantém a versão local se ela foi alterada aqui e ainda não foi enviada
-    if(loc&&JSON.stringify(loc)!==(ultimo[col][obj.id]||'')&&ultimo[col][obj.id]!==undefined&&ultimo[col][obj.id]===raw)novo.push(loc);
-    else novo.push(obj);
-    ultimo[col][obj.id]=raw});
-  // itens criados aqui que ainda não subiram
-  S[col].forEach(x=>{if(!ids.has(x.id)&&ultimo[col][x.id]===undefined)novo.push(x)});
-  Object.keys(ultimo[col]).forEach(id=>{if(!ids.has(id))delete ultimo[col][id]});
-  S[col]=novo;
-}
-function aplicarBase(snap){
-  const d=snap&&typeof snap.data==='function'?snap.data():snap;
-  const primeira=!recebeuBase;recebeuBase=true;
-  if(d&&d.json){
-    try{const o=JSON.parse(d.json);
-      // versão antiga guardava tudo num documento só: migra saídas e fiados para o banco separado
-      ['saidas','fiados'].forEach(c=>{(o[c]||[]).forEach(x=>{if(!S[c].some(y=>y.id===x.id))S[c].push(x)});delete o[c]});
-      const keepS=S.saidas, keepF=S.fiados, keepC=S.comprovantes, keepP=S.pedidos;
-      S=Object.assign(JSON.parse(JSON.stringify(VAZIO)),o);S.saidas=keepS;S.fiados=keepF;S.comprovantes=keepC;S.pedidos=keepP;
-      ultimo.base=d.json;
-    }catch(e){}
+function aplicarTudo(docs){
+  const por={};docs.forEach(d=>{(por[d.col]=por[d.col]||{})[d.id]=d.json});
+  if(por.config&&por.config.geral)aplicarDoc('config','geral',por.config.geral);
+  else if(!ehGestor()){S.config={};ultimo.config={}}
+  for(const col of COLS){const rem=por[col]||{};
+    Object.keys(rem).forEach(id=>aplicarDoc(col,id,rem[id]));
+    // sumiram do servidor (apagados ou deixaram de ser desta pessoa); os criados aqui e ainda não enviados ficam
+    S[col]=S[col].filter(x=>x&&(rem[x.id]!==undefined||ultimo[col][x.id]===undefined));
+    Object.keys(ultimo[col]).forEach(id=>{if(rem[id]===undefined)delete ultimo[col][id]});
   }
-  if(primeira){pronto=true}
-  salvar();
 }
+function renderSuave(){
+  if(!pronto)return;
+  const a=document.activeElement;
+  if(a&&a.closest&&a.closest('#app')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){renderPendente=true;return}
+  const y=scrollY;render();scrollTo(0,y);
+}
+document.addEventListener('focusout',()=>{if(renderPendente){renderPendente=false;setTimeout(renderSuave,80)}});
+let ouvindo=false;
+async function ouvir(){
+  if(ouvindo)return;ouvindo=true;
+  while(TOKEN&&ui.sess){
+    try{
+      const r=await api('mudancas',{q:'desde='+SEQ});online=true;
+      if(r.completo||(r.docs&&r.docs.length)){if(r.completo)aplicarTudo(r.docs);else r.docs.forEach(d=>aplicarDoc(d.col,d.id,d.apagado?null:d.json));SEQ=r.seq;guardarCache();renderSuave()}
+      else if(r.seq>SEQ)SEQ=r.seq;
+      marcarEstado();if(pendentes().length)enviar();
+    }catch(e){if(e.message==='sessao')break;online=false;marcarEstado();await espera(5000)}
+  }
+  ouvindo=false;
+}
+async function carregar(){
+  if(!TOKEN||!ui.sess)return;
+  marcar('conectando…');
+  try{const r=await api('dados');aplicarTudo(r.docs);SEQ=r.seq;online=true;guardarCache();renderSuave();marcarEstado();enviar();ouvir();enviarPos()}
+  catch(e){if(e.message!=='sessao'){online=false;marcarEstado();setTimeout(carregar,8000)}}
+}
+function sessaoTerminou(){TOKEN='';ui.sess=null;entradaInfo=null;try{localStorage.removeItem('lgr_token_'+EMP);localStorage.removeItem('lgr_sessao_'+EMP)}catch(e){}zerarDados();render();toast('Entre de novo com a sua senha')}
 async function iniciar(){
-  try{const l=localStorage.getItem('lgrural');if(l)S=Object.assign(JSON.parse(JSON.stringify(VAZIO)),JSON.parse(l))}catch(e){}
-  try{const se=localStorage.getItem('lgr_sessao');if(se)ui.sess=JSON.parse(se)}catch(e){}
-  render();
-  const fim=()=>{if(!pronto){pronto=true;marcarDia();render()}};
-  const timer=setTimeout(()=>{marcar('modo offline');fim()},10000);
-  try{
-    if(!window.claude||!window.claude.use){clearTimeout(timer);marcar('salvo neste aparelho');fim();return}
-    const db=await window.claude.use('db');
-    if(!db){clearTimeout(timer);marcar('salvo neste aparelho');fim();return}
-    DB=db;
-    db.doc('app/estado').onSnapshot(snap=>{clearTimeout(timer);aplicarBase(snap);marcarDia();marcar('✓ sincronizado');render()},
-      ()=>{clearTimeout(timer);DB=null;marcar('salvo neste aparelho');fim()});
-    ['saidas','fiados','comprovantes','pedidos'].forEach(col=>{try{db.collection(col).onSnapshot(snap=>{aplicarColecao(col,snap);if(pronto)render()},()=>{})}catch(e){}});
-  }catch(e){clearTimeout(timer);marcar('salvo neste aparelho');fim()}
+  if(EMP&&!new URLSearchParams(location.search).get('e')){try{history.replaceState(null,'',location.pathname+'?e='+encodeURIComponent(EMP))}catch(e){}}
+  try{const se=localStorage.getItem('lgr_sessao_'+EMP);if(se&&TOKEN)ui.sess=JSON.parse(se)}catch(e){}
+  if(ui.sess)lerCache();
+  pronto=true;render();
+  if(ui.sess)carregar();
+  addEventListener('online',()=>{online=true;enviar();enviarPos()});
+  setInterval(()=>{if(TOKEN&&ui.sess&&pendentes().length)enviar()},15000);
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 
 /* ===================== UI básica ===================== */
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1800)}
-function irPara(tab,seg){ui.tab=tab;ui.saidaId=null;ui.rotaId=null;if(seg&&seg!=='rotas')ui.cadSeg=seg;render();window.scrollTo(0,0)}
+function irPara(tab,seg){ui.tab=tab;ui.saidaId=null;ui.rotaId=null;ui.vendId=null;if(seg&&seg!=='rotas')ui.cadSeg=seg;render();window.scrollTo(0,0)}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>irPara(b.dataset.tab));
 
 function modal(html,onMontar){
@@ -277,72 +341,102 @@ function confirmar(msg,ok,rotulo){
 function render(){
   if(!pronto){$('#app').innerHTML='<div class="vazio">Carregando dados…</div>';return}
   if(LIC.estado==='verificando'||licCache!==(S.licenca?.chave||'')){verificarLicenca().then(()=>render());if(LIC.estado==='verificando'){$('#app').innerHTML='<div class="vazio">Carregando…</div>';return}}
-  garantirCliente();
   const ativa=licencaAtiva(), d=diasRestantes();
   const bl=$('#badgeLic');bl.textContent=ativa?`🔑 ${d} dia${d===1?'':'s'}`:'🔒 bloqueado';bl.style.background=ativa&&d>5?'#ffffff26':'#b3261e';bl.style.display=LICENCA_OBRIGATORIA?'':'none';
   bl.onclick=()=>{if(ativa){ui.tab='licenca';render();scrollTo(0,0)}};
   if(!ativa){document.body.classList.add('bloq');$('#app').innerHTML=vLicenca(true);ligarLicenca();return}
   document.body.classList.remove('bloq');
-  if(!sessaoValida()){ui.sess=null;document.body.classList.add('login');$('#quem').textContent='Gestão da horta';$('#app').innerHTML=vLogin();ligarLogin();return}
+  $('#nomeApp').textContent=(S.config&&S.config.nomeHorta)||(entradaInfo&&entradaInfo.nome)||'LegislaGov Rural';
+  if(!sessaoValida()){ui.sess=null;document.body.classList.add('login');$('#quem').textContent='Gestão da horta';$('#app').innerHTML=vLogin();ligarLogin();marcar('');return}
   document.body.classList.remove('login');
   const g=ehGestor();
   $('#quem').innerHTML=`${g?'👑 Gestor':'🧑‍🌾 '+esc(eu().nome)} · <u id="btnSair">sair</u>`;
   $('#btnSair').onclick=e=>{e.stopPropagation();confirmarSair()};
   document.querySelectorAll('nav button').forEach(b=>b.style.display=g||ABAS_VEND.includes(b.dataset.tab)?'':'none');
   if(!g){bl.onclick=null;if(!ABAS_VEND.includes(ui.tab))ui.tab='inicio'}
+  if(ui.tab!=='equipe'&&MAPA){MAPA.remove();MAPA=null}
   if(ui.tab==='licenca'&&g){$('#app').innerHTML=vLicenca(false)+vSenhaGestor();ligarSenhaGestor();ligarLicenca();document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));return}
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===ui.tab||(b.dataset.tab==='mais'&&['cadastros','custos'].includes(ui.tab))));
   const app=$('#app');
   if(ui.tab==='saidas'&&ui.saidaId){app.innerHTML=vSaidaDetalhe();ligarSaidaDetalhe();return}
   if(ui.tab==='rotas'&&ui.rotaId){app.innerHTML=vRotaDetalhe();ligarRotaDetalhe();return}
-  if(!g&&ui.tab==='inicio'){app.innerHTML=vInicioVend();ligar();return}
-  app.innerHTML=({inicio:vInicio,saidas:vSaidas,rotas:vRotas,cadastros:vCadastros,custos:vCustos,fiado:vFiado,pedidos:vPedidos,mais:vMais})[ui.tab]();
+  if(!g&&ui.tab==='inicio'){app.innerHTML=vInicioVend();ligar();rastrear();return}
+  if(g&&ui.tab==='equipe'&&ui.vendId){app.innerHTML=vVendedorDia();ligar();ligarVendedorDia();return}
+  app.innerHTML=({inicio:vInicio,saidas:vSaidas,rotas:vRotas,cadastros:vCadastros,custos:vCustos,fiado:vFiado,pedidos:vPedidos,mais:vMais,equipe:vEquipe})[ui.tab]();
   ligar();
+  if(!g)rastrear();
+  marcarEstado();
 }
 
 /* ===================== ACESSO (gestor / vendedor) ===================== */
-function hashPin(p){let h=2166136261;const s='lgr:'+(S.clienteId||'')+':'+p;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
 const ehGestor=()=>ui.sess?.tipo==='gestor';
-const eu=()=>ui.sess?.tipo==='vendedor'?vend(ui.sess.id):null;
+const eu=()=>ui.sess?.tipo==='vendedor'?(vend(ui.sess.id)||{id:ui.sess.id,nome:ui.sess.nome||''}):null;
 const ABAS_VEND=['inicio','pedidos','saidas','rotas'];
-function entrar(sess){ui.sess=sess;try{localStorage.setItem('lgr_sessao',JSON.stringify(sess))}catch(e){};ui.tab='inicio';ui.saidaId=null;ui.rotaId=null;render();scrollTo(0,0)}
-function sair(){ui.sess=null;try{localStorage.removeItem('lgr_sessao')}catch(e){};render()}
-function sessaoValida(){const s=ui.sess;if(!s)return false;if(s.tipo==='gestor')return !!S.config?.pinGestor;const v=vend(s.id);return !!(v&&v.pin)}
+function logado(r){
+  TOKEN=r.token;ui.sess=r.sessao;
+  try{localStorage.setItem('lgr_token_'+EMP,TOKEN);localStorage.setItem('lgr_sessao_'+EMP,JSON.stringify(ui.sess))}catch(e){}
+  zerarDados();lerCache();ui.tab='inicio';ui.saidaId=null;ui.rotaId=null;ui.vendId=null;render();scrollTo(0,0);carregar();
+}
+function sair(){
+  api('sair',{metodo:'POST'}).catch(()=>{});
+  try{localStorage.removeItem(chaveCache());localStorage.removeItem('lgr_token_'+EMP);localStorage.removeItem('lgr_sessao_'+EMP)}catch(e){}
+  TOKEN='';ui.sess=null;entradaInfo=null;zerarDados();if(GEO.watch!=null){navigator.geolocation.clearWatch(GEO.watch);GEO.watch=null}render();
+}
+function sessaoValida(){return !!(TOKEN&&ui.sess)}
+let carregandoEnt=false;
+async function carregarEntrada(){
+  if(carregandoEnt)return;carregandoEnt=true;
+  try{entradaInfo=await api('entrada',{q:'e='+encodeURIComponent(EMP)})}
+  catch(e){entradaInfo={erro:e.status===404?'Código da horta não encontrado. Confira o link que você recebeu.':'Sem internet. Para entrar, o celular precisa estar conectado.'}}
+  carregandoEnt=false;render();
+}
+const pinInput=id=>`<input id="${id}" type="password" inputmode="numeric" autocomplete="off" maxlength="6" style="font-size:26px;letter-spacing:.35em;text-align:center">`;
 function vLogin(){
-  if(!S.config?.pinGestor)return `<div style="text-align:center;padding:24px 6px 6px"><div style="font-size:50px">👑</div><h2>Primeiro acesso</h2>
-    <p style="color:var(--sub);margin-top:0">Crie a senha do <b>gestor</b> (dono). Ela dá acesso a tudo: vendas, conferência, custos e cadastros.</p></div>
-    <div class="card"><label style="margin-top:0">Senha do gestor (4 a 6 números)</label><input id="pg1" type="password" inputmode="numeric" maxlength="6" style="font-size:24px;letter-spacing:.3em;text-align:center">
-    <label>Repita a senha</label><input id="pg2" type="password" inputmode="numeric" maxlength="6" style="font-size:24px;letter-spacing:.3em;text-align:center">
+  if(!EMP)return `<div style="text-align:center;padding:24px 6px 6px"><div style="font-size:50px">🌱</div><h2>Bem-vindo</h2>
+    <p style="color:var(--sub);margin-top:0">Digite o código da horta. Ele vem no link que você recebeu.</p></div>
+    <div class="card"><label style="margin-top:0">Código da horta</label><input id="codEmp" autocapitalize="none" autocomplete="off" style="font-size:20px;text-align:center">
+    <button class="btn" id="okEmp" style="margin-top:14px">Continuar</button></div>`;
+  if(!entradaInfo){carregarEntrada();return '<div class="vazio">Carregando…</div>'}
+  if(entradaInfo.erro)return `<div class="vazio"><b>⚠️</b>${esc(entradaInfo.erro)}<br><br><button class="btn" id="tentaEnt">Tentar de novo</button><br><br><button class="btn sec" id="trocaEmp">Usar outro código</button></div>`;
+  if(!entradaInfo.gestorDefinido)return `<div style="text-align:center;padding:24px 6px 6px"><div style="font-size:50px">👑</div><h2>Primeiro acesso</h2>
+    <p style="color:var(--sub);margin-top:0">Crie a senha do <b>gestor</b> (dono). Ela dá acesso a tudo: vendas, conferência, custos, cadastros e o acompanhamento dos vendedores.</p></div>
+    <div class="card"><label style="margin-top:0">Senha do gestor (4 a 6 números)</label>${pinInput('pg1')}
+    <label>Repita a senha</label>${pinInput('pg2')}
     <button class="btn" id="criarPin" style="margin-top:14px">Criar e entrar</button><div id="pinMsg" class="neg" style="margin-top:8px;font-size:14px"></div></div>`;
   return `<div style="text-align:center;padding:18px 6px 4px"><div style="font-size:46px">👋</div><h2 style="margin-bottom:4px">Quem está usando?</h2><p style="color:var(--sub);margin-top:0">Toque no seu nome</p></div>
   <button class="tile grande" data-login="gestor" style="width:100%;margin-bottom:10px"><span>👑</span><div><b>Gestor / Dono</b><small>acesso completo</small></div></button>
-  ${S.vendedores.map(v=>`<button class="card item" data-login="${v.id}" style="width:100%;text-align:left;font:inherit;${v.pin?'':'opacity:.5'}"><div style="font-size:28px">🧑‍🌾</div><div class="info"><div class="t">${esc(v.nome)}</div><div class="s">${v.pin?'vendedor':'sem senha — peça ao gestor'}</div></div><div style="color:var(--sub)">›</div></button>`).join('')}`;
+  ${entradaInfo.vendedores.map(v=>`<button class="card item" data-login="${esc(v.id)}" data-nome="${esc(v.nome)}" data-tem="${v.temSenha?1:0}" style="width:100%;text-align:left;font:inherit;${v.temSenha?'':'opacity:.5'}"><div style="font-size:28px">🧑‍🌾</div><div class="info"><div class="t">${esc(v.nome)}</div><div class="s">${v.temSenha?'vendedor':'sem senha — peça ao gestor'}</div></div><div style="color:var(--sub)">›</div></button>`).join('')}`;
 }
 function ligarLogin(){
-  const c=$('#criarPin');if(c)c.onclick=()=>{const a=$('#pg1').value.trim(),b=$('#pg2').value.trim();
+  const oe=$('#okEmp');if(oe){const ir=()=>{const v=$('#codEmp').value.trim().toLowerCase().replace(/\s+/g,'');if(!v){toast('Digite o código');return}
+    EMP=v;try{localStorage.setItem('lgr_empresa',EMP);history.replaceState(null,'',location.pathname+'?e='+encodeURIComponent(EMP))}catch(e){}entradaInfo=null;TOKEN='';render()};
+    oe.onclick=ir;$('#codEmp').onkeydown=e=>{if(e.key==='Enter')ir()}}
+  const te=$('#tentaEnt');if(te)te.onclick=()=>{entradaInfo=null;render()};
+  const tr=$('#trocaEmp');if(tr)tr.onclick=()=>{EMP='';try{localStorage.removeItem('lgr_empresa')}catch(e){}entradaInfo=null;render()};
+  const c=$('#criarPin');if(c)c.onclick=async()=>{const a=$('#pg1').value.trim(),b=$('#pg2').value.trim();
     if(!/^\d{4,6}$/.test(a)){$('#pinMsg').textContent='Use de 4 a 6 números.';return}
     if(a!==b){$('#pinMsg').textContent='As senhas não são iguais.';return}
-    S.config=Object.assign(S.config||{},{pinGestor:hashPin(a)});salvar();entrar({tipo:'gestor'});toast('Senha criada')};
+    c.disabled=true;try{logado(await api('primeiro',{metodo:'POST',corpo:{e:EMP,pin:a}}));toast('Senha criada')}catch(e){$('#pinMsg').textContent=e.message;c.disabled=false}};
   document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>{
-    const id=b.dataset.login, g=id==='gestor', v=g?null:vend(id);
-    if(!g&&!v.pin){toast('Peça ao gestor para criar sua senha');return}
-    modal(`<h2>${g?'👑 Gestor':'🧑‍🌾 '+esc(v.nome)}</h2><label>Digite sua senha</label>
-      <input id="pinIn" type="password" inputmode="numeric" maxlength="6" style="font-size:28px;letter-spacing:.4em;text-align:center">
+    const id=b.dataset.login, g=id==='gestor', nome=b.dataset.nome||'';
+    if(!g&&b.dataset.tem!=='1'){toast('Peça ao gestor para criar sua senha');return}
+    modal(`<h2>${g?'👑 Gestor':'🧑‍🌾 '+esc(nome)}</h2><label>Digite sua senha</label>${pinInput('pinIn')}
       <div id="pinErr" class="neg" style="margin-top:8px;font-size:14px"></div>
       <div class="acoes"><button class="btn sec" id="pc">Cancelar</button><button class="btn" id="pok">Entrar</button></div>`,f=>{
       const inp=f.querySelector('#pinIn');setTimeout(()=>inp.focus(),50);
-      const ok=()=>{const h=hashPin(inp.value.trim());
-        if(g?h===S.config.pinGestor:h===v.pin){fecharModal();entrar(g?{tipo:'gestor'}:{tipo:'vendedor',id:v.id});toast(g?'Bem-vindo, gestor':'Olá, '+v.nome)}
-        else{f.querySelector('#pinErr').textContent='Senha errada. Tente de novo.';inp.value='';inp.focus()}};
+      const ok=async()=>{const pin=inp.value.trim();if(!pin)return;f.querySelector('#pok').disabled=true;
+        try{const r=await api('entrar',{metodo:'POST',corpo:{e:EMP,quem:id,pin}});fecharModal();logado(r);toast(g?'Bem-vindo, gestor':'Olá, '+nome)}
+        catch(e){f.querySelector('#pinErr').textContent=e.message;inp.value='';inp.focus();f.querySelector('#pok').disabled=false}};
       f.querySelector('#pok').onclick=ok;inp.onkeydown=e=>{if(e.key==='Enter')ok()};
       f.querySelector('#pc').onclick=fecharModal;
     });
   });
 }
 
-function confirmarSair(){modal(`<h2>Sair?</h2><p>Você vai voltar para a tela "Quem está usando?".</p><div class="acoes"><button class="btn sec" id="sn">Cancelar</button><button class="btn" id="ss">Sair</button></div>`,f=>{f.querySelector('#sn').onclick=fecharModal;f.querySelector('#ss').onclick=()=>{fecharModal();sair()}})}
+function confirmarSair(){const p=pendentes().length;modal(`<h2>Sair?</h2><p>Você vai voltar para a tela "Quem está usando?".</p>${p?`<p class="neg"><b>Atenção:</b> ${p} lançamento(s) ainda não chegaram ao servidor${online?'':' (sem internet)'}. Se sair agora, eles se perdem. Espere aparecer "✓ em tempo real".</p>`:''}<div class="acoes"><button class="btn sec" id="sn">Cancelar</button><button class="btn" id="ss">Sair</button></div>`,f=>{f.querySelector('#sn').onclick=fecharModal;f.querySelector('#ss').onclick=()=>{fecharModal();sair()}})}
 function vSenhaGestor(){return `<div class="card"><b>Senha do gestor</b><label>Nova senha (4 a 6 números)</label><input id="ng1" type="password" inputmode="numeric" maxlength="6"><label>Repita</label><input id="ng2" type="password" inputmode="numeric" maxlength="6"><button class="btn sec" id="trocaPin" style="margin-top:10px">Trocar senha</button></div>`}
-function ligarSenhaGestor(){$('#trocaPin').onclick=()=>{const a=$('#ng1').value.trim(),b=$('#ng2').value.trim();if(!/^\d{4,6}$/.test(a)){toast('Use de 4 a 6 números');return}if(a!==b){toast('As senhas não são iguais');return}S.config.pinGestor=hashPin(a);salvar();$('#ng1').value=$('#ng2').value='';toast('Senha trocada')}}
+function ligarSenhaGestor(){$('#trocaPin').onclick=async()=>{const a=$('#ng1').value.trim(),b=$('#ng2').value.trim();if(!/^\d{4,6}$/.test(a)){toast('Use de 4 a 6 números');return}if(a!==b){toast('As senhas não são iguais');return}
+  try{await api('senha',{metodo:'POST',corpo:{para:'gestor',pin:a}});$('#ng1').value=$('#ng2').value='';toast('Senha trocada')}catch(e){toast(e.message)}}}
 const STATUS={aberta:['ab','Em rota'],entregue:['az','Aguardando conferência'],fechada:['fe','Conferida']};
 function tagStatus(s){const st=STATUS[s.status||'aberta']||STATUS.aberta;return `<span class="tag ${st[0]}">${st[1]}</span>`}
 /* ===================== INÍCIO DO VENDEDOR ===================== */
@@ -354,7 +448,7 @@ function vInicioVend(){
   if(aberta){const c=calcSaida(aberta),r=rota(aberta.rotaId);const tot=r?(r.pontos||[]).filter(id=>ponto(id)?.ativo!==false).length:0,feitas=(aberta.vendas||[]).length;
     topo=`<button class="tile grande" data-saida="${aberta.id}" style="width:100%"><span>🚚</span><div><b>Continuar minha rota</b><small>${r?esc(r.nome)+' · ':''}${feitas}${tot?'/'+tot:''} entregas · ${R(c.cobrado)} cobrado</small></div></button>`}
   else topo=`<button class="tile grande" id="atalhoSaida" style="width:100%"><span>🚚</span><div><b>Começar saída de hoje</b><small>Registrar o que estou levando</small></div></button>`;
-  return `<h2>Olá, ${esc(v.nome)} 👋</h2>${topo}
+  return `<h2>Olá, ${esc(v.nome)} 👋</h2>${topo}${aberta?avisoGeo():''}
   ${aguard.map(s=>`<div class="card item" data-saida="${s.id}" style="margin-top:10px;background:#e8f0f8;border-color:#c9dbeb"><div style="font-size:24px">⏳</div><div class="info"><div class="t">Aguardando conferência</div><div class="s">${dataBR(s.data)} · você entregou ${R(s.declarado)}</div></div></div>`).join('')}
   ${rs.length?`<h3>Minha rota</h3>`+rs.map(r=>{const lk=linkRota(r.pontos||[]);return `<div class="card"><div class="item" data-rota="${r.id}"><div style="font-size:24px">🗺️</div><div class="info"><div class="t">${esc(r.nome)}</div><div class="s">${(r.pontos||[]).length} fornecedor(es)${(r.dias||[]).length?' · '+r.dias.map(d=>DIAS[d]).join(', '):''}</div></div><div style="color:var(--sub)">›</div></div>
     ${lk?`<a class="btn sec" style="margin-top:10px" href="${lk}" target="_blank" rel="noopener">🧭 Abrir caminho no mapa</a>`:''}</div>`}).join(''):''}
@@ -368,7 +462,7 @@ function mudarMes(d){const[a,m]=ui.mes.split('-').map(Number);const x=new Date(a
 function vInicio(){
   const sm=S.saidas.filter(s=>(s.data||'').startsWith(ui.mes));
   let carga=0,perdas=0,desp=0,recebido=0,esperado=0,trocas=0;
-  sm.forEach(s=>{const c=calcSaida(s);carga+=c.carga;perdas+=c.perdas;trocas+=c.trocas;desp+=c.despesas;esperado+=c.esperado;if(c.contado!=null)recebido+=c.contado});
+  sm.forEach(s=>{const c=calcSaida(s);carga+=c.carga;perdas+=c.perdas;trocas+=c.trocas;desp+=c.despesas;esperado+=c.esperado;if(c.contado!=null)recebido+=c.contado-c.troco});
   const lanc=S.custos.filter(c=>(c.data||'').startsWith(ui.mes)).reduce((a,c)=>a+num(c.valor),0);
   const sal=S.funcionarios.filter(f=>f.ativo!==false).reduce((a,f)=>a+num(f.salario),0);
   const fiadoRec=S.fiados.filter(f=>f.pago&&(f.dataPago||'').startsWith(ui.mes)).reduce((a,f)=>a+num(f.valor),0);
@@ -390,6 +484,7 @@ function vInicio(){
   <h2>O que você quer fazer?</h2>
   <div class="tiles">
     <button class="tile grande" id="atalhoSaida"><span>🚚</span><div><b>Alguém vai sair para vender</b><small>Registrar a carga do carro</small></div></button>
+    <button class="tile grande" data-ir="equipe" style="background:var(--azul)"><span>📍</span><div><b>Acompanhar vendedores</b><small>${S.saidas.filter(x=>x.data===hoje()&&(x.status||'aberta')==='aberta').length} em rota agora · o que cada um fez e o caminho no mapa</small></div></button>
     <button class="tile" data-ir="saidas"><span>💰</span><b>Fazer acerto</b><small>${abertas.length} em rota</small></button>
     <button class="tile" data-ir="rotas"><span>🗺️</span><b>Rotas</b><small>${S.rotas.length} rota(s)</small></button>
     <button class="tile" data-ir="fiado"><span>🧾</span><b>Fiado / a receber</b><small>${R(aReceber)}</small></button>
@@ -397,6 +492,7 @@ function vInicio(){
     <button class="tile" data-ir="pedidos" style="grid-column:1/-1"><span>📋</span><b>Pedidos</b><small>${S.pedidos.filter(p=>p.data===hoje()&&p.status!=='entregue').length} a entregar hoje · ${S.pedidos.filter(p=>p.data===somaDias(hoje(),1)).length} para amanhã</small></button>
   </div>
   ${pend}
+  ${vHojeGestor()}
   <h3>Resumo do mês</h3>
   <div class="mes"><button data-mes="-1">‹</button><b>${nomeMes(ui.mes)}</b><button data-mes="1">›</button></div>
   <div class="grid2">
@@ -423,7 +519,7 @@ function cardSaida(s){
   const dif=c.dif==null||s.status!=='fechada'?(s.status==='entregue'?`<div class="s" style="color:var(--azul)">entregou ${R(s.declarado)}</div>`:''):`<div class="s ${c.dif<0?'neg':'pos'}">${c.dif<0?'Faltou ':c.dif>0?'Sobrou ':'Bateu '}${c.dif?R(Math.abs(c.dif)):'✓'}</div>`;
   return `<div class="card item" data-saida="${s.id}">
     <div class="info"><div class="t">${esc(v?v.nome:'(vendedor removido)')}${(()=>{const n=(s.vendas||[]).filter(x=>x.pontoId&&(!comp(x.id)||comp(x.id).semAssinatura)).length;return n?` <span class="tag" style="background:var(--verm-cl);color:var(--verm)">⚠️ ${n} sem assinatura</span>`:''})()}</div>
-    <div class="s">${dataBR(s.data)} · ${(s.itens||[]).length} produtos · ${tagStatus(s)}</div></div>
+    <div class="s">${dataBR(s.data)} · ${(s.itens||[]).length} produtos${num(s.troco)?' · troco '+R(s.troco):''} · ${tagStatus(s)}</div></div>
     <div style="text-align:right"><div class="v">${R(c.cobrado||c.carga)}</div><div class="s" style="color:var(--sub);font-size:12px">${c.cobrado?'cobrado':'carga'}</div>${dif}</div></div>`;
 }
 function vSaidas(){
@@ -458,6 +554,8 @@ function modalCarga(saida){
     </div>
     <div class="card resumo"><div class="r tot"><span>Total da carga</span><span id="mt">R$ 0,00</span></div>
     <div class="s" style="color:var(--sub);font-size:13px">É o valor que deve voltar no caixa se vender tudo.</div></div>
+    <label>💵 Troco que está levando (R$)</label><input inputmode="decimal" id="mtroco" value="${saida&&num(saida.troco)?String(saida.troco).replace('.',','):''}" placeholder="0,00">
+    <div class="ajuda" style="margin:4px 0 0">Dinheiro trocado que sai junto para dar troco. Ele volta no acerto.</div>
     <div class="acoes"><button class="btn sec" id="mc">Cancelar</button><button class="btn" id="ms">${ed?'Salvar':'Registrar saída'}</button></div>`,f=>{
     const tot=()=>{let t=0;f.querySelectorAll('[data-q]').forEach(i=>{t+=num(i.value)*num(prod(i.dataset.q).preco)});f.querySelector('#mt').textContent=R(t)};
     f.querySelectorAll('[data-q]').forEach(i=>i.oninput=tot);
@@ -481,10 +579,11 @@ function modalCarga(saida){
       f.querySelectorAll('[data-q]').forEach(i=>{const n=num(i.value);if(n>0){const p=prod(i.dataset.q),a=antigos[p.id];
         itens.push({produtoId:p.id,nome:p.nome,unidade:p.unidade,preco:a?a.preco:num(p.preco),qtd:n,perda:a?.perda||0,sobra:a?.sobra||0})}});
       if(!itens.length){toast('Informe pelo menos um produto');return}
-      const vid=f.querySelector('#mv').value, data=f.querySelector('#md').value||hoje(), rotaId=mr.value;
-      if(ed){Object.assign(saida,{vendedorId:vid,data,itens,rotaId})}
-      else{const s={id:uid(),criado:Date.now(),vendedorId:vid,data,itens,rotaId,vendas:[],criadoPor:ui.sess?.tipo==='vendedor'?ui.sess.id:'gestor',despesas:[],contado:'',status:'aberta'};S.saidas.push(s);ui.saidaId=s.id;ui.tab='saidas'}
+      const vid=f.querySelector('#mv').value, data=f.querySelector('#md').value||hoje(), rotaId=mr.value, troco=num(f.querySelector('#mtroco').value);
+      if(ed){Object.assign(saida,{vendedorId:vid,data,itens,rotaId,troco})}
+      else{const s={id:uid(),criado:Date.now(),vendedorId:vid,data,itens,rotaId,troco,vendas:[],criadoPor:ui.sess?.tipo==='vendedor'?ui.sess.id:'gestor',despesas:[],contado:'',status:'aberta'};S.saidas.push(s);ui.saidaId=s.id;ui.tab='saidas'}
       salvar();fecharModal();render();toast(ed?'Carga atualizada':'Saída registrada');
+      if(!ed&&!ehGestor()){rastrear();marcarEvento('Saiu para vender')}
     };
   });
 }
@@ -566,9 +665,11 @@ function vSaidaDetalhe(){
     <div class="r"><span>Total cobrado nas entregas</span><b>${R(c.cobrado)}</b></div>
     <div class="r" style="color:var(--amar)"><span>− Ficou fiado (a receber)</span><span>${R(c.fiado)}</span></div>
     <div class="r neg"><span>− Despesas na rota</span><span>${R(c.despesas)}</span></div>
-    <div class="r tot"><span>${g?'O app calculou':'Você deve entregar'}</span><span>${R(c.esperado)}</span></div>
+    ${c.troco?`<div class="r"><span>+ Troco que levou</span><span>${R(c.troco)}</span></div>`:''}
+    <div class="r tot"><span>${c.entregar<0?'Gestor devolve ao vendedor':g?'O app calculou':'Você deve entregar'}</span><span>${R(Math.abs(c.entregar))}</span></div>
+    ${c.entregar<0?'<div class="ajuda" style="margin:2px 0 0">As despesas passaram do dinheiro recebido: o vendedor pagou do próprio bolso.</div>':''}
     ${s.status==='entregue'||s.status==='fechada'?`<div class="r" style="color:var(--azul)"><span>Vendedor entregou${s.entregueEm?' ('+dataBR(s.entregueEm.slice(0,10))+' '+s.entregueEm.slice(11,16)+')':''}</span><b>${R(s.declarado)}</b></div>
-      ${num(s.declarado)!==Math.round(c.esperado*100)/100?`<div class="r ${num(s.declarado)<c.esperado?'neg':'pos'}" style="font-size:14px"><span>Diferença do vendedor</span><span>${num(s.declarado)<c.esperado?'faltou':'sobrou'} ${R(Math.abs(num(s.declarado)-c.esperado))}</span></div>`:'<div class="r pos" style="font-size:14px"><span>Bate com o app</span><span>✓</span></div>'}`:''}
+      ${num(s.declarado)!==Math.round(c.entregar*100)/100?`<div class="r ${num(s.declarado)<c.entregar?'neg':'pos'}" style="font-size:14px"><span>Diferença do vendedor</span><span>${num(s.declarado)<c.entregar?'faltou':'sobrou'} ${R(Math.abs(num(s.declarado)-c.entregar))}</span></div>`:'<div class="r pos" style="font-size:14px"><span>Bate com o app</span><span>✓</span></div>'}`:''}
     ${!g&&s.status!=='entregue'&&s.status!=='fechada'?`
       <label>Quanto você está entregando em dinheiro?</label>
       <input inputmode="decimal" id="declarado" value="${s.declarado??''}" placeholder="0,00" style="font-size:22px;font-weight:700">
@@ -605,7 +706,7 @@ function ligarSaidaDetalhe(){
   const ct=$('#contado');if(ct)ct.onchange=()=>{s.contado=ct.value===''?'':num(ct.value);atualiza()};
   const pr=$('#prestar');if(pr)pr.onclick=()=>{const d=$('#declarado').value.trim();if(d===''){toast('Digite quanto está entregando');$('#declarado').focus();return}
     const val=num(d), c=calcSaida(s);
-    confirmar(`Confirmar entrega de <b>${R(val)}</b> ao gestor?${Math.abs(val-c.esperado)>0.009?`<br><br><span class="neg">Atenção: o app calculou ${R(c.esperado)}.</span>`:''}`,()=>{s.declarado=val;s.status='entregue';s.entregueEm=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString();atualiza();toast('Dinheiro entregue. Aguardando conferência.')},'Sim, entregar');};
+    confirmar(`Confirmar entrega de <b>${R(val)}</b> ao gestor?${Math.abs(val-c.entregar)>0.009?`<br><br><span class="neg">Atenção: o app calculou ${R(c.entregar)}.</span>`:''}`,()=>{s.declarado=val;s.status='entregue';s.entregueEm=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString();atualiza();marcarEvento('Entregou o dinheiro: '+R(val));toast('Dinheiro entregue. Aguardando conferência.')},'Sim, entregar');};
   const dv=$('#devolver');if(dv)dv.onclick=()=>{s.status='aberta';atualiza();toast('Devolvida para o vendedor')};
   const fd=$('#fecharDireto');if(fd)fd.onclick=()=>{s.status='entregue';s.declarado=s.declarado??null;atualiza()};
   const ob=$('#obs');if(ob)ob.onchange=()=>{s.obs=ob.value;salvar()};
@@ -662,9 +763,12 @@ function modalVendedor(v){
       const nome=f.querySelector('#vn').value.trim();if(!nome){toast('Informe o nome');return}
       const dados={nome,telefone:f.querySelector('#vt').value.trim(),veiculo:f.querySelector('#vv').value.trim()};
       const pin=f.querySelector('#vpin').value.trim();
-      if(pin){if(!/^\d{4,6}$/.test(pin)){toast('Senha: use de 4 a 6 números');return}dados.pin=hashPin(pin)}
-      if(v)Object.assign(v,dados);else S.vendedores.push({id:uid(),...dados});
-      salvar();fecharModal();render();toast('Vendedor salvo');
+      if(pin&&!/^\d{4,6}$/.test(pin)){toast('Senha: use de 4 a 6 números');return}
+      let alvo=v;if(v)Object.assign(v,dados);else{alvo={id:uid(),...dados};S.vendedores.push(alvo)}
+      salvar();fecharModal();render();
+      if(!pin){toast('Vendedor salvo');return}
+      (async()=>{await enviarAgora();try{await api('senha',{metodo:'POST',corpo:{para:alvo.id,pin}});alvo.pin=true;ultimo.vendedores[alvo.id]=JSON.stringify(alvo);guardarCache();renderSuave();toast('Vendedor salvo com senha')}
+        catch(e){toast(online?e.message:'Sem internet: a senha não foi criada. Tente de novo.')}})();
     };
   });
 }
@@ -948,6 +1052,7 @@ function modalEntrega(s,venda,pontoIdIni){
       S.comprovantes=S.comprovantes.filter(x=>x.id!==v.id);
       if(novoComp)S.comprovantes.push(Object.assign({id:v.id,saidaId:s.id,pontoId:pid,hora:new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString(),por:ui.sess?.tipo==='vendedor'?ui.sess.id:'gestor'},novoComp));
       salvar();fecharModal();const y=scrollY;render();scrollTo(0,y);toast('Entrega salva');
+      if(!venda)marcarEvento('Entrega: '+(ponto(pid)?.nome||'venda avulsa')+' · '+R(total));
     };
   });
 }
@@ -958,7 +1063,7 @@ const CHAVE_PUBLICA={"kty":"EC","crv":"P-256","x":"M_XYTAM2tywi-9BDG0owzBWhPTRfd
 const LICENCA_OBRIGATORIA=false;
 let LIC={estado:'verificando'}, licCache='';
 function b64d(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
-function garantirCliente(){if(!S.clienteId){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let c='';const r=crypto.getRandomValues(new Uint8Array(8));r.forEach(x=>c+=a[x%a.length]);S.clienteId=c.slice(0,4)+'-'+c.slice(4);salvar()}}
+function garantirCliente(){}
 function hojeSeguro(){const h=hoje(),u=S.licenca?.ultimoDia;return u&&u>h?u:h}
 async function lerChave(chave){
   const k=String(chave||'').trim().replace(/\s+/g,'');
@@ -1142,6 +1247,9 @@ function vMais(){
   <button class="tile" data-ir="cadastros"><span>📋</span><b>Cadastros</b><small>vendedores, produtos, fornecedores</small></button>
   <button class="tile" data-ir="custos"><span>💸</span><b>Gastos</b><small>combustível, luz, adubo…</small></button>
   ${LICENCA_OBRIGATORIA?'':'<!--'}<button class="tile" id="maisLic"><span>🔑</span><b>Chave de ativação</b><small>${diasRestantes()} dias restantes</small></button>${LICENCA_OBRIGATORIA?'':'-->'}
+  <button class="tile" data-ir="equipe"><span>📍</span><b>Vendedores</b><small>acompanhar no mapa</small></button>
+  <button class="tile" id="maisNome"><span>🏡</span><b>Nome da horta</b><small>${esc(S.config.nomeHorta||'não definido')}</small></button>
+  <button class="tile" id="maisSenha"><span>🔐</span><b>Senha do gestor</b><small>trocar</small></button>
   <button class="tile" id="maisSair"><span>🚪</span><b>Sair</b><small>trocar de usuário</small></button>
   </div>`;
 }
@@ -1205,6 +1313,160 @@ function modalFunc(fu){
   });
 }
 
+
+/* ===================== Localização do vendedor (trajeto) ===================== */
+const GEO={watch:null,ult:null,fila:[],erro:null};
+try{GEO.fila=JSON.parse(localStorage.getItem('lgr_pos_'+EMP)||'[]')}catch(e){}
+function saidaAberta(){if(!ui.sess||ui.sess.tipo!=='vendedor')return null;return S.saidas.find(s=>s.vendedorId===ui.sess.id&&(s.status||'aberta')==='aberta')||null}
+function rastrear(){
+  if(!navigator.geolocation)return;
+  const s=saidaAberta();
+  if(s&&document.visibilityState==='visible'&&GEO.erro!==1){
+    if(GEO.watch==null)GEO.watch=navigator.geolocation.watchPosition(p=>novaPos(p,null),e=>{if(e.code===1){GEO.erro=1;if(GEO.watch!=null){navigator.geolocation.clearWatch(GEO.watch);GEO.watch=null}renderSuave()}},{enableHighAccuracy:true,maximumAge:20000,timeout:60000});
+  }else if(GEO.watch!=null){navigator.geolocation.clearWatch(GEO.watch);GEO.watch=null}
+}
+function distM(a,b){const r=Math.PI/180,dl=(b.lat-a.lat)*r,dg=(b.lng-a.lng)*r;const x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dg/2)**2;return 2*6371e3*Math.asin(Math.sqrt(x))}
+function novaPos(p,ev){
+  const primeira=!GEO.ult;GEO.erro=null;
+  const s=saidaAberta();const q={t:Date.now(),lat:p.coords.latitude,lng:p.coords.longitude,prec:Math.round(p.coords.accuracy||0),saida:s?s.id:null,ev:ev||null};
+  if(!ev&&q.prec>250)return;
+  if(!ev&&GEO.ult&&distM(GEO.ult,q)<60&&q.t-GEO.ult.t<4*60e3)return;
+  GEO.ult=q;GEO.fila.push(q);if(GEO.fila.length>2000)GEO.fila=GEO.fila.slice(-2000);
+  try{localStorage.setItem('lgr_pos_'+EMP,JSON.stringify(GEO.fila))}catch(e){}
+  enviarPos();if(primeira&&ui.tab==='inicio')renderSuave();
+}
+let enviandoPos=false;
+async function enviarPos(){
+  if(enviandoPos||!GEO.fila.length||!TOKEN||!ui.sess||ui.sess.tipo!=='vendedor')return;enviandoPos=true;
+  const lote=GEO.fila.slice(0,300);
+  try{await api('posicoes',{metodo:'POST',corpo:{pontos:lote}});GEO.fila=GEO.fila.slice(lote.length);try{localStorage.setItem('lgr_pos_'+EMP,JSON.stringify(GEO.fila))}catch(e){}}catch(e){}
+  enviandoPos=false;if(GEO.fila.length&&online)setTimeout(enviarPos,1500);
+}
+function marcarEvento(ev){
+  if(!ui.sess||ui.sess.tipo!=='vendedor'||!navigator.geolocation)return;
+  if(GEO.ult&&Date.now()-GEO.ult.t<90e3){novaPos({coords:{latitude:GEO.ult.lat,longitude:GEO.ult.lng,accuracy:GEO.ult.prec}},ev);return}
+  navigator.geolocation.getCurrentPosition(p=>novaPos(p,ev),e=>{if(e.code===1){GEO.erro=1;renderSuave()}},{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
+}
+function avisoGeo(){
+  if(!navigator.geolocation)return '';
+  if(GEO.erro===1)return `<div class="geo erro"><span style="font-size:22px">📍</span><div><b>Localização bloqueada</b><br><small>Para o gestor acompanhar a rota, libere a localização. Android: toque no cadeado ao lado do endereço › Permissões › Localização. iPhone: Ajustes › Privacidade › Localização › Safari.</small></div><button class="btn sec" id="geoLiga">Tentar</button></div>`;
+  if(GEO.ult)return `<div class="geo ok"><span style="font-size:22px">📍</span><div><b>Caminho da rota sendo registrado</b><br><small>Último ponto às ${new Date(GEO.ult.t).toTimeString().slice(0,5)}. Deixe o app aberto durante a rota.</small></div></div>`;
+  return `<div class="geo liga"><span style="font-size:22px">📍</span><div><b>Ligue a localização da rota</b><br><small>O gestor acompanha por onde você passou, só enquanto você estiver em rota.</small></div><button class="btn" id="geoLiga">Ligar</button></div>`;
+}
+document.addEventListener('visibilitychange',()=>{if(!ui.sess)return;rastrear();if(document.visibilityState==='visible'){enviar();enviarPos()}});
+setInterval(()=>{if(ui.sess&&ui.sess.tipo==='vendedor'){rastrear();enviarPos()}},60000);
+document.addEventListener('click',e=>{if(e.target&&e.target.id==='geoLiga'){GEO.erro=null;navigator.geolocation.getCurrentPosition(p=>{novaPos(p,'Localização ligada');rastrear();renderSuave()},er=>{GEO.erro=er.code===1?1:null;if(er.code!==1)toast('Não achou o sinal do GPS. Tente perto de uma janela.');renderSuave()},{enableHighAccuracy:true,timeout:20000,maximumAge:0})}});
+
+/* ===================== Gestor: hoje e acompanhamento dos vendedores ===================== */
+function hora(t){return new Date(t).toTimeString().slice(0,5)}
+function quandoTxt(t){const m=Math.round((Date.now()-t)/6e4);if(m<2)return 'agora';if(m<60)return 'há '+m+' min';const d=new Date(t);return d.toDateString()===new Date().toDateString()?'às '+hora(t):d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+hora(t)}
+function totaisDe(ss){const t={cob:0,desp:0,fi:0,trQ:0,trV:0,troco:0,carga:0,feitas:0,paradas:0,entregar:0};
+  ss.forEach(s=>{const c=calcSaida(s);t.cob+=c.cobrado;t.desp+=c.despesas;t.fi+=c.fiado;t.trQ+=c.trocaQtd;t.trV+=c.trocas;t.troco+=c.troco;t.carga+=c.carga;t.entregar+=c.entregar;t.feitas+=(s.vendas||[]).length;
+    const r=rota(s.rotaId);if(r)t.paradas+=(r.pontos||[]).filter(id=>ponto(id)?.ativo!==false).length});return t}
+function vHojeGestor(){
+  const ss=S.saidas.filter(s=>s.data===hoje());if(!ss.length)return '';
+  const t=totaisDe(ss), cust=S.custos.filter(c=>c.data===hoje()).reduce((a,c)=>a+num(c.valor),0);
+  return `<h3>Hoje</h3><div class="grid2">
+    <div class="kpi"><div class="l">Vendido (cobrado)</div><div class="n">${R(t.cob)}</div></div>
+    <div class="kpi"><div class="l">Ficou fiado</div><div class="n" style="color:var(--amar)">${R(t.fi)}</div></div>
+    <div class="kpi"><div class="l">Despesas nas rotas</div><div class="n neg">${R(t.desp)}</div></div>
+    <div class="kpi"><div class="l">Gastos da horta hoje</div><div class="n neg">${R(cust)}</div></div>
+    <div class="kpi"><div class="l">🔄 Trocas</div><div class="n" style="color:var(--azul)">${t.trQ} un. · ${R(t.trV)}</div></div>
+    <div class="kpi"><div class="l">Entregas feitas</div><div class="n">${t.feitas}${t.paradas?' / '+t.paradas:''}</div></div>
+  </div>`;
+}
+const AOVIVO={ultimas:{},t:0,carregando:false};
+async function carregarAoVivo(forcar){
+  if(!ehGestor()||AOVIVO.carregando||(!forcar&&Date.now()-AOVIVO.t<15000))return;AOVIVO.carregando=true;
+  try{const r=await api('aovivo');AOVIVO.ultimas=r.ultimas||{};AOVIVO.t=Date.now();if(ui.tab==='equipe'&&!ui.vendId)renderSuave()}catch(e){}
+  AOVIVO.carregando=false;
+}
+setInterval(()=>{if(ui.tab==='equipe'&&ehGestor()&&document.visibilityState==='visible'){if(ui.vendId)desenharMapa(true);else carregarAoVivo(true)}},30000);
+function statusHoje(ss){if(!ss.length)return ['','Sem saída hoje'];if(ss.some(s=>(s.status||'aberta')==='aberta'))return ['ab','Em rota'];if(ss.some(s=>s.status==='entregue'))return ['az','Aguardando conferência'];return ['fe','Rota encerrada']}
+function vEquipe(){
+  carregarAoVivo();
+  const d=hoje();
+  return `<button class="voltar" data-ir="inicio">‹ Início</button><h2>Vendedores agora</h2>
+  <div class="ajuda">Atualiza sozinho. Toque no vendedor para ver tudo o que ele fez no dia e o caminho no mapa.</div>
+  ${S.vendedores.length?S.vendedores.map(v=>{const ss=S.saidas.filter(s=>s.vendedorId===v.id&&s.data===d);const st=statusHoje(ss);const t=totaisDe(ss);const p=AOVIVO.ultimas[v.id];
+    return `<div class="card" data-vendhoje="${v.id}" style="cursor:pointer"><div class="item"><div style="font-size:28px">🧑‍🌾</div><div class="info"><div class="t">${esc(v.nome)}</div>
+      <div class="s">${st[0]?`<span class="tag ${st[0]}">${st[1]}</span>`:`<span style="color:var(--sub)">${st[1]}</span>`}${p?` · 📍 ${quandoTxt(p.t)}`:''}</div></div><div style="color:var(--sub)">›</div></div>
+      ${ss.length?`<div class="grid4"><div><b>${t.feitas}${t.paradas?'/'+t.paradas:''}</b><small>entregas</small></div><div><b>${R(t.cob).replace('R$','').trim()}</b><small>cobrado R$</small></div><div><b>${t.trQ}</b><small>trocas</small></div><div><b>${R(t.desp).replace('R$','').trim()}</b><small>despesas R$</small></div></div>`:''}</div>`}).join('')
+  :`<div class="vazio"><b>🧑‍🌾</b>Nenhum vendedor cadastrado.<br><br><button class="btn sec" data-ir="cadastros" data-seg="vendedores">Cadastrar vendedor</button></div>`}`;
+}
+function vVendedorDia(){
+  const v=vend(ui.vendId);if(!v){ui.vendId=null;return vEquipe()}
+  const d=ui.equipeDia||hoje();const rot=d===hoje()?'Hoje':d===somaDias(hoje(),-1)?'Ontem':'';
+  const ss=S.saidas.filter(s=>s.vendedorId===v.id&&s.data===d).sort((a,b)=>(a.criado||0)-(b.criado||0));
+  const mes=d.slice(0,7), sm=S.saidas.filter(s=>s.vendedorId===v.id&&(s.data||'').startsWith(mes)), tm=totaisDe(sm);
+  const difMes=sm.reduce((a,s)=>a+(calcSaida(s).dif||0),0);
+  const tel=v.telefone?linkZap(v.telefone,'Olá '+v.nome+'!'):null;
+  return `<button class="voltar" id="voltaEquipe">‹ Vendedores</button>
+  <div class="item" style="margin-bottom:8px"><div class="info"><h2 style="margin:0">${esc(v.nome)}</h2><div class="s" style="color:var(--sub)">${[v.veiculo,v.telefone].filter(Boolean).map(esc).join(' · ')}</div></div>${tel?`<a class="mini" href="${tel}" target="_blank" rel="noopener">💬</a>`:''}</div>
+  <div class="mes"><button data-edia="-1">‹</button><b>${rot?rot+' · ':''}${dataBR(d)}</b><button data-edia="1" ${d>=hoje()?'disabled style="opacity:.4"':''}>›</button></div>
+  <div id="mapa" style="height:320px;border-radius:14px;overflow:hidden;border:1px solid var(--borda);background:#e9eee5"></div>
+  <div class="s" id="mapaInfo" style="color:var(--sub);font-size:13px;margin:6px 0 4px">Carregando o caminho…</div>
+  <div class="card" id="passouBox" style="display:none"><b>Por onde passou</b><ul class="linha-tempo" id="passou"></ul></div>
+  ${ss.length?ss.map(s=>{const c=calcSaida(s),r=rota(s.rotaId);const tot=r?(r.pontos||[]).filter(id=>ponto(id)?.ativo!==false).length:0;
+    return `<div class="card"><div class="item"><div class="info"><div class="t">🚚 ${r?esc(r.nome):'Saída'}</div><div class="s">${(s.itens||[]).length} produtos · ${tagStatus(s)}</div></div><button class="btn sec peq" data-saida="${s.id}">Abrir</button></div>
+      <div class="resumo" style="margin-top:8px">
+      <div class="r"><span>Levou (carga a preço normal)</span><b>${R(c.carga)}</b></div>
+      <div class="r"><span>💵 Troco que levou</span><span>${R(c.troco)}</span></div>
+      <div class="r"><span>Entregas</span><span>${(s.vendas||[]).length}${tot?' de '+tot:''}</span></div>
+      <div class="r"><span>Cobrado</span><b>${R(c.cobrado)}</b></div>
+      <div class="r" style="color:var(--azul)"><span>🔄 Trocas</span><span>${c.trocaQtd} un. · ${R(c.trocas)}</span></div>
+      <div class="r" style="color:var(--amar)"><span>Fiado</span><span>${R(c.fiado)}</span></div>
+      <div class="r neg"><span>Despesas na rota</span><span>${R(c.despesas)}</span></div>
+      <div class="r tot"><span>${s.status==='fechada'?'Conferido':s.status==='entregue'?'Entregou':c.entregar<0?'Gestor devolve':'Deve entregar'}</span><span>${R(s.status==='fechada'?c.contado:s.status==='entregue'?num(s.declarado):Math.abs(c.entregar))}</span></div>
+      ${s.status==='fechada'&&c.dif?`<div class="r ${c.dif<0?'neg':'pos'}"><span>${c.dif<0?'Faltou':'Sobrou'}</span><span>${R(Math.abs(c.dif))}</span></div>`:''}</div>
+      ${(s.vendas||[]).length?`<ul class="linha-tempo" style="margin-top:8px">${[...s.vendas].sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')).map(vd=>`<li><time>${vd.hora?vd.hora.slice(11,16):''}</time><span>${esc(ponto(vd.pontoId)?.nome||'Venda avulsa')} · <b>${R(vd.itens.reduce((a,i)=>a+num(i.qtd)*num(i.preco),0))}</b>${vd.itens.reduce((a,i)=>a+num(i.troca),0)?` · 🔄 ${vd.itens.reduce((a,i)=>a+num(i.troca),0)}`:''}${vd.fiadoId?' · 🧾 fiado':''}</span></li>`).join('')}</ul>`:''}</div>`}).join('')
+  :`<div class="card s" style="color:var(--sub)">Nenhuma saída neste dia.</div>`}
+  <h3>No mês · ${nomeMes(mes)}</h3>
+  <div class="grid2">
+    <div class="kpi"><div class="l">Saídas</div><div class="n">${sm.length}</div></div>
+    <div class="kpi"><div class="l">Cobrado</div><div class="n">${R(tm.cob)}</div></div>
+    <div class="kpi"><div class="l">Despesas na rota</div><div class="n neg">${R(tm.desp)}</div></div>
+    <div class="kpi"><div class="l">Fiado</div><div class="n" style="color:var(--amar)">${R(tm.fi)}</div></div>
+    <div class="kpi"><div class="l">🔄 Trocas</div><div class="n" style="color:var(--azul)">${tm.trQ} un. · ${R(tm.trV)}</div></div>
+    <div class="kpi"><div class="l">Diferenças no acerto</div><div class="n ${difMes<0?'neg':difMes>0?'pos':''}">${difMes?(difMes<0?'faltou ':'sobrou ')+R(Math.abs(difMes)):'—'}</div></div>
+  </div>`;
+}
+let MAPA=null, MAPA_CAMADA=null;
+function carregarLeaflet(){return new Promise((ok,erro)=>{if(window.L)return ok();
+  if(!document.getElementById('lfcss')){const c=document.createElement('link');c.id='lfcss';c.rel='stylesheet';c.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.appendChild(c)}
+  const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';s.onload=()=>ok();s.onerror=()=>erro(new Error('mapa'));document.head.appendChild(s)})}
+function ligarVendedorDia(){desenharMapa(false)}
+async function desenharMapa(atualizacao){
+  const el=$('#mapa');if(!el)return;
+  const vid=ui.vendId, d=ui.equipeDia||hoje();
+  if(atualizacao&&d!==hoje())return;
+  const de=new Date(d+'T00:00').getTime(), ate=de+864e5;
+  let pts=[];
+  try{pts=(await api('trajeto',{q:'vendedor='+encodeURIComponent(vid)+'&de='+de+'&ate='+ate})).pontos||[]}catch(e){const i=$('#mapaInfo');if(i)i.textContent='Sem internet para carregar o caminho.';return}
+  try{await carregarLeaflet()}catch(e){const i=$('#mapaInfo');if(i)i.textContent='Não foi possível abrir o mapa agora.';return}
+  if(!$('#mapa')||ui.vendId!==vid)return;
+  if(!MAPA||MAPA.getContainer()!==$('#mapa')){if(MAPA){MAPA.remove()}MAPA=L.map('mapa',{zoomControl:true});
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAPA);
+    MAPA.on('moveend',()=>{ui.mapaVista={c:MAPA.getCenter(),z:MAPA.getZoom(),k:vid+d}});MAPA_CAMADA=null}
+  if(MAPA_CAMADA)MAPA_CAMADA.remove();MAPA_CAMADA=L.layerGroup().addTo(MAPA);
+  const info=$('#mapaInfo'), lista=$('#passou'), box=$('#passouBox');
+  if(!pts.length){MAPA.setView([-20.82,-49.38],9);
+    info.textContent='Nenhum ponto de localização neste dia. O caminho aparece quando o vendedor está em rota com o app aberto e a localização ligada.';if(box)box.style.display='none';return}
+  const ll=pts.map(p=>[p.lat,p.lng]);
+  L.polyline(ll,{color:'#2f6b3a',weight:5,opacity:.85}).addTo(MAPA_CAMADA);
+  const ini=pts[0], fim=pts[pts.length-1];
+  L.circleMarker([ini.lat,ini.lng],{radius:7,color:'#fff',weight:2,fillColor:'#62705f',fillOpacity:1}).addTo(MAPA_CAMADA).bindPopup('Primeiro ponto do dia · '+hora(ini.t));
+  pts.filter(p=>p.ev).forEach(p=>L.circleMarker([p.lat,p.lng],{radius:8,color:'#fff',weight:2,fillColor:/^Entrega/.test(p.ev)?'#1f5f8b':'#9a6a00',fillOpacity:1}).addTo(MAPA_CAMADA).bindPopup('<b>'+esc(p.ev)+'</b><br>'+hora(p.t)));
+  L.circleMarker([fim.lat,fim.lng],{radius:11,color:'#fff',weight:3,fillColor:'#b3261e',fillOpacity:1}).addTo(MAPA_CAMADA).bindPopup('<b>Última posição</b><br>'+hora(fim.t));
+  const vista=ui.mapaVista;
+  if(vista&&vista.k===vid+d)MAPA.setView(vista.c,vista.z,{animate:false});else MAPA.fitBounds(L.latLngBounds(ll).pad(0.2),{maxZoom:16});
+  let km=0;for(let i=1;i<pts.length;i++)km+=distM(pts[i-1],pts[i])/1000;
+  const gm='https://www.google.com/maps/search/?api=1&query='+fim.lat+','+fim.lng;
+  info.innerHTML=`${pts.length} pontos · de ${hora(ini.t)} a ${hora(fim.t)} · cerca de ${km.toFixed(1).replace('.',',')} km · última posição <b>${quandoTxt(fim.t)}</b> · <a href="${gm}" target="_blank" rel="noopener">abrir no Google Maps</a>`;
+  const evs=pts.filter(p=>p.ev);
+  if(box&&lista){box.style.display=evs.length?'':'none';lista.innerHTML=evs.map(p=>`<li><time>${hora(p.t)}</time><span>${esc(p.ev)}</span></li>`).join('')}
+}
+
 /* ===================== Ligações ===================== */
 function ligar(){
   const on=(sel,fn)=>document.querySelectorAll(sel).forEach(e=>e.onclick=()=>fn(e));
@@ -1222,6 +1484,11 @@ function ligar(){
   on('[data-pedido]',e=>modalPedido(S.pedidos.find(x=>x.id===e.dataset.pedido)));
   on('#maisLic',()=>{ui.tab='licenca';render();scrollTo(0,0)});
   on('#maisSair',()=>confirmarSair());
+  on('#maisNome',()=>modal(`<h2>Nome da horta</h2><label>Aparece no topo do app e na tela de entrada</label><input id="nh" value="${esc(S.config.nomeHorta||'')}" placeholder="Ex.: Horta Boa Vista"><div class="acoes"><button class="btn sec" id="nhc">Cancelar</button><button class="btn" id="nhs">Salvar</button></div>`,f=>{f.querySelector('#nhc').onclick=fecharModal;f.querySelector('#nhs').onclick=()=>{S.config.nomeHorta=f.querySelector('#nh').value.trim();salvar();fecharModal();render();toast('Nome salvo')}}));
+  on('#maisSenha',()=>{modal(vSenhaGestor()+'<div class="acoes"><button class="btn sec" id="sgf">Fechar</button></div>',f=>{f.querySelector('#sgf').onclick=fecharModal;ligarSenhaGestor()})});
+  on('[data-vendhoje]',e=>{ui.tab='equipe';ui.vendId=e.dataset.vendhoje;ui.equipeDia=hoje();ui.mapaVista=null;render();scrollTo(0,0)});
+  on('[data-edia]',e=>{ui.equipeDia=somaDias(ui.equipeDia||hoje(),+e.dataset.edia);ui.mapaVista=null;render()});
+  on('#voltaEquipe',()=>{ui.vendId=null;render();scrollTo(0,0)});
   on('[data-fseg]',e=>{ui.fiadoSeg=e.dataset.fseg;render()});
   on('#novoFiado',()=>modalFiado());
   on('[data-recebi]',e=>modalRecebi(S.fiados.find(f=>f.id===e.dataset.recebi)));

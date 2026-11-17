@@ -38,6 +38,7 @@ from http.cookies import SimpleCookie
 
 import lgapi
 import lgwhats
+import lgrural
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
 PORTA = int(os.environ.get("PORT", "8000"))
@@ -534,9 +535,26 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if lgwhats.rota(self, "GET", camara_do_host):
             return
+        if lgrural.rota(self, "GET"):
+            return
         if self._api("GET"):
             return
         caminho = self.path.split("?", 1)[0].split("#", 1)[0]
+        # LegislaGov Rural: endereço próprio (modo rural) ou /rural/ no endereço de testes
+        camara_r, modo_r = camara_do_host(self.headers.get("Host"))
+        partes_r = [p for p in caminho.split("/") if p]
+        if modo_r == "rural" or (camara_r == "teste" and partes_r and partes_r[0] == "rural"):
+            if ".." in caminho:
+                self.send_error(404)
+                return
+            if caminho == "/rural":
+                self.send_response(301)
+                self.send_header("Location", "/rural/")
+                self.end_headers()
+                return
+            self.directory = os.path.join(PASTA, "apps", "rural") if modo_r == "rural" else os.path.join(PASTA, "apps")
+            super().do_GET()
+            return
         # site LegislaGov (legislagov.com.br): pasta portfolio. Área do cliente e Atendimento WhatsApp
         # também abrem no endereço de testes, para testar antes de o domínio principal apontar para cá.
         camara_h, modo_h = camara_do_host(self.headers.get("Host"))
@@ -561,7 +579,7 @@ class Handler(SimpleHTTPRequestHandler):
         nome = caminho.rsplit("/", 1)[-1]
         partes = [p for p in caminho.split("/") if p]
         # não expõe arquivos internos nem as ferramentas locais (.bat / .py)
-        if nome in BLOQUEADOS or nome.endswith((".bat", ".py")) or (partes and partes[0] in {"ferramentas", ".git", "portfolio", "dados_servidor"}):
+        if nome in BLOQUEADOS or nome.endswith((".bat", ".py")) or (partes and partes[0] in {"ferramentas", ".git", "portfolio", "dados_servidor", "apps"}):
             self.send_error(404)
             return
         if caminho == "/healthz":
@@ -618,6 +636,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         if lgwhats.rota(self, "POST", camara_do_host):
+            return
+        if lgrural.rota(self, "POST"):
             return
         if self._api("POST"):
             return

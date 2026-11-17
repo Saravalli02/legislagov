@@ -1,0 +1,5 @@
+# LegislaGov Rural — códigos das hortas liberadas neste servidor (um por linha).
+# O link de cada horta é  https://rural.legislagov.com.br/?e=CÓDIGO
+# O nome da horta, os vendedores e as senhas são definidos pelo gestor dentro do app.
+horta-e3jbf3      # 1ª horta (teste a partir de 23/11/2026)
+demo-rural        # demonstração e testes internos
