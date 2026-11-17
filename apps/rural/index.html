@@ -220,6 +220,7 @@ async function api(acao,{metodo='GET',corpo=null,q=''}={}){
   const r=await fetch(API+acao+(q?'?'+q:''),{method:metodo,cache:'no-store',headers:Object.assign({'Content-Type':'application/json'},TOKEN?{Authorization:'Bearer '+TOKEN}:{}),body:corpo?JSON.stringify(corpo):undefined});
   let d={};try{d=await r.json()}catch(e){}
   if(r.status===410&&d.encerrada){demoEncerrada();throw new Error('sessao')}
+  if(r.status===423&&d.suspensa){acessoSuspenso();throw new Error('sessao')}
   if(r.status===401&&TOKEN&&!['entrar','primeiro'].includes(acao)){sessaoTerminou();throw new Error('sessao')}
   if(!r.ok){const e=new Error(d.erro||('Erro '+r.status));e.status=r.status;throw e}
   return d;
@@ -317,6 +318,14 @@ function sessaoTerminou(){TOKEN='';ui.sess=null;entradaInfo=null;try{localStorag
 /* ===================== Demonstração (link da Central LegislaGov) ===================== */
 let ENCERRADA=false;
 function demoInfo(){try{return EMP.startsWith('demo-')&&EMP!=='demo-rural'?JSON.parse(localStorage.getItem('lgr_demo')||'null'):null}catch(e){return null}}
+let SUSPENSO=false;
+function acessoSuspenso(){
+  if(SUSPENSO)return;SUSPENSO=true;ENCERRADA=true;TOKEN='';ui.sess=null;
+  try{Object.keys(localStorage).filter(k=>/^lgr(_token|_sessao|ural:)/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
+  try{if(GEO.watch!=null){navigator.geolocation.clearWatch(GEO.watch);GEO.watch=null}}catch(e){}
+  document.body.className='';document.body.style.cssText='margin:0;background:#fff';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><img src="logo-rural.png" alt="" style="height:64px;width:auto"><h1 style="font-size:22px;margin:14px 0 6px">Acesso suspenso</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O acesso a este sistema está suspenso no momento. Para voltar a usar, fale com a LegislaGov.</p><button onclick="location.reload()" style="margin-top:18px;font:700 15px system-ui,Arial;padding:12px 18px;border-radius:12px;border:1px solid #c9d6cc;background:#fff;color:#1d2a20">Tentar de novo</button></div>';
+}
 function demoEncerrada(){
   if(ENCERRADA)return;ENCERRADA=true;TOKEN='';ui.sess=null;
   try{Object.keys(localStorage).filter(k=>/^lgr/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
@@ -430,7 +439,7 @@ async function carregarEntrada(){
   if(carregandoEnt)return;carregandoEnt=true;
   try{entradaInfo=await api('entrada',{q:EMP?'e='+encodeURIComponent(EMP):''})}
   catch(e){entradaInfo={erro:e.status===404?e.message:'Sem internet. Para entrar, o celular precisa estar conectado.'}}
-  carregandoEnt=false;render();
+  carregandoEnt=false;if(entradaInfo&&entradaInfo.suspensa){acessoSuspenso();return}render();
 }
 const campo=(id,rot,tipo,auto,extra)=>`<label>${rot}</label><input id="${id}" type="${tipo}" autocomplete="${auto}" autocapitalize="none" spellcheck="false" ${extra||''} style="font-size:18px">`;
 function vLogin(){
@@ -510,8 +519,7 @@ function modalUsuario(u){
   modal(`<h2>${u?'Editar usuário':'Novo usuário'}</h2>
     <label>Nome</label><input id="un" value="${esc(u?.nome||'')}" placeholder="Ex.: Maria">
     <label>Usuário (para entrar)</label><input id="uu" autocapitalize="none" spellcheck="false" autocomplete="off" value="${esc(u?.usuario||'')}" placeholder="Ex.: maria">
-    <label>${u?'Senha nova (deixe em branco para manter)':'Senha (mínimo 8 caracteres)'}</label><input id="us1" type="password" autocomplete="new-password">
-    <label>Repita a senha</label><input id="us2" type="password" autocomplete="new-password">
+    ${u?'<div class="ajuda" style="margin:8px 0">🔐 Para trocar a senha deste usuário, fale com a LegislaGov.</div><input id="us1" type="hidden" value=""><input id="us2" type="hidden" value="">':'<label>Senha (mínimo 8 caracteres)</label><input id="us1" type="password" autocomplete="new-password"><label>Repita a senha</label><input id="us2" type="password" autocomplete="new-password">'}
     <label>Perfil</label>
     <div class="seg"><button type="button" data-perf="padrao">🧑‍🌾 Padrão</button><button type="button" data-perf="adm">👑 Administrador</button></div>
     <div id="uvBox"><label>Vendedor (ele vê só as rotas deste vendedor)</label><select id="uv"><option value="">— escolher —</option>${livres.map(v=>`<option value="${v.id}" ${u?.vendedor===v.id?'selected':''}>${esc(v.nome)}</option>`).join('')}<option value="__novo">+ Cadastrar vendedor com este nome</option></select></div>
@@ -1346,7 +1354,7 @@ function vMais(){
   <button class="tile" data-ir="equipe"><span>📍</span><b>Vendedores</b><small>acompanhar no mapa</small></button>
   <button class="tile" id="maisNome"><span>🏡</span><b>Nome da horta</b><small>${esc(S.config.nomeHorta||'não definido')}</small></button>
   <button class="tile" data-ir="usuarios"><span>👥</span><b>Usuários e senhas</b><small>quem entra no app</small></button>
-  <button class="tile" id="maisSenha"><span>🔐</span><b>Minha senha</b><small>trocar</small></button>
+  <button class="tile" id="maisSenha"><span>🔐</span><b>Minha senha</b><small>pedir à LegislaGov</small></button>
   <button class="tile" id="maisSair"><span>🚪</span><b>Sair</b><small>trocar de usuário</small></button>
   </div>`;
 }
@@ -1590,7 +1598,7 @@ function ligar(){
   on('#maisLic',()=>{ui.tab='licenca';render();scrollTo(0,0)});
   on('#maisSair',()=>confirmarSair());
   on('#maisNome',()=>modal(`<h2>Nome da horta</h2><label>Aparece no topo do app e na tela de entrada</label><input id="nh" value="${esc(S.config.nomeHorta||'')}" placeholder="Ex.: Horta Boa Vista"><div class="acoes"><button class="btn sec" id="nhc">Cancelar</button><button class="btn" id="nhs">Salvar</button></div>`,f=>{f.querySelector('#nhc').onclick=fecharModal;f.querySelector('#nhs').onclick=()=>{S.config.nomeHorta=f.querySelector('#nh').value.trim();salvar();fecharModal();render();toast('Nome salvo')}}));
-  on('#maisSenha',()=>modalMinhaSenha());
+  on('#maisSenha',()=>modal(`<h2>Trocar a senha</h2><p>Por segurança, a troca de senha é feita pela LegislaGov. Mande uma mensagem pedindo a senha nova.</p><div class="acoes"><button class="btn" id="okS">Entendi</button></div>`,f=>f.querySelector('#okS').onclick=fecharModal));
   on('#novoUsu',()=>modalUsuario());
   on('[data-usu]',e=>modalUsuario(USUARIOS.find(u=>u.id===e.dataset.usu)));
   on('[data-vendhoje]',e=>{ui.tab='equipe';ui.vendId=e.dataset.vendhoje;ui.equipeDia=hoje();ui.mapaVista=null;render();scrollTo(0,0)});

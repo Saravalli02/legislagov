@@ -65,6 +65,7 @@ def _db():
             perfil TEXT NOT NULL, vendedor TEXT NOT NULL DEFAULT '', senha TEXT NOT NULL, falhas INTEGER NOT NULL DEFAULT 0,
             janela REAL NOT NULL DEFAULT 0, bloqueio REAL NOT NULL DEFAULT 0, criado REAL);
         CREATE TABLE IF NOT EXISTS rural_sess(token TEXT PRIMARY KEY, empresa TEXT NOT NULL, usuario_id TEXT NOT NULL, expira REAL NOT NULL, criado REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS rural_empresas(codigo TEXT PRIMARY KEY, nome TEXT, bloqueada REAL, motivo TEXT, criado REAL, por TEXT);
         """)
         _estado["pronto"] = True
     return c
@@ -82,8 +83,31 @@ def empresas():
                         cods.add(p[0])
         except OSError:
             pass
+        try:
+            cods |= {r[0] for r in _db().execute("SELECT codigo FROM rural_empresas")}
+        except Exception:
+            pass
         _estado.update(empresas=cods, empresas_lidas=time.time())
     return _estado["empresas"] | _demos_ativas()
+
+
+def bloqueadas():
+    """Hortas com acesso suspenso pela LegislaGov (falta de pagamento etc.)."""
+    if time.time() - _estado.get("bloq_lidas", 0) > 10:
+        try:
+            _estado["bloq"] = {r[0] for r in _db().execute("SELECT codigo FROM rural_empresas WHERE bloqueada IS NOT NULL")}
+        except Exception:
+            _estado["bloq"] = set()
+        _estado["bloq_lidas"] = time.time()
+    return _estado.get("bloq", set())
+
+
+def esquecer_cadastros():
+    _estado["empresas_lidas"] = 0
+    _estado["bloq_lidas"] = 0
+
+
+SUSPENSA = "O acesso a este sistema está suspenso. Fale com a LegislaGov."
 
 
 def _demos_ativas():
@@ -165,6 +189,73 @@ def semear_demo(c, empresa, cliente=""):
     esquecer_demos()
 
 
+# ---------------------------------------------------------------- administração pela Central (Ricardo e Geraldo)
+def _nome_horta(c, emp):
+    cfg = next(iter(_docs(c, emp, "config")), {}) or {}
+    r = c.execute("SELECT nome FROM rural_empresas WHERE codigo=?", (emp,)).fetchone()
+    return cfg.get("nomeHorta") or (r["nome"] if r and r["nome"] else "") or emp
+
+
+def central_hortas(c):
+    out = []
+    for emp in sorted(e for e in empresas() if not e.startswith("demo-") or e == "demo-rural"):
+        r = c.execute("SELECT * FROM rural_empresas WHERE codigo=?", (emp,)).fetchone()
+        n = c.execute("SELECT COUNT(*) FROM rural_usuarios WHERE empresa=?", (emp,)).fetchone()[0]
+        ult = c.execute("SELECT MAX(criado) FROM rural_sess WHERE empresa=?", (emp,)).fetchone()[0]
+        out.append({"codigo": emp, "nome": _nome_horta(c, emp), "usuarios": n, "ultimoAcesso": ult,
+                    "suspensa": bool(r and r["bloqueada"]), "suspensaEm": r["bloqueada"] if r else None, "motivo": (r["motivo"] if r else "") or ""})
+    return out
+
+
+def central_usuarios(c, emp):
+    vend = {v.get("id"): v.get("nome") for v in _docs(c, emp, "vendedores")}
+    agora = time.time()
+    return [{"id": u["id"], "nome": u["nome"], "usuario": u["usuario"], "perfil": u["perfil"], "vendedor": vend.get(u["vendedor"], ""),
+             "bloqueado": u["bloqueio"] > agora, "criado": u["criado"]} for u in _usuarios(c, emp)], \
+           [{"id": k, "nome": v} for k, v in vend.items()]
+
+
+def central_senha(c, uid, senha):
+    if len(str(senha or "")) < SENHA_MIN:
+        return 400, {"ok": False, "erro": f"A senha precisa ter pelo menos {SENHA_MIN} caracteres."}
+    u = c.execute("SELECT * FROM rural_usuarios WHERE id=?", (uid,)).fetchone()
+    if not u:
+        return 404, {"ok": False, "erro": "Usuário não encontrado."}
+    c.execute("UPDATE rural_usuarios SET senha=?, falhas=0, bloqueio=0 WHERE id=?", (lgapi.hash_senha(senha), uid))
+    c.execute("DELETE FROM rural_sess WHERE usuario_id=?", (uid,))
+    _avisar()
+    return 200, {"ok": True, "usuario": u["usuario"], "empresa": u["empresa"]}
+
+
+def central_criar_usuario(c, emp, d):
+    if emp not in empresas():
+        return 404, {"ok": False, "erro": "Horta não encontrada."}
+    return salvar_usuario(c, {"empresa": emp, "_token": ""}, {k: d.get(k) for k in ("nome", "usuario", "perfil", "vendedor", "senha")})
+
+
+def central_suspender(c, emp, suspender, motivo, por):
+    if emp not in empresas() or emp.startswith("demo-") and emp != "demo-rural":
+        return 404, {"ok": False, "erro": "Horta não encontrada."}
+    if not c.execute("SELECT 1 FROM rural_empresas WHERE codigo=?", (emp,)).fetchone():
+        c.execute("INSERT INTO rural_empresas(codigo, nome, criado, por) VALUES(?,?,?,?)", (emp, "", time.time(), por))
+    c.execute("UPDATE rural_empresas SET bloqueada=?, motivo=? WHERE codigo=?", (time.time() if suspender else None, str(motivo or "")[:200] if suspender else "", emp))
+    esquecer_cadastros()
+    _avisar()   # quem está com o app aberto recebe a resposta na hora
+    return 200, {"ok": True}
+
+
+def central_nova_horta(c, nome, por):
+    nome = str(nome or "").strip()[:60]
+    if not nome:
+        return 400, {"ok": False, "erro": "Escreva o nome da horta."}
+    base = re.sub(r"[^a-z0-9]+", "-", nome.lower().encode("ascii", "ignore").decode()).strip("-")[:20] or "horta"
+    cod = f"{base}-{secrets.token_hex(3)}"
+    c.execute("INSERT INTO rural_empresas(codigo, nome, criado, por) VALUES(?,?,?,?)", (cod, nome, time.time(), por))
+    _doc(c, cod, "config", {"id": "geral", "nomeHorta": nome})
+    esquecer_cadastros()
+    return 200, {"ok": True, "codigo": cod}
+
+
 def apagar_empresa(c, empresa):
     """Apaga todos os dados de uma horta de demonstração vencida."""
     if not empresa.startswith("demo-") or empresa == "demo-rural":
@@ -239,7 +330,7 @@ def _empresa_padrao():
 def entrada(c, empresa):
     cfg = next(iter(_docs(c, empresa, "config")), {}) or {}
     tem_adm = c.execute("SELECT 1 FROM rural_usuarios WHERE empresa=? AND perfil='adm' LIMIT 1", (empresa,)).fetchone()
-    return {"ok": True, "empresa": empresa, "nome": cfg.get("nomeHorta") or "", "primeiroAcesso": not tem_adm}
+    return {"ok": True, "empresa": empresa, "nome": cfg.get("nomeHorta") or "", "primeiroAcesso": not tem_adm, "suspensa": empresa in bloqueadas()}
 
 
 def _criar_sessao(c, empresa, uid):
@@ -260,7 +351,7 @@ def sessao(c, token):
     if not token:
         return None
     r = c.execute("SELECT * FROM rural_sess WHERE token=?", (_resumo(token),)).fetchone()
-    if not r or r["expira"] < time.time() or r["empresa"] not in empresas():
+    if not r or r["expira"] < time.time() or r["empresa"] not in empresas() or r["empresa"] in bloqueadas():
         return None
     u = c.execute("SELECT * FROM rural_usuarios WHERE empresa=? AND id=?", (r["empresa"], r["usuario_id"])).fetchone()
     if not u or (u["perfil"] != "adm" and not u["vendedor"]):
@@ -306,6 +397,8 @@ def entrar(c, empresa, login, senha):
     if not u or u["empresa"] not in empresas():
         lgapi.hash_senha("x")   # mesmo tempo de resposta de um usuário que existe
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
+    if u["empresa"] in bloqueadas():
+        return 423, {"ok": False, "suspensa": True, "erro": SUSPENSA}
     if u["bloqueio"] > agora:
         minutos = int((u["bloqueio"] - agora) // 60) + 1
         return 429, {"ok": False, "erro": f"Muitas tentativas erradas. Tente de novo em {minutos} minuto(s)."}
@@ -346,6 +439,8 @@ def salvar_usuario(c, s, d):
         return 400, {"ok": False, "erro": "Usuário: use de 2 a 40 letras ou números, sem espaço."}
     if not _login_livre(c, login, uid or None):
         return 409, {"ok": False, "erro": "Este nome de usuário já existe. Escolha outro."}
+    if atual and senha:
+        return 403, {"ok": False, "erro": "Para trocar a senha de alguém, fale com a LegislaGov."}
     if (not atual or senha) and len(senha) < SENHA_MIN:
         return 400, {"ok": False, "erro": f"A senha precisa ter pelo menos {SENHA_MIN} caracteres."}
     if perfil == "padrao":
@@ -385,6 +480,7 @@ def remover_usuario(c, s, uid):
 
 
 def minha_senha(c, s, atual, nova):
+    return 403, {"ok": False, "erro": "Para trocar a sua senha, fale com a LegislaGov."}
     u = c.execute("SELECT * FROM rural_usuarios WHERE id=?", (s["uid"],)).fetchone()
     if not u or not lgapi.confere_senha(str(atual or ""), u["senha"]):
         return 401, {"ok": False, "erro": "A senha atual não confere."}
@@ -729,6 +825,8 @@ def rota(h, metodo):
                 if acao == "entrar" and metodo == "POST":   # o usuário já diz de qual horta é
                     cod, r = entrar(c, empresa, corpo.get("usuario"), corpo.get("senha"))
                     lgapi.registrar("rural:" + (r.get("empresa") or empresa or "?"), str(corpo.get("usuario"))[:40], "Rural: entrou" if cod == 200 else "Rural: senha errada", "", _ip(h))
+                    if cod in (401, 429):
+                        lgapi._falha_ip(_ip(h), None, "Rural")
                     return _resp(h, cod, r)
                 empresa = empresa or _empresa_padrao()
                 if not empresa:
@@ -754,6 +852,8 @@ def rota(h, metodo):
                     r0 = _db().execute("SELECT empresa FROM rural_sess WHERE token=?", (_resumo(token),)).fetchone()
                 if r0 and r0["empresa"].startswith("demo-") and r0["empresa"] != "demo-rural":
                     return _resp(h, 410, {"ok": False, "encerrada": True, "erro": "Esta demonstração terminou."})
+                if r0 and r0["empresa"] in bloqueadas():
+                    return _resp(h, 423, {"ok": False, "suspensa": True, "erro": SUSPENSA})
             return _resp(h, 401, {"ok": False, "erro": "Sua sessão terminou. Entre de novo."})
 
         if acao == "dados" and metodo == "GET":
@@ -766,6 +866,8 @@ def rota(h, metodo):
                 desde = 0
             fim = time.time() + ESPERA
             while True:
+                if s["empresa"] in bloqueadas():
+                    return _resp(h, 423, {"ok": False, "suspensa": True, "erro": SUSPENSA})
                 with lgapi._trava:
                     r = mudancas(_db(), s, desde)
                 if r is not None:

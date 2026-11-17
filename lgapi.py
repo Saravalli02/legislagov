@@ -479,19 +479,86 @@ def ips_confiaveis(camara=None):
     return ips
 
 
+# ---------------------------------------------------------------- lista de endereços bloqueados (vale para todo o servidor)
+# Bloqueio automático com escada: 1ª vez 1 hora, 2ª vez (em 7 dias) 24 horas, 3ª vez em diante 7 dias.
+# Os sócios veem a lista na Central e podem bloquear para sempre, bloquear à mão ou desbloquear.
+ESCADA = [3600, 86400, 7 * 86400]
+_ipcache = {"lido": 0.0, "mapa": {}}
+
+
+def _tabela_ips():
+    _db().execute("CREATE TABLE IF NOT EXISTS ip_bloqueios(ip TEXT PRIMARY KEY, ate REAL, motivo TEXT, criado REAL, por TEXT, vezes INTEGER NOT NULL DEFAULT 0, ultimo REAL)")
+
+
+def _ips_ativos():
+    if time.time() - _ipcache["lido"] > 20:
+        _tabela_ips()
+        agora_ = time.time()
+        _ipcache["mapa"] = {r["ip"]: r["ate"] for r in _db().execute("SELECT ip, ate FROM ip_bloqueios WHERE ate IS NULL OR ate > ?", (agora_,))}
+        _ipcache["lido"] = agora_
+    return _ipcache["mapa"]
+
+
+def ip_barrado(ip):
+    """Usado em todo pedido (antes da trava do banco): True se o endereço está na lista de bloqueados."""
+    if not ip or not ativo():
+        return False
+    m = _ipcache["mapa"] if time.time() - _ipcache["lido"] <= 20 else None
+    if m is None:
+        with _trava:
+            m = _ips_ativos()
+    ate = m.get(ip, 0)
+    return ate is None or ate > time.time()
+
+
+def ip_bloquear(ip, motivo, por="sistema", segundos=None, sempre=False):
+    """Bloqueia o endereço. Sem 'segundos' e sem 'sempre': segue a escada (1 h, 24 h, 7 dias)."""
+    _tabela_ips()
+    agora_ = time.time()
+    r = _db().execute("SELECT * FROM ip_bloqueios WHERE ip=?", (ip,)).fetchone()
+    vezes = (r["vezes"] if r and r["ultimo"] and agora_ - r["ultimo"] < 7 * 86400 else 0) + 1
+    if r and r["ate"] is None and not sempre and por == "sistema":
+        return   # já está bloqueado para sempre
+    ate = None if sempre else agora_ + (segundos if segundos else ESCADA[min(vezes, len(ESCADA)) - 1])
+    _db().execute("INSERT INTO ip_bloqueios(ip, ate, motivo, criado, por, vezes, ultimo) VALUES(?,?,?,?,?,?,?) "
+                  "ON CONFLICT(ip) DO UPDATE SET ate=excluded.ate, motivo=excluded.motivo, por=excluded.por, vezes=excluded.vezes, ultimo=excluded.ultimo",
+                  (ip, ate, str(motivo)[:200], agora_, por, vezes, agora_))
+    _ipcache["lido"] = 0
+    registrar("servidor", por, "Endereço bloqueado", f"{ip} — {motivo} — " + ("para sempre" if ate is None else f"até {time.strftime('%d/%m %H:%M', time.localtime(ate))}"), ip)
+
+
+def ip_desbloquear(ip, por):
+    _tabela_ips()
+    _db().execute("UPDATE ip_bloqueios SET ate=?, vezes=0 WHERE ip=?", (time.time() - 1, ip))
+    _ip_falhas.pop(ip, None)
+    _ipcache["lido"] = 0
+    registrar("servidor", por, "Endereço desbloqueado", ip, ip)
+
+
+def ip_lista():
+    _tabela_ips()
+    agora_ = time.time()
+    return [{"ip": r["ip"], "ate": r["ate"], "sempre": r["ate"] is None, "ativo": r["ate"] is None or r["ate"] > agora_, "motivo": r["motivo"] or "",
+             "desde": r["ultimo"], "vezes": r["vezes"], "por": r["por"] or ""}
+            for r in _db().execute("SELECT * FROM ip_bloqueios ORDER BY (ate IS NULL) DESC, ultimo DESC LIMIT 300")]
+
+
 def ip_bloqueado(ip, camara=None):
-    ate = _ip_bloqueado.get(ip, 0)
-    return ate > time.time() and ip not in ips_confiaveis(camara)
-
-
-def _falha_ip(ip, camara):
     if ip in ips_confiaveis(camara):
+        return False
+    ate = _ips_ativos().get(ip, 0)
+    return ate is None or ate > time.time()
+
+
+def _falha_ip(ip, camara, sistema="painel"):
+    """Senha errada vinda deste endereço (qualquer sistema, qualquer usuário)."""
+    if not ip or ip in ("127.0.0.1", "::1") and not os.environ.get("LG_TESTE_IP") or ip in ips_confiaveis(camara):
         return
     h = [t for t in _ip_falhas.get(ip, []) if time.time() - t < 900] + [time.time()]
     _ip_falhas[ip] = h
     if len(h) >= IP_FALHAS_MAX:
-        _ip_bloqueado[ip] = time.time() + 3600
-        registrar(camara, "sistema", "Endereço bloqueado", f"{ip}: {len(h)} senhas erradas em 15 min (vários usuários)", ip)
+        _ip_falhas[ip] = []
+        ip_bloquear(ip, f"{len(h)} senhas erradas em 15 min ({sistema})")
 
 
 def _gravar_dados_usuario(uid, fn):

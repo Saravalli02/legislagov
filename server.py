@@ -352,7 +352,12 @@ def excesso(ip, camara):
     if passou and ip not in _confiaveis(camara):
         with _lim_trava:
             _lim["bloq"][ip] = agora_ + 300
-        print(f"limite: {ip} passou de {LIMITE_MIN} pedidos/min — bloqueado 5 min", flush=True)
+        print(f"limite: {ip} passou de {LIMITE_MIN} pedidos/min", flush=True)
+        try:
+            with lgapi._trava:
+                lgapi.ip_bloquear(ip, f"mais de {LIMITE_MIN} acessos em 1 minuto")
+        except Exception as e:
+            print("limite:", repr(e), flush=True)
         return True
     return False
 
@@ -433,12 +438,21 @@ class Handler(SimpleHTTPRequestHandler):
         return (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
 
     def _barrado(self):
-        """True se este endereço passou do limite (e já respondeu 429)."""
-        if not excesso(self._ip(), camara_do_host(self.headers.get("Host"))[0]):
-            return False
-        corpo = "Muitos acessos seguidos deste endereço. Aguarde alguns minutos e tente de novo.".encode("utf-8")
+        """True se este endereço está bloqueado ou passou do limite (e já respondeu)."""
+        ip = self._ip()
+        camara_b, modo_b = camara_do_host(self.headers.get("Host"))
         try:
-            self.send_response(429)
+            # a Central fica fora da lista (é dali que os sócios desbloqueiam); lá vale o bloqueio por conta (3 erros)
+            lista = modo_b != "central" and lgapi.ip_barrado(ip) and ip not in _confiaveis(camara_b)
+        except Exception:
+            lista = False
+        if not lista and not excesso(ip, camara_b):
+            return False
+        corpo = ("Acesso bloqueado por segurança a partir desta internet (muitas tentativas erradas ou acessos demais). "
+                 "Se você é da Câmara, fale com o administrador do sistema." if lista else
+                 "Muitos acessos seguidos deste endereço. Aguarde alguns minutos e tente de novo.").encode("utf-8")
+        try:
+            self.send_response(403 if lista else 429)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.send_header("Retry-After", "300")
             self.send_header("Content-Length", str(len(corpo)))

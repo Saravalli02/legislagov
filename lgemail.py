@@ -586,6 +586,8 @@ def rota(h, metodo):
             if acao == "entrar" and metodo == "POST":
                 cod, r = entrar(c, corpo.get("usuario"), corpo.get("senha"))
                 lgapi.registrar("email", str(corpo.get("usuario"))[:40], "E-mail: entrou" if cod == 200 else "E-mail: senha errada", "", ip)
+                if cod in (401, 429):
+                    lgapi._falha_ip(ip, None, "E-mails")
                 return _resp(h, cod, r)
             if acao == "link" and metodo == "GET":
                 l, r = ver_link(c, q.get("t", ""))

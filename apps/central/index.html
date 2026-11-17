@@ -82,6 +82,19 @@ input,select{height:46px;border:1px solid var(--linha);border-radius:10px;paddin
 .qr{align-self:center;padding:10px;background:#fff;border:1px solid var(--linha);border-radius:12px}
 .qr svg{display:block;width:200px;height:200px}
 .fim{color:var(--sub);font-size:12.5px;text-align:center;margin-top:48px}
+.rcab{display:flex;gap:16px;align-items:flex-start}.rcab .selo{background:color-mix(in srgb,#3fae4f 12%,var(--papel));border-color:color-mix(in srgb,#3fae4f 25%,var(--linha))}
+.rodape-acoes{display:flex;justify-content:flex-end;margin:18px 0 12px}
+.hortas{display:flex;flex-direction:column;gap:12px}
+.horta{background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:16px 18px;box-shadow:var(--sombra)}
+.horta.susp{border-color:color-mix(in srgb,var(--erro) 45%,var(--linha))}
+.hl{display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:center}
+.hl b{font-size:16px;color:var(--forte)}.hl small{display:block;color:var(--sub);font-size:13px;margin-top:2px}
+.hl .acoes{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.st.susp{background:color-mix(in srgb,var(--erro) 14%,var(--papel));color:var(--erro)}
+.usus[hidden]{display:none}.bloq-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.bloq-form input{flex:1 1 180px}main>h2+.horta,main>h2+.vazio{margin-top:0}.usus{margin-top:14px;padding-top:14px;border-top:1px solid var(--linha);display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.tab{width:100%;border-collapse:collapse;font-size:14px}.tab th{text-align:left;font-size:12px;color:var(--sub);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--linha)}
+.tab td{padding:9px 8px;border-bottom:1px solid var(--linha);vertical-align:middle}.tab tr:last-child td{border-bottom:0}.tab .dir{text-align:right}.tab code{font-size:13px}
+@media(max-width:640px){.hl{grid-template-columns:1fr}.hl .acoes{justify-content:flex-start}.tab thead{display:none}.tab tr{display:grid;grid-template-columns:1fr auto;padding:8px 0;border-bottom:1px solid var(--linha)}.tab td{border:0;padding:2px 4px}.tab td:nth-child(4){grid-row:1/4;grid-column:2;align-self:center}}
 @media(max-width:960px){.sist{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.topo-in{padding:10px 14px;gap:8px}.quem,.marca small{display:none}main{padding:22px 14px 50px}h1{font-size:23px}.sist{grid-template-columns:1fr}.demo-l{grid-template-columns:1fr}.demo-l .acoes{grid-row:auto;grid-column:auto;justify-content:flex-start}.rod .btn{flex:1}.tbtn{padding:0 9px}}
 </style>
@@ -120,6 +133,7 @@ async function tela(){
     <p class="sub">Escolha o sistema. Cada um abre em outra aba. Para mostrar a um cliente, use “Criar demonstração”: tem prazo e para de funcionar sozinha.</p>
     <div class="sist">${P.sistemas.map(x=>`<section class="card" style="--cor:${esc(x.cor)}" aria-labelledby="t-${esc(x.id)}">
       <div class="cab"><div class="selo"><img src="${esc(x.icone)}" alt=""></div><div><h3 id="t-${esc(x.id)}">${esc(x.nome)}</h3><p>${esc(x.desc)}</p></div></div>
+      ${x.id==='rural'?`<button class="btn" data-clientes="rural">Clientes, senhas e acesso</button>`:''}
       ${x.demo?`<button class="btn demo" data-demo="${esc(x.id)}">Criar demonstração</button>`:''}
       <a class="abrir" href="${esc(x.abrir[1])}" target="_blank" rel="noopener"><span>${esc(x.abrir[0])}</span>${seta}</a>
       ${(x.outros||[]).length?`<div class="outros">${x.outros.map(l=>`<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>`:''}
@@ -127,11 +141,16 @@ async function tela(){
     <h2>Demonstrações ativas</h2>
     <div class="${ativas.length?'demos':''}">${ativas.length?ativas.map(linhaDemo).join(''):'<div class="vazio">Nenhuma demonstração ativa. Use “Criar demonstração” no sistema que quer mostrar.</div>'}</div>
     ${velhas.length?`<h2>Encerradas</h2><div class="demos">${velhas.map(linhaDemo).join('')}</div>`:''}
+    <h2>Segurança</h2>
+    <section class="horta"><div class="hl"><div><b>Endereços (IP) bloqueados</b><span class="st ${P.bloqueados?'off susp':'on'}">${P.bloqueados?P.bloqueados+' bloqueado(s) agora':'nenhum agora'}</span>
+      <small>O servidor bloqueia sozinho quem erra senha muitas vezes ou faz acessos demais: 1 hora na 1ª vez, 24 horas na 2ª e 7 dias da 3ª em diante. Aqui você vê, desbloqueia ou bloqueia para sempre.</small></div>
+      <div class="acoes"><button class="btn" id="segBt">Ver e gerenciar</button></div></div></section>
     <p class="fim">LegislaGov · este site não é governamental.</p>
   </main>`;
-  ligarTema();
+  ligarTema();$('#segBt').onclick=telaSeguranca;
   $('#sairBt').onclick=sair;$('#senhaBt').onclick=trocarSenha;
   document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>novaDemo(b.dataset.demo));
+  document.querySelectorAll('[data-clientes]').forEach(b=>b.onclick=()=>telaRural());
   document.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>mostrarDemo(P.demos.find(d=>d.id===b.dataset.ver)));
   document.querySelectorAll('[data-fim]').forEach(b=>b.onclick=()=>encerrar(b.dataset.fim));
 }
@@ -192,6 +211,99 @@ function trocarSenha(){
   });
 }
 function alertar(t){modal(`<h2>${esc(t)}</h2><div class="rod"><button class="btn pri" id="ok">Ok</button></div>`,f=>$('#ok',f).onclick=fechar)}
+/* ===================== LegislaGov Rural: clientes, senhas e acesso ===================== */
+const gerar=()=>{const a='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',v=new Uint32Array(10);crypto.getRandomValues(v);return [...v].map(x=>a[x%a.length]).join('')};
+const linkHorta=c=>(location.hostname==='central.legislagov.com.br'?'https://rural.legislagov.com.br/':location.origin+'/rural/')+'?e='+encodeURIComponent(c);
+let RURAL={hortas:[],aberta:''};
+async function telaRural(){
+  try{RURAL.hortas=(await api('rural/hortas')).hortas}catch(e){if(e.message!=='sessao')alertar(e.message);return}
+  const voltar='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+  $('main').innerHTML=`<button class="tbtn" id="volta" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:18px">${voltar}Sistemas</button>
+    <div class="rcab"><div class="selo" style="--cor:#3fae4f"><img src="em-rural.png" alt=""></div><div><h1 style="margin:0">Clientes do Rural</h1><p class="sub">Cada horta é um cliente. Aqui você troca a senha de qualquer pessoa, cria administradores e suspende ou libera o acesso.</p></div></div>
+    <div class="rodape-acoes"><button class="btn pri" id="novaHorta">+ Nova horta</button></div>
+    <div class="hortas">${RURAL.hortas.map(cartaoHorta).join('')||'<div class="vazio">Nenhuma horta cadastrada.</div>'}</div>`;
+  $('#volta').onclick=()=>tela();$('#novaHorta').onclick=novaHorta;
+  document.querySelectorAll('[data-usu]').forEach(b=>b.onclick=()=>abrirUsuarios(b.dataset.usu));
+  document.querySelectorAll('[data-susp]').forEach(b=>b.onclick=()=>suspender(b.dataset.susp,b.dataset.v==='1'));
+  document.querySelectorAll('[data-copiar]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(linkHorta(b.dataset.copiar));b.textContent='Link copiado'}catch(e){}});
+  if(RURAL.aberta)abrirUsuarios(RURAL.aberta);
+  scrollTo(0,0);
+}
+function cartaoHorta(h){
+  return `<section class="horta ${h.suspensa?'susp':''}" id="h-${esc(h.codigo)}"><div class="hl">
+    <div><b>${esc(h.nome)}</b><span class="st ${h.suspensa?'off susp':'on'}">${h.suspensa?'Acesso suspenso':'Liberado'}</span>
+    <small>${h.usuarios} usuário(s) · ${h.ultimoAcesso?'último acesso '+quando(h.ultimoAcesso):'ainda sem acesso'} · código ${esc(h.codigo)}</small>
+    ${h.suspensa&&h.motivo?`<small>Motivo: ${esc(h.motivo)}</small>`:''}</div>
+    <div class="acoes"><button class="btn" data-usu="${esc(h.codigo)}">Usuários e senhas</button><button class="btn" data-copiar="${esc(h.codigo)}">Copiar link</button>
+    ${h.suspensa?`<button class="btn pri" data-susp="${esc(h.codigo)}" data-v="0">Liberar acesso</button>`:`<button class="btn perigo" data-susp="${esc(h.codigo)}" data-v="1">Suspender acesso</button>`}</div></div>
+    <div class="usus" hidden></div></section>`;
+}
+async function abrirUsuarios(cod){
+  RURAL.aberta=cod;const box=document.querySelector(`#h-${CSS.escape(cod)} .usus`);if(!box)return;
+  let r;try{r=await api('rural/usuarios?e='+encodeURIComponent(cod))}catch(e){return}
+  box.hidden=false;
+  box.innerHTML=`<table class="tab"><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th></th></tr></thead><tbody>${r.usuarios.map(u=>`<tr><td>${esc(u.nome)}${u.bloqueado?' <span class="st off susp">bloqueado por senha errada</span>':''}</td><td><code>${esc(u.usuario)}</code></td><td>${u.perfil==='adm'?'Administrador da horta':'Vendedor'+(u.vendedor?' · '+esc(u.vendedor):'')}</td><td class="dir"><button class="btn" data-senha="${esc(u.id)}" data-nome="${esc(u.nome)}" data-login="${esc(u.usuario)}">Senha nova</button></td></tr>`).join('')||'<tr><td colspan="4" class="dica">Nenhum usuário.</td></tr>'}</tbody></table>
+    <button class="btn" data-novo="${esc(cod)}">+ Novo usuário nesta horta</button>`;
+  box.querySelectorAll('[data-senha]').forEach(b=>b.onclick=()=>senhaRural(b.dataset.senha,b.dataset.nome,b.dataset.login,cod));
+  box.querySelector('[data-novo]').onclick=()=>novoUsuarioRural(cod,r.vendedores);
+}
+function senhaRural(id,nome,login,cod){
+  const s=gerar();
+  modal(`<h2>Senha nova · ${esc(nome)}</h2><p class="dica">A pessoa sai do app em todos os aparelhos e entra de novo com a senha nova. Se estava bloqueada por erro de senha, fica liberada.</p>
+    <label>Usuário<input value="${esc(login)}" readonly></label><label>Senha nova<input id="sn" value="${s}" style="font-family:ui-monospace,monospace"></label><p class="msg" id="sm"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar senha nova</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{const nova=$('#sn',f).value.trim();try{await api('rural/senha',{metodo:'POST',corpo:{id,senha:nova}});
+      modal(`<h2>Senha trocada</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(nova)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar usuário e senha</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=()=>{fechar();abrirUsuarios(cod)};$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('Usuário: '+login+'\nSenha: '+nova+'\n'+linkHorta(cod));$('#cp',g).textContent='Copiado'}catch(e){}}})}
+      catch(e){if(e.message!=='sessao')$('#sm',f).textContent=e.message}};
+  });
+}
+function novoUsuarioRural(cod,vendedores){
+  let perfil='adm';
+  modal(`<h2>Novo usuário</h2>
+    <div class="chips" role="group" aria-label="Perfil"><button type="button" class="chip" data-p="adm" aria-pressed="true">Administrador da horta</button><button type="button" class="chip" data-p="padrao" aria-pressed="false">Vendedor</button></div>
+    <p class="dica" id="pd">Vê tudo da horta (como a Sueli) e cadastra os vendedores. Não troca senhas: isso fica com a LegislaGov.</p>
+    <label>Nome<input id="nn" maxlength="60" placeholder="Ex.: Sueli"></label>
+    <label>Usuário (para entrar)<input id="nu" autocapitalize="none" spellcheck="false" placeholder="Ex.: sueli"></label>
+    <label id="vl" hidden>Vendedor<select id="nv">${vendedores.map(v=>`<option value="${esc(v.id)}">${esc(v.nome)}</option>`).join('')||'<option value="">Cadastre o vendedor no app primeiro</option>'}</select></label>
+    <label>Senha<input id="ns" value="${gerar()}" style="font-family:ui-monospace,monospace"></label><p class="msg" id="nm"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Criar usuário</button></div>`,f=>{
+    f.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{perfil=b.dataset.p;f.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#vl',f).hidden=perfil!=='padrao';$('#pd',f).textContent=perfil==='adm'?'Vê tudo da horta (como a Sueli) e cadastra os vendedores. Não troca senhas: isso fica com a LegislaGov.':'Vê só as rotas, saídas, pedidos e fornecedores do vendedor escolhido.'});
+    $('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{const corpo={e:cod,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),perfil,vendedor:perfil==='padrao'?$('#nv',f).value:'',senha:$('#ns',f).value.trim()};
+      try{await api('rural/usuario',{metodo:'POST',corpo});fechar();alertar('Usuário criado: '+corpo.usuario+' / '+corpo.senha);abrirUsuarios(cod);telaRural()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
+  });
+}
+function suspender(cod,sim){
+  const h=RURAL.hortas.find(x=>x.codigo===cod)||{nome:cod};
+  modal(sim?`<h2>Suspender o acesso de ${esc(h.nome)}?</h2><p class="dica">Todos os usuários desta horta (administrador e vendedores) saem do app em poucos segundos e passam a ver “Acesso suspenso”. Os dados ficam guardados: ao liberar, eles voltam a entrar normalmente.</p><label>Motivo (só você vê)<input id="mt" maxlength="200" placeholder="Ex.: mensalidade de novembro em aberto"></label><div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok" style="background:var(--erro);border-color:var(--erro);color:#fff">Suspender acesso</button></div>`
+    :`<h2>Liberar o acesso de ${esc(h.nome)}?</h2><p class="dica">Os usuários voltam a entrar com o mesmo usuário e senha.</p><div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok">Liberar acesso</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;$('#ok',f).onclick=async()=>{try{await api('rural/suspender',{metodo:'POST',corpo:{e:cod,suspender:sim,motivo:$('#mt',f)?.value||''}});fechar();telaRural()}catch(e){}}});
+}
+function novaHorta(){
+  modal(`<h2>Nova horta</h2><p class="dica">Cria um cliente novo do Rural, com link próprio. Depois crie o administrador da horta em “Usuários e senhas”.</p><label>Nome da horta<input id="hn" maxlength="60" placeholder="Ex.: Horta Boa Vista"></label><p class="msg" id="hm"></p><div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Criar</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;$('#ok',f).onclick=async()=>{try{const r=await api('rural/horta',{metodo:'POST',corpo:{nome:$('#hn',f).value}});fechar();RURAL.aberta=r.codigo;telaRural()}catch(e){if(e.message!=='sessao')$('#hm',f).textContent=e.message}}});
+}
+/* ===================== Segurança: endereços bloqueados ===================== */
+async function telaSeguranca(){
+  let r;try{r=await api('seguranca/ips')}catch(e){return}
+  const voltar='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+  const ativos=r.ips.filter(x=>x.ativo),antigos=r.ips.filter(x=>!x.ativo).slice(0,30);
+  const linha=x=>`<tr><td><code>${esc(x.ip)}</code></td><td>${esc(x.motivo)}${x.vezes>1?` <small class="dica">(${x.vezes}ª vez)</small>`:''}</td><td>${x.sempre?'<b>para sempre</b>':x.ativo?'até '+quando(x.ate):'terminou '+quando(x.ate)}</td><td>${x.por==='sistema'?'automático':esc(x.por)}</td>
+    <td class="dir">${x.ativo?`<button class="btn" data-des="${esc(x.ip)}">Desbloquear</button>`:''}${x.sempre?'':`<button class="btn perigo" data-sem="${esc(x.ip)}">Para sempre</button>`}</td></tr>`;
+  $('main').innerHTML=`<button class="tbtn" id="volta" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:18px">${voltar}Sistemas</button>
+    <h1>Endereços bloqueados</h1><p class="sub">Vale para todos os sistemas (Câmara, Rural, E-mails, sites). A Central nunca é bloqueada, para vocês sempre conseguirem desbloquear. Você está usando agora: <b>${esc(r.voce)}</b>.</p>
+    <section class="horta" style="margin-top:20px"><b>Bloquear um endereço</b><div class="bloq-form"><input id="ipn" placeholder="Ex.: 200.100.50.25" inputmode="decimal"><input id="ipm" placeholder="Motivo (opcional)"><button class="btn" id="b24">Bloquear 24 horas</button><button class="btn perigo" id="bsp">Bloquear para sempre</button></div><p class="msg" id="ipe"></p></section>
+    <h2>Bloqueados agora (${ativos.length})</h2>
+    ${ativos.length?`<div class="horta"><table class="tab"><thead><tr><th>Endereço</th><th>Motivo</th><th>Situação</th><th>Por</th><th></th></tr></thead><tbody>${ativos.map(linha).join('')}</tbody></table></div>`:'<div class="vazio">Nenhum endereço bloqueado agora.</div>'}
+    ${antigos.length?`<h2>Bloqueios que já terminaram</h2><div class="horta"><table class="tab"><thead><tr><th>Endereço</th><th>Motivo</th><th>Situação</th><th>Por</th><th></th></tr></thead><tbody>${antigos.map(linha).join('')}</tbody></table></div>`:''}`;
+  $('#volta').onclick=()=>tela();
+  const acao=async(ip,a)=>{try{await api('seguranca/ip',{metodo:'POST',corpo:{ip,acao:a,motivo:$('#ipm')?.value||'',horas:24}});telaSeguranca()}catch(e){if(e.message!=='sessao')$('#ipe').textContent=e.message}};
+  document.querySelectorAll('[data-des]').forEach(b=>b.onclick=()=>acao(b.dataset.des,'desbloquear'));
+  document.querySelectorAll('[data-sem]').forEach(b=>b.onclick=()=>acao(b.dataset.sem,'sempre'));
+  $('#b24').onclick=()=>acao($('#ipn').value.trim(),'bloquear');$('#bsp').onclick=()=>acao($('#ipn').value.trim(),'sempre');
+  scrollTo(0,0);
+}
 function seletorTema(){const t=document.documentElement.dataset.tema;return `<div class="tema" role="group" aria-label="Aparência"><button type="button" data-tema="claro" aria-pressed="${t==='claro'}">Claro</button><button type="button" data-tema="escuro" aria-pressed="${t==='escuro'}">Escuro</button></div>`}
 function ligarTema(){document.querySelectorAll('[data-tema]').forEach(b=>b.onclick=()=>{document.documentElement.dataset.tema=b.dataset.tema;try{localStorage.setItem('lgc_tema',b.dataset.tema)}catch(e){}document.querySelectorAll('[data-tema]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tema===b.dataset.tema));const m=document.querySelector('meta[name=theme-color]');if(m)m.content=b.dataset.tema==='escuro'?'#06080d':'#f4f6f9'})}
 function telaEntrar(){

@@ -260,7 +260,11 @@ def _limpar(c):
 def painel(c, s):
     _limpar(c)
     demos = [_demo_pub(d) for d in c.execute("SELECT * FROM ct_demos ORDER BY criado DESC LIMIT 60")]
-    return {"ok": True, "sessao": {k: v for k, v in s.items() if not k.startswith("_")}, "sistemas": SISTEMAS,
+    try:
+        bloq = sum(1 for x in lgapi.ip_lista() if x["ativo"])
+    except Exception:
+        bloq = 0
+    return {"ok": True, "bloqueados": bloq, "sessao": {k: v for k, v in s.items() if not k.startswith("_")}, "sistemas": SISTEMAS,
             "prazos": [{"horas": h, "nome": n} for h, n in PRAZOS.items()], "demos": demos}
 
 
@@ -321,6 +325,8 @@ def rota(h, metodo):
             c = _db()
             if acao == "entrar" and metodo == "POST":
                 cod, r = entrar(c, corpo.get("usuario"), corpo.get("senha"), ip)
+                if cod in (401, 429):
+                    lgapi._falha_ip(ip, None, "Central")
                 return _resp(h, cod, r)
             auth = h.headers.get("Authorization", "")
             s = sessao(c, auth[7:].strip() if auth.lower().startswith("bearer ") else "")
@@ -336,6 +342,55 @@ def rota(h, metodo):
                 return _resp(h, *criar_demo(c, s, corpo, ip))
             if acao == "demos/encerrar" and metodo == "POST":
                 return _resp(h, *encerrar_demo(c, s, corpo.get("id"), ip))
+            # ---- endereços (IP) bloqueados no servidor
+            if acao == "seguranca/ips" and metodo == "GET":
+                return _resp(h, 200, {"ok": True, "ips": lgapi.ip_lista(), "voce": ip})
+            if acao == "seguranca/ip" and metodo == "POST":
+                alvo = str(corpo.get("ip", "")).strip()
+                import ipaddress
+                try:
+                    ipaddress.ip_address(alvo)
+                except ValueError:
+                    return _resp(h, 400, {"ok": False, "erro": "Endereço inválido."})
+                if alvo == ip and corpo.get("acao") != "desbloquear":
+                    return _resp(h, 400, {"ok": False, "erro": "Esse é o endereço que você está usando agora."})
+                if corpo.get("acao") == "desbloquear":
+                    lgapi.ip_desbloquear(alvo, s["usuario"])
+                else:
+                    lgapi.ip_bloquear(alvo, str(corpo.get("motivo") or "bloqueado na Central")[:200], s["usuario"],
+                                      segundos=None if corpo.get("acao") == "sempre" else int(corpo.get("horas") or 24) * 3600,
+                                      sempre=corpo.get("acao") == "sempre")
+                _log(c, s["usuario"], "Endereço " + ("desbloqueado" if corpo.get("acao") == "desbloquear" else "bloqueado"), alvo, ip)
+                return _resp(h, 200, {"ok": True})
+            # ---- administração do LegislaGov Rural (todas as hortas)
+            if acao.startswith("rural/"):
+                import lgrural
+                rc = lgrural._db()
+                if acao == "rural/hortas" and metodo == "GET":
+                    return _resp(h, 200, {"ok": True, "hortas": lgrural.central_hortas(rc)})
+                if acao == "rural/usuarios" and metodo == "GET":
+                    us, vend = lgrural.central_usuarios(rc, str(q.get("e", "")))
+                    return _resp(h, 200, {"ok": True, "usuarios": us, "vendedores": vend})
+                if acao == "rural/senha" and metodo == "POST":
+                    cod, r = lgrural.central_senha(rc, str(corpo.get("id", "")), corpo.get("senha"))
+                    if cod == 200:
+                        _log(c, s["usuario"], "Rural: senha nova", f"{r['empresa']}/{r['usuario']}", ip)
+                    return _resp(h, cod, r)
+                if acao == "rural/usuario" and metodo == "POST":
+                    cod, r = lgrural.central_criar_usuario(rc, str(corpo.get("e", "")), corpo)
+                    if cod == 200:
+                        _log(c, s["usuario"], "Rural: usuário criado", f"{corpo.get('e')}/{corpo.get('usuario')} ({corpo.get('perfil')})", ip)
+                    return _resp(h, cod, r)
+                if acao == "rural/suspender" and metodo == "POST":
+                    cod, r = lgrural.central_suspender(rc, str(corpo.get("e", "")), bool(corpo.get("suspender")), corpo.get("motivo"), s["usuario"])
+                    if cod == 200:
+                        _log(c, s["usuario"], "Rural: acesso " + ("suspenso" if corpo.get("suspender") else "liberado"), str(corpo.get("e")), ip)
+                    return _resp(h, cod, r)
+                if acao == "rural/horta" and metodo == "POST":
+                    cod, r = lgrural.central_nova_horta(rc, corpo.get("nome"), s["usuario"])
+                    if cod == 200:
+                        _log(c, s["usuario"], "Rural: horta criada", r["codigo"], ip)
+                    return _resp(h, cod, r)
         return _resp(h, 404, {"ok": False, "erro": "Rota não encontrada."})
     except Exception as e:
         print("central:", acao, repr(e), flush=True)
