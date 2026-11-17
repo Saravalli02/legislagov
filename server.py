@@ -130,7 +130,11 @@ def atualizar_youtube():
         else:
             cid = _id_do_canal()
             _yt["canal"]["id"] = cid
-            xml = _baixar(f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}")
+            try:
+                xml = _baixar(f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}")
+            except Exception:
+                # o feed do canal às vezes responde 404; a lista de envios (UU...) costuma funcionar
+                xml = _baixar(f"https://www.youtube.com/feeds/videos.xml?playlist_id=UU{cid[2:]}")
         novos = _ler_feed(xml)
         with _yt_trava:
             antigos = {v["id"]: v for v in _yt["videos"]}

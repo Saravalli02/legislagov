@@ -204,6 +204,7 @@ def semear(camara):
         gravar(camara, "lg_seed_perfis_v2", "1", None, "sistema")
         registrar(camara, "sistema", "Câmara criada no banco", "administradores Ricardo e Geraldo")
     _limpeza_v2(camara)
+    _limpeza_v3(camara)
     migrar_arquivos(camara)
     _herdar_senha_admins(camara)
 
@@ -259,6 +260,55 @@ def _limpeza_v2(camara):
     c.execute("INSERT INTO contador(nome, valor) VALUES(?, 1)", (marca,))
     _marcar_usuarios(camara)
     registrar(camara, "sistema", "Limpeza de usuários", "ficaram só os administradores")
+
+
+EXEMPLOS_ANTIGOS = {"pl024", "pl025", "pl026", "pl027"}
+
+
+def _eh_exemplo(x):
+    return isinstance(x, dict) and (x.get("id") in EXEMPLOS_ANTIGOS or x.get("protocolId") in EXEMPLOS_ANTIGOS or x.get("exemplo") is True
+                                    or str(x.get("id", "")).startswith("ex-"))
+
+
+def _limpeza_v3(camara):
+    """17/11/2026: tira os exemplos de demonstração (PL 027 da Guarda Municipal, avisos dele e itens marcados
+    como exemplo) que o painel antigo gravava. O que sai fica guardado em copias/limpeza-v3-<câmara>.json."""
+    c = _db()
+    marca = "limpeza_v3:" + camara
+    if c.execute("SELECT 1 FROM contador WHERE nome=?", (marca,)).fetchone():
+        return
+    retirados = {}
+    for r in c.execute("SELECT chave, valor FROM dados WHERE camara=?", (camara,)).fetchall():
+        try:
+            v = json.loads(r["valor"] or "null")
+        except Exception:
+            continue
+        mudou = False
+        if isinstance(v, list):
+            fora = [x for x in v if _eh_exemplo(x)]
+            if fora:
+                v, mudou = [x for x in v if not _eh_exemplo(x)], True
+                retirados[r["chave"]] = fora
+        elif isinstance(v, dict):
+            for k, x in list(v.items()):
+                if isinstance(x, list):
+                    fora = [i for i in x if _eh_exemplo(i)]
+                    if fora:
+                        v[k], mudou = [i for i in x if not _eh_exemplo(i)], True
+                        retirados[r["chave"] + "." + k] = fora
+        if mudou:
+            gravar(camara, r["chave"], json.dumps(v, ensure_ascii=False), None, "sistema")
+    if retirados:
+        try:
+            pasta = os.path.join(PASTA_DADOS, "copias")
+            os.makedirs(pasta, exist_ok=True)
+            nome = "limpeza-v3-" + re.sub(r"[^\w\-]", "_", camara) + ".json"
+            with open(os.path.join(pasta, nome), "w", encoding="utf-8") as fh:
+                json.dump(retirados, fh, ensure_ascii=False, indent=1)
+        except Exception:
+            pass
+        registrar(camara, "sistema", "Exemplos retirados", ", ".join(f"{k}: {len(x)}" for k, x in retirados.items())[:900])
+    c.execute("INSERT INTO contador(nome, valor) VALUES(?, 1)", (marca,))
 
 
 def definir_senha(login_, senha, camara=None):

@@ -8,7 +8,7 @@
    ===================================================================== */
 (function (g) {
   const KEY = 'lgll_v1', PROT = 'legislagov_protocolos_v2_neves-paulista-sp';
-  const MOSTRAR_EXEMPLOS = true; // exemplos marcados (EXEMPLO) para demonstrar o texto compilado; desligar quando as leis reais forem cadastradas
+  const MOSTRAR_EXEMPLOS = false; // sem exemplos: só as leis cadastradas pela Câmara
   const ler = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   g.LEIS_CHAVE = KEY;

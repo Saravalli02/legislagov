@@ -183,9 +183,8 @@
   }
   function sessoes() {
     const ag = ler('lgv11_agenda_v1', []).filter(x => x && x.when).map(x => ({ quando: new Date(x.when), titulo: x.title || 'Sessão', local: x.local || 'Plenário' }));
-    const base = [['2026-11-16T20:00', '18ª Sessão Ordinária']].map(([d, t]) => ({ quando: new Date(d), titulo: t, local: 'Plenário' })).filter(s => !ag.some(x => x.quando.toDateString() === s.quando.toDateString()));
     const h = new Date(); h.setHours(0, 0, 0, 0);
-    return [...ag, ...base].filter(s => s.quando >= h).sort((a, b) => a.quando - b.quando);
+    return ag.filter(s => s.quando >= h).sort((a, b) => a.quando - b.quando);
   }
   const fmtSessao = s => `${s.quando.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })} às ${s.quando.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 

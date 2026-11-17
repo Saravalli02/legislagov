@@ -569,8 +569,11 @@ def _resp(h, cod, dados_):
     h.send_header("Content-Type", "application/json; charset=utf-8")
     h.send_header("Content-Length", str(len(corpo)))
     h.send_header("Cache-Control", "no-store")
-    h.end_headers()
-    h.wfile.write(corpo)
+    try:
+        h.end_headers()
+        h.wfile.write(corpo)
+    except (BrokenPipeError, ConnectionResetError):
+        h.close_connection = True   # o celular fechou o app ou perdeu a internet durante a espera
     return True
 
 

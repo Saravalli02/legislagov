@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<script src="../assets/sincronia.js?v=202611170727"></script>
+<script src="../assets/sincronia.js?v=202611171812"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="app/app-192.png">
@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="LegislaGov">
-<script src="app/instalar.js?v=202611170727" defer></script>
+<script src="app/instalar.js?v=202611171812" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LegislaGov — Câmara Municipal</title>
 <link rel="icon" type="image/png" href="logo-legislagov.png">
@@ -627,7 +627,7 @@ input::placeholder,textarea::placeholder {color:#8498b4!important;}
               <div class="field-group"><label>Tipo de expediente</label><select id="f-tipo"><option>Projeto de Lei</option></select></div>
               <div class="field-group"><label>Regime de tramitação</label><select id="f-regime"><option>Ordinário</option><option>Urgência</option><option>Urgência especial</option></select></div>
             </div>
-            <div class="field-group"><label>Ementa</label><input type="text" id="f-ementa" value="Institui o programa municipal de qualificação profissional"></div>
+            <div class="field-group"><label>Ementa</label><input type="text" id="f-ementa" value="" placeholder="Resumo do que o projeto faz"></div>
             <div class="field-group"><label>Assunto</label><select id="f-assunto"><option>Administração e recursos humanos</option><option>Saúde</option><option>Educação</option><option>Obras e infraestrutura</option><option>Meio ambiente</option></select></div>
             <div class="field-row">
               <div class="field-group"><label>Unidade responsável</label><select id="f-unidade"><option>Gabinete do Prefeito</option><option>Secretaria de Administração</option><option>Secretaria de Saúde</option><option>Procuradoria Jurídica</option></select></div>
@@ -636,10 +636,7 @@ input::placeholder,textarea::placeholder {color:#8498b4!important;}
             <div class="field-group"><label>Observações</label><textarea id="f-obs" placeholder="Informações adicionais para a Secretaria Legislativa, se houver"></textarea></div>
             <div class="field-group">
               <label>Documentos anexados</label>
-              <div class="doc-list" id="novo-doc-list">
-                <div class="doc-row"><span class="doc-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>Projeto de Lei.pdf</span><span class="doc-status">Anexado</span></div>
-                <div class="doc-row"><span class="doc-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>Mensagem e Justificativa.pdf</span><span class="doc-status">Anexado</span></div>
-              </div>
+              <div class="doc-list" id="novo-doc-list"></div>
               <button class="attach-btn" type="button" onclick="anexarDocumentoNovo()">+ Anexar documento</button>
             </div>
           </div>
@@ -1004,8 +1001,8 @@ const SESSION_KEY = 'legislagov_session_v1';
 const AUDIT_KEY = 'legislagov_audit_v1';
 let usuarioAtual = null;
 let municipioAtual = '';
-const DEMO_MUNICIPIO = 'Vista Alegre — MG';
-const MUNICIPIOS_CADASTRADOS = ['Vista Alegre — MG', 'Neves Paulista — SP'];
+const DEMO_MUNICIPIO = 'Neves Paulista — SP';
+const MUNICIPIOS_CADASTRADOS = ['Neves Paulista — SP'];
 function chaveMunicipio() { return municipioAtual.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
 function municipiosDisponiveis() { return [...new Set([...MUNICIPIOS_CADASTRADOS, ...getUsers().map(u => u.municipio).filter(Boolean)])].sort((a,b) => a.localeCompare(b, 'pt-BR')); }
 function cpfValido(valor) {
@@ -1037,34 +1034,7 @@ function getUsers() {
 function saveUsers(users) {
   try { localStorage.setItem(USERS_KEY, JSON.stringify(users)); } catch (e) {}
 }
-function seedUsers() {
-  const users = getUsers().map(u => ({...u, municipio: u.municipio || DEMO_MUNICIPIO}));
-  const demos = [
-    { nome: 'Prefeito Municipal', email: 'prefeitura@vistaalegre.mg.gov.br', senha: 'prefeitura123', orgao: 'exec', cargo: 'Gabinete do Prefeito', municipio: DEMO_MUNICIPIO },
-    { nome: 'Secretaria Legislativa', email: 'camara@vistaalegre.mg.gov.br', senha: 'camara123', orgao: 'cam', cargo: 'Secretaria Legislativa', municipio: DEMO_MUNICIPIO },
-    { nome: 'Administrador do Sistema', email: 'admin@vistaalegre.mg.gov.br', senha: 'admin123', orgao: 'ambos', cargo: 'Acesso administrativo aos dois ambientes', municipio: DEMO_MUNICIPIO },
-    { nome: 'Prefeitura de Neves Paulista', email: 'prefeitura@nevespaulista.sp.gov.br', senha: 'prefeitura123', orgao: 'exec', cargo: 'Gabinete do Prefeito', municipio: 'Neves Paulista — SP' },
-    { nome: 'Câmara de Neves Paulista', email: 'camara@nevespaulista.sp.gov.br', senha: 'camara123', orgao: 'cam', cargo: 'Secretaria Legislativa', municipio: 'Neves Paulista — SP' },
-    { nome: 'Administrador de Neves Paulista', email: 'admin@nevespaulista.sp.gov.br', senha: 'admin123', orgao: 'ambos', cargo: 'Acesso administrativo aos dois ambientes', municipio: 'Neves Paulista — SP' },
-  ];
-  for (const demo of demos) if (!users.some(u => u.email.toLowerCase() === demo.email)) users.push(demo);
-  // Atualiza apenas o administrador de demonstração de Neves Paulista,
-  // inclusive quando uma versão anterior já foi salva neste navegador.
-  const adminVista = users.find(u => u.email.toLowerCase() === 'admin@vistaalegre.mg.gov.br');
-  const adminNeves = users.findIndex(u => u.email.toLowerCase() === 'admin@nevespaulista.sp.gov.br');
-  if (adminVista && adminNeves !== -1) {
-    users[adminNeves] = {
-      ...users[adminNeves],
-      nome: adminVista.nome,
-      senha: adminVista.senha,
-      orgao: adminVista.orgao,
-      cargo: adminVista.cargo,
-      email: 'admin@nevespaulista.sp.gov.br',
-      municipio: 'Neves Paulista — SP'
-    };
-  }
-  saveUsers(users);
-}
+function seedUsers() { /* sem usuários de demonstração: o acesso vem do servidor */ }
 
 function setAuthTab(tab) {
   document.getElementById('tab-login').classList.toggle('current', tab === 'login');
@@ -1399,21 +1369,14 @@ function abrirDetalheExpediente(id) { carregarExpedientes(); const e=expedientes
  * em um ambiente (enviar, anexar, receber, devolver, dar parecer,   *
  * votar, sancionar) muda o mesmo registro que o outro ambiente lê.  */
 
-let seq = 28;
-let protocolos = [
-  { id:'pl027', numero:'PL 027/2026', full:'PL-2026-00027', autor:'Prefeito Municipal', ementa:'Altera o quadro de cargos efetivos da Guarda Municipal',
-    unidade:'Gabinete do Prefeito', comissao:'Justiça e Redação', status:'concluido', data:'02/09/2026', lei:'Lei Municipal nº 1842/2026',
-    docs:['Projeto de Lei.pdf','Justificativa.pdf'],
-    timeline:[{date:'02/09 08:40',label:'Projeto criado'},{date:'02/09 08:55',label:'Enviado à Câmara'},{date:'02/09 13:10',label:'Recebido pela Câmara'},
-      {date:'03/09 09:00',label:'Encaminhado à Comissão de Justiça e Redação'},{date:'05/09 10:00',label:'Parecer anexado — favorável'},
-      {date:'08/09 10:00',label:'Aprovado em votação (8 a favor)'},{date:'09/09 09:00',label:'Encaminhado ao Poder Executivo'},
-      {date:'11/09 16:00',label:'Sancionado pelo Prefeito'},{date:'12/09 09:00',label:'Convertido em Lei Municipal nº 1842/2026'}] },
-];
+let seq = 0;
+let protocolos = [];
 
 const PROTOCOLS_KEY = 'legislagov_protocolos_v2';
 function chaveProtocolos() { return PROTOCOLS_KEY + '_' + chaveMunicipio(); }
 function salvarProtocolos() { try { localStorage.setItem(chaveProtocolos(), JSON.stringify(protocolos)); } catch (e) {} }
-function carregarProtocolos() { try { const raw=localStorage.getItem(chaveProtocolos()); if (raw) { const salvo=JSON.parse(raw); if (Array.isArray(salvo) && salvo.length) protocolos=salvo; } } catch (e) {} }
+const EXEMPLOS_ANTIGOS = ['pl024', 'pl025', 'pl026', 'pl027'];
+function carregarProtocolos() { try { const raw=localStorage.getItem(chaveProtocolos()); if (raw) { const salvo=JSON.parse(raw); if (Array.isArray(salvo)) { protocolos=salvo.filter(p => p && !EXEMPLOS_ANTIGOS.includes(p.id)); if (protocolos.length !== salvo.length) salvarProtocolos(); } } } catch (e) {} }
 function sincronizarProtocolo(p, evento) { salvarProtocolos(); if (evento) registrarLog('Tramitação institucional', p.full + ' — ' + evento); }
 window.addEventListener('storage', e => { if (e.key === chaveProtocolos()) { try { const salvo=JSON.parse(e.newValue||'[]'); if(Array.isArray(salvo)&&salvo.length){ protocolos=salvo; renderAll(); renderNotificacoes(); } } catch (err) {} } });
 
@@ -1423,6 +1386,7 @@ let currentNotificationProtocol = null;
 
 function carregarNotificacoes() {
   try { notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY + '_' + chaveMunicipio())) || []; } catch (e) { notifications = []; }
+  notifications = notifications.filter(n => n && !EXEMPLOS_ANTIGOS.includes(n.protocolId));
   if (!notifications.length) {
     notifications = protocolos.map(p => {
       const i = p.timeline.length - 1, t = p.timeline[i];
@@ -1486,7 +1450,7 @@ async function testarWhatsApp() {
   catch (e) { status.textContent = 'Não foi possível conectar ao backend'; status.className = 'integration-status error'; }
 }
 function notificar(p, label) {
-  const n = criarNotificacao(p, label, '22/09 ' + now(), false);
+  const n = criarNotificacao(p, label, hojeHora(), false);
   notifications.unshift(n); notifications = notifications.slice(0, 80); salvarNotificacoes();
   enviarAtualizacaoWhatsApp(p, label);
   registrarLog('Atualização de protocolo', p.full + ' — ' + label);
@@ -1582,7 +1546,7 @@ function abrirDetalheExec(id) {
   const tag = document.getElementById('ed-tag'); tag.textContent = meta.labelExec; tag.className = 'tag ' + meta.tag;
   document.getElementById('ed-timeline').innerHTML = p.timeline.map(t => `<div class="tl-item"><span class="tl-dot"></span><div class="tl-date">${t.date}</div><div class="tl-label">${t.label}</div></div>`).join('');
 
-  let side = `<div class="side-card"><h3>Documentos</h3><div class="doc-list">${p.docs.map(d => `<div class="doc-row"><span class="doc-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>${d}</span></div>`).join('')}</div></div>`;
+  let side = `<div class="side-card"><h3>Documentos</h3><div class="doc-list">${p.docs.map(d => `<div class="doc-row"><span class="doc-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>${linkDoc(p, d)}</span></div>`).join('')}</div></div>`;
   if (p.status === 'devolvido') {
     side = `<div class="side-card"><h3>Devolvido pela Câmara</h3><p class="note" style="margin-bottom:12px;">${p.motivo || 'Corrija o documento indicado pela Secretaria Legislativa.'}</p><button class="btn-primary" style="width:100%;" onclick="reenviarProtocolo('${p.id}')">Corrigir e reenviar à Câmara</button></div>` + side;
   } else if (p.status === 'aguardando_exec') {
@@ -1602,52 +1566,73 @@ function abrirDetalheExec(id) {
 function reenviarProtocolo(id) {
   const p = protocolos.find(x => x.id === id);
   p.status = 'enviado'; delete p.motivo;
-  p.timeline.push({ date:'22/09 ' + now(), label:'Corrigido e reenviado à Câmara' });
+  p.timeline.push({ date:hojeHora(), label:'Corrigido e reenviado à Câmara' });
   sincronizarProtocolo(p, 'Corrigido e reenviado à Câmara');
   notificar(p, 'Enviado à Câmara após correção');
   renderAll(); abrirDetalheExec(id);
 }
 function sancionar(id) {
   const p = protocolos.find(x => x.id === id);
-  const n = 1843 + (seq - 28);
-  p.status = 'concluido'; p.lei = 'Lei Municipal nº ' + n + '/2026';
-  p.timeline.push({ date:'22/09 ' + now(), label:'Sancionado pelo Prefeito' });
+  const n = prompt('Número da Lei Municipal (conforme o livro de leis):', '');
+  if (!n || !n.trim()) return;
+  p.status = 'concluido'; p.lei = 'Lei Municipal nº ' + n.trim().replace(/\/\d{4}$/, '') + '/' + new Date().getFullYear();
+  p.timeline.push({ date:hojeHora(), label:'Sancionado pelo Prefeito' });
   sincronizarProtocolo(p, 'Sancionado pelo Prefeito');
   notificar(p, 'Sancionado pelo Prefeito');
-  p.timeline.push({ date:'22/09 ' + now(), label:'Convertido em ' + p.lei });
+  p.timeline.push({ date:hojeHora(), label:'Convertido em ' + p.lei });
   salvarProtocolos();
   renderAll(); abrirDetalheExec(id);
 }
 function vetar(id) {
   const p = protocolos.find(x => x.id === id);
   p.status = 'rejeitado';
-  p.timeline.push({ date:'22/09 ' + now(), label:'Vetado pelo Prefeito' });
+  p.timeline.push({ date:hojeHora(), label:'Vetado pelo Prefeito' });
   sincronizarProtocolo(p, 'Vetado pelo Prefeito');
   notificar(p, 'Vetado pelo Prefeito');
   renderAll(); abrirDetalheExec(id);
 }
 
 /* ---------- NOVO PROTOCOLO (Executivo) ---------- */
+let novosAnexos = [];
 function anexarDocumentoNovo() {
-  const list = document.getElementById('novo-doc-list');
-  const n = list.children.length + 1;
-  const row = document.createElement('div');
-  row.className = 'doc-row';
-  row.innerHTML = `<span class="doc-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>Documento adicional ${n}.pdf</span><span class="doc-status">Anexado</span>`;
-  list.appendChild(row);
+  const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = '.pdf,.doc,.docx,.odt,.jpg,.jpeg,.png';
+  inp.onchange = async () => {
+    for (const f of inp.files) {
+      if (f.size > 10 * 1024 * 1024) { alert(f.name + ': o limite é 10 MB por arquivo.'); continue; }
+      const url = await new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = erro; r.readAsDataURL(f); });
+      novosAnexos.push({ nome: f.name, url });
+    }
+    desenharAnexosNovos();
+  };
+  inp.click();
 }
+function desenharAnexosNovos() {
+  const list = document.getElementById('novo-doc-list');
+  list.innerHTML = novosAnexos.length ? novosAnexos.map((a, i) => `<div class="doc-row"><span class="doc-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>${escLG(a.nome)}</span><button class="btn-secondary" type="button" onclick="novosAnexos.splice(${i},1);desenharAnexosNovos()">Remover</button></div>`).join('')
+    : '<p class="note">Nenhum documento anexado ainda. Anexe o projeto e a justificativa em PDF.</p>';
+}
+function linkDoc(p, nome) {
+  const a = (p.anexos || []).find(x => x.nome === nome);
+  return a && a.url ? `<a href="${escLG(a.url)}" target="_blank" rel="noopener" download="${escLG(nome)}">${escLG(nome)}</a>` : escLG(nome);
+}
+
 async function enviarProtocolo() {
-  seq++;
-  const docs = Array.from(document.querySelectorAll('#novo-doc-list .doc-name')).map(n => n.textContent.trim());
+  const ano = new Date().getFullYear();
+  const usados = protocolos.map(p => String(p.full || '').match(/^PL-(\d{4})-(\d+)$/)).filter(m => m && Number(m[1]) === ano).map(m => Number(m[2]));
+  seq = Math.max(0, ...usados) + 1;
+  const n3 = String(seq).padStart(3, '0');
+  if (!document.getElementById('f-ementa').value.trim()) { alert('Escreva a ementa (resumo do projeto).'); return; }
+  if (!novosAnexos.length) { alert('Anexe pelo menos o documento do projeto.'); return; }
+  const anexos = novosAnexos.slice(); const docs = anexos.map(a => a.nome);
   const novo = {
-    id: 'pl0' + seq, numero: 'PL 0' + seq + '/2026', full: 'PL-2026-000' + seq,
+    id: 'pl-' + ano + '-' + n3 + '-' + Date.now().toString(36), numero: 'PL ' + n3 + '/' + ano, full: 'PL-' + ano + '-' + String(seq).padStart(5, '0'),
     autor: (usuarioAtual && usuarioAtual.nome) || 'Usuário atual',
     ementa: document.getElementById('f-ementa').value || 'Novo Projeto de Lei',
     unidade: document.getElementById('f-unidade').value, comissao: '—', status: 'enviado',
-    data: new Date().toLocaleDateString('pt-BR'), docs,
-    timeline: [{ date:'22/09 ' + now(), label:'Projeto criado' }, { date:'22/09 ' + now(), label:'Documento assinado' }, { date:'22/09 ' + now(), label:'Enviado à Câmara' }],
+    data: new Date().toLocaleDateString('pt-BR'), docs, anexos,
+    timeline: [{ date:hojeHora(), label:'Projeto criado' }, { date:hojeHora(), label:'Documento assinado' }, { date:hojeHora(), label:'Enviado à Câmara' }],
   };
-  protocolos.unshift(novo);
+  protocolos.unshift(novo); novosAnexos = []; document.getElementById('f-ementa').value = ''; desenharAnexosNovos();
   sincronizarProtocolo(novo, 'Enviado à Câmara');
   notificar(novo, 'Enviado à Câmara');
   document.getElementById('novo-form-wrap').style.display = 'none';
@@ -1746,7 +1731,7 @@ function devolverProtocolo() {
   const p = protocolos.find(x => x.id === currentEntradaId); if (!p) return;
   const motivo = document.getElementById('devolver-motivo').value.trim() || 'Favor substituir o arquivo do Projeto de Lei por versão devidamente assinada.';
   p.status = 'devolvido'; p.motivo = motivo;
-  p.timeline.push({ date:'22/09 ' + now(), label:'Devolvido ao Executivo — ' + motivo });
+  p.timeline.push({ date:hojeHora(), label:'Devolvido ao Executivo — ' + motivo });
   sincronizarProtocolo(p, 'Devolvido ao Executivo — ' + motivo);
   notificar(p, 'Devolvido ao Executivo — ' + motivo);
   document.getElementById('conf-form-wrap').style.display = 'none';
@@ -1792,7 +1777,7 @@ function lg24ParecerJuridico(id){
  sincronizarProtocolo(p,'Parecer jurídico registrado');notificar(p,'Encaminhado à Comissão de Finanças e Orçamento');renderAll();abrirDetalheCam(id);
 }
 function renderAcaoLateral(p) {
- const docs=`<div class="side-card"><h3>Documentos</h3><div class="doc-list">${(p.docs||[]).map(d=>`<div class="doc-row"><span class="doc-name">${escLG(d)}</span></div>`).join('')}</div></div>`;
+ const docs=`<div class="side-card"><h3>Documentos</h3><div class="doc-list">${(p.docs||[]).map(d=>`<div class="doc-row"><span class="doc-name">${linkDoc(p,d)}</span></div>`).join('')}</div></div>`;
  let action='';
  if(p.status==='analise'){
  action=`<div class="side-card"><h3>Procuradoria Legislativa</h3><p class="note">Primeira etapa obrigatória: registrar parecer jurídico.</p><textarea id="lg24-juridico" placeholder="Resumo do parecer jurídico" style="width:100%;min-height:95px;margin:12px 0"></textarea><button class="btn-primary" style="width:100%" onclick="lg24ParecerJuridico('${p.id}')">Registrar parecer e enviar a Finanças</button></div>`;
@@ -1824,18 +1809,18 @@ function registrarVotacao(id, aprovado) {
   const p = protocolos.find(x => x.id === id);
   if (aprovado) {
     p.status = 'aguardando_exec';
-    p.timeline.push({ date:'22/09 ' + now(), label:'Aprovado em votação' });
+    p.timeline.push({ date:hojeHora(), label:'Aprovado em votação' });
     sincronizarProtocolo(p, 'Aprovado em votação');
     notificar(p, 'Aprovado em votação');
-    p.timeline.push({ date:'22/09 ' + now(), label:'Encaminhado ao Poder Executivo' });
+    p.timeline.push({ date:hojeHora(), label:'Encaminhado ao Poder Executivo' });
     sincronizarProtocolo(p, 'Encaminhado ao Poder Executivo');
     notificar(p, 'Encaminhado ao Poder Executivo');
   } else {
     p.status = 'rejeitado';
-    p.timeline.push({ date:'22/09 ' + now(), label:'Rejeitado em votação' });
+    p.timeline.push({ date:hojeHora(), label:'Rejeitado em votação' });
     sincronizarProtocolo(p, 'Rejeitado em votação');
     notificar(p, 'Rejeitado em votação');
-    p.timeline.push({ date:'22/09 ' + now(), label:'Arquivado' });
+    p.timeline.push({ date:hojeHora(), label:'Arquivado' });
   }
   renderAll(); abrirDetalheCam(id);
 }
@@ -1852,7 +1837,7 @@ function renderComissoes() {
 /* ---------- Documentos / Configurações (compartilhados) ---------- */
 function renderDocumentos() {
   const rows = [];
-  protocolos.filter(p=>!['pl024','pl025','pl026','pl027'].includes(p.id)).forEach(p => (p.docs||[]).forEach(d => rows.push({ doc:d, num:p.numero, data:p.data })));
+  protocolos.forEach(p => (p.docs||[]).forEach(d => rows.push({ doc:d, num:p.numero, data:p.data })));
   getExpedientes().filter(e=>!e.privado).forEach(e=>(e.documentos||[]).forEach((d,i)=>{if(/Ficha de Personagem.*Ravi.*Despertar Prism[aá]tico/i.test(d))return;rows.push({doc:d,num:e.numero,data:e.timeline?.[0]?.date||'',exp:e.id,index:i});}));
   document.getElementById('documentos-docket').innerHTML =
     '<thead><tr><th>Documento</th><th>Protocolo</th><th>Anexado em</th></tr></thead><tbody>' +
@@ -1861,6 +1846,7 @@ function renderDocumentos() {
 
 /* ---------- Navegação ---------- */
 function now() { return new Date().toTimeString().slice(0,5); }
+function hojeHora() { const d = new Date(); return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + now(); }
 
 function renderAll() { renderExec(); renderCam(); renderDocumentos(); carregarExpedientes(); renderExpedientes(); renderNotificacoes(); }
 document.getElementById('exp-tabs').addEventListener('click', e => { const b=e.target.closest('.expediente-tab'); if(!b)return; document.querySelectorAll('.expediente-tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderExpedientes(b.dataset.filter); });
@@ -3186,20 +3172,20 @@ html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-msg{color:#c5
 html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-card:not(.bloq):hover,html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-card:not(.bloq):focus-visible{border-color:#1f4e79!important;background:#fff!important}
 </style>
 
-<script src="../assets/transparencia-catalogo.js?v=202611170727"></script>
-<script src="lgt-publicacoes.js?v=202611170727"></script>
-<script src="lgok-confirmar.js?v=202611170727"></script>
-<script src="lgf-financeiro.js?v=202611170727"></script>
-<script src="lgs-assinatura.js?v=202611170727"></script>
-<script src="lgvr-vereador.js?v=202611170727"></script>
-<script src="lgcm-comissoes.js?v=202611170727"></script>
-<script src="lgcg-cargos.js?v=202611170727"></script>
-<script src="lgux-facil.js?v=202611170727"></script>
-<script src="../assets/leis-comum.js?v=202611170727"></script>
-<script src="../assets/tv.js?v=202611170727"></script>
-<script src="lgpl-plenario.js?v=202611170727"></script>
-<script src="lgfx-funcoes.js?v=202611170727"></script>
-<script src="lgav-avisos.js?v=202611170727"></script>
-<script src="lgsc-site.js?v=202611170727"></script>
-<script src="lgtr-treinamento.js?v=202611170727"></script>
+<script src="../assets/transparencia-catalogo.js?v=202611171812"></script>
+<script src="lgt-publicacoes.js?v=202611171812"></script>
+<script src="lgok-confirmar.js?v=202611171812"></script>
+<script src="lgf-financeiro.js?v=202611171812"></script>
+<script src="lgs-assinatura.js?v=202611171812"></script>
+<script src="lgvr-vereador.js?v=202611171812"></script>
+<script src="lgcm-comissoes.js?v=202611171812"></script>
+<script src="lgcg-cargos.js?v=202611171812"></script>
+<script src="lgux-facil.js?v=202611171812"></script>
+<script src="../assets/leis-comum.js?v=202611171812"></script>
+<script src="../assets/tv.js?v=202611171812"></script>
+<script src="lgpl-plenario.js?v=202611171812"></script>
+<script src="lgfx-funcoes.js?v=202611171812"></script>
+<script src="lgav-avisos.js?v=202611171812"></script>
+<script src="lgsc-site.js?v=202611171812"></script>
+<script src="lgtr-treinamento.js?v=202611171812"></script>
 </body></html>

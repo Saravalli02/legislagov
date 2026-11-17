@@ -7,7 +7,7 @@
    ===================================================================== */
 (function () {
   const CHAVE_PAINEL = 'legislagov_protocolos_v2_neves-paulista-sp';
-  const MOSTRAR_EXEMPLOS = true; // demonstração: desligar quando houver dados reais
+  const MOSTRAR_EXEMPLOS = false; // sem exemplos: só o que a Câmara protocolar
 
   const TIPOS = {
     PL: { nome: 'Projeto de Lei', plural: 'Projetos de Lei', fluxo: 'sancao' },

@@ -149,7 +149,7 @@
     const el = $('#view-lgf-geral'); const ex = D.exercicio;
     if (!D.dotacoes.length) {
       el.innerHTML = cab('Financeiro', `Exercício ${ex} · execução orçamentária da Câmara`) + vazioCard('Comece pelas dotações do orçamento', 'Cadastre as dotações aprovadas na LOA (ficha, classificação e valor). Depois, emita empenhos, registre liquidações e pagamentos.',
-        `<div class="lgt-acoes" style="justify-content:center">${btnEd('Cadastrar dotação', "lgfFormDotacao()")}${btnEd('Carregar dados de exemplo', 'lgfExemplo()', '')}</div>`);
+        `<div class="lgt-acoes" style="justify-content:center">${btnEd('Cadastrar dotação', "lgfFormDotacao()")}</div>`);
       return;
     }
     let T = { atualizado: 0, empenhado: 0, liquidado: 0, pago: 0, saldo: 0 };
@@ -191,7 +191,7 @@
         <td style="min-width:120px">${barra([[c.pago, '#2fbf71', 'pago'], [c.liquidado - c.pago, '#a78bfa', 'liquidado'], [c.empenhado - c.liquidado, '#39bdf6', 'empenhado']], c.atualizado)}<small>${pct(c.empenhado, c.atualizado).toFixed(0)}% empenhado</small></td>
         <td class="acoes-col"><button class="lgt-mini" type="button" data-edita onclick="lgfCredito('${d.id}')">Crédito adicional</button><button class="lgt-mini" type="button" data-edita onclick="lgfFormDotacao('${d.id}')">Editar</button></td></tr>`; }).join('')}</tbody></table></div>
       <p class="lgt-p" style="margin-top:12px">Saldo = orçamento atualizado − empenhado. A Lei 4.320/1964 (art. 59) proíbe empenhar acima do saldo; o sistema bloqueia automaticamente.</p>`
-        : vazioCard('Nenhuma dotação cadastrada', 'Cadastre as fichas do orçamento aprovado (LOA) para começar a empenhar.', `<div class="lgt-acoes" style="justify-content:center">${btnEd('+ Nova dotação', 'lgfFormDotacao()')}${btnEd('Carregar dados de exemplo', 'lgfExemplo()', '')}</div>`));
+        : vazioCard('Nenhuma dotação cadastrada', 'Cadastre as fichas do orçamento aprovado (LOA) para começar a empenhar.', `<div class="lgt-acoes" style="justify-content:center">${btnEd('+ Nova dotação', 'lgfFormDotacao()')}</div>`));
   }
   window.lgfFormDotacao = function (id) {
     if (!exigeEdicao()) return; const d = id ? dot(id) : { funcional: '01.031.0001.2001', acao: 'Manutenção das atividades legislativas', fonte: '01 – Tesouro', aplicacao: '110.000' };
@@ -432,8 +432,7 @@
         <button class="lgt-btn primario" type="submit" data-edita>Salvar parâmetros</button></form>
         <div class="lgt-card"><h3>Dados</h3><p class="lgt-p">Cópia de segurança de todo o Financeiro (dotações, empenhos, contratos e credores).</p>
           <div class="lgt-acoes"><button class="lgt-btn" type="button" onclick="lgfBackup()">Baixar cópia (JSON)</button><label class="lgt-btn" data-edita>Restaurar cópia<input type="file" accept=".json" hidden onchange="lgfRestaurar(this)"></label></div>
-          <h3 style="margin-top:18px">Demonstração</h3><p class="lgt-p">Dados de exemplo ajudam a conhecer o módulo. Eles ficam marcados e não vão para o Portal da Transparência.</p>
-          <div class="lgt-acoes"><button class="lgt-btn" type="button" data-edita onclick="lgfExemplo()">Carregar exemplo</button><button class="lgt-btn" type="button" data-edita onclick="lgfLimparExemplo()">Remover exemplos</button></div>
+          ${(D.dotacoes.concat(D.empenhos, D.contratos)).some(x => x && x.exemplo) ? `<h3 style="margin-top:18px">Exemplos</h3><p class="lgt-p">Há dados de exemplo carregados antes. Remova-os para ficar só com os dados reais.</p><div class="lgt-acoes"><button class="lgt-btn" type="button" data-edita onclick="lgfLimparExemplo()">Remover exemplos</button></div>` : ''}
           <h3 style="margin-top:18px">Importante</h3><p class="lgt-p">Este painel é o controle gerencial da Câmara. A escrituração oficial e o envio ao TCE-SP (AUDESP) continuam no sistema contábil; numa próxima etapa os dois podem ser integrados.</p></div></div>`;
     $('#lgf-param').onsubmit = e => { e.preventDefault(); if (!exigeEdicao()) return; const f = e.target; D.exercicio = +f.exercicio.value || D.exercicio; ['orgao', 'unidade', 'ordenador', 'cargoOrdenador', 'contador', 'crc'].forEach(k => p[k] = f[k].value.trim()); p.alertaDias = Math.max(1, +f.alertaDias.value || 60); p.autoPublicar = f.autoPublicar.checked;
       if (!p.autoPublicar && typeof transpLer === 'function') { try { transpSalvar(transpLer().filter(i => i.origem !== 'financeiro')); } catch (x) { } }

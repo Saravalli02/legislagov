@@ -64,8 +64,18 @@ exec sudo -E -u legislagov python3 /opt/legislagov/app/ferramentas/aws/senha.py 
 EOS
 chmod 755 /usr/local/bin/legislagov-senha
 
-# HTTPS para cada endereço listado em dominios.txt
-DOMS=$(grep -v '^\s*#' "$APP/ferramentas/aws/dominios.txt" | awk 'NF>=2{print $1}' | tr '\n' ' ')
+# HTTPS para cada endereço listado em dominios.txt — só os que já apontam para este servidor
+# (assim o Caddy não fica tentando certificado de endereço cujo DNS ainda não mudou).
+# Roda também a cada 30 min: quando o DNS de um endereço novo passar a apontar para cá, ele entra sozinho.
+cat > /usr/local/bin/legislagov-caddy <<'EOS'
+#!/bin/bash
+APP=/opt/legislagov/app
+MEUIP=$(curl -s --max-time 6 https://checkip.amazonaws.com | tr -d '[:space:]')
+DOMS=""
+for d in $(grep -v '^\s*#' "$APP/ferramentas/aws/dominios.txt" | awk 'NF>=2{print $1}'); do
+  ip=$(getent ahostsv4 "$d" | awk 'NR==1{print $1}')
+  if [ -z "$MEUIP" ] || [ "$ip" = "$MEUIP" ]; then DOMS="$DOMS $d"; fi
+done
 NOVO=$(mktemp)
 {
   for d in $DOMS; do
@@ -97,5 +107,10 @@ EOF
 if ! cmp -s "$NOVO" /etc/caddy/Caddyfile; then
   cp "$NOVO" /etc/caddy/Caddyfile
   systemctl reload caddy || systemctl restart caddy
+  echo "$(date '+%F %T') Caddy:$DOMS" >> /var/log/legislagov-caddy.log
 fi
 rm -f "$NOVO"
+EOS
+chmod 755 /usr/local/bin/legislagov-caddy
+echo '*/30 * * * * root /usr/local/bin/legislagov-caddy' > /etc/cron.d/legislagov-caddy
+/usr/local/bin/legislagov-caddy || true
