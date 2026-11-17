@@ -1,7 +1,7 @@
 /* LegislaGov Rural: guarda o app no celular para abrir sem internet.
    Busca a versão nova quando há internet (rede primeiro) e usa a cópia guardada quando não há. */
-const CACHE = 'lgrural-v1';
-const ARQS = ['./', 'index.html', 'manifest.webmanifest', 'icone-192.png', 'icone-512.png', 'icone-180.png'];
+const CACHE = 'lgrural-v2';
+const ARQS = ['./', 'index.html', 'manifest.json', 'icone-192.png', 'icone-512.png', 'icone-180.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARQS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
