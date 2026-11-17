@@ -144,9 +144,13 @@ def main():
                 except Exception as e:
                     print("arquivo não baixado:", url, e)
                     local, erros = None, erros + 1
+                comp = competencia(tit, ano)
+                if re.search(r"\.[A-Za-z]{3,4}$", tit) or not re.search(r"[A-Za-zÀ-ú]{3}", tit):   # o link era só o nome do arquivo
+                    nome_mes = next((k for k, v in MESES.items() if len(comp) == 7 and v == int(comp[5:]) and k != "marco"), "")
+                    tit = f"{rotulo} — {nome_mes.capitalize() + ' de ' if nome_mes else ''}{comp[:4]}"
                 itens.append({"id": "ant-" + hashlib.sha1(url.encode()).hexdigest()[:12], "cat": cat, "sub": sub, "titulo": tit,
                               "descricao": f"{rotulo} · trazido do site anterior da Câmara", "data": data or f"{ano}-12-31",
-                              "competencia": competencia(tit, ano), "link": local or url, "origem": url, "publicado": True, "importado": True})
+                              "competencia": comp, "link": local or url, "origem": url, "publicado": True, "importado": True})
             print(f"{rotulo} {ano}: ok")
     for pid, (cat, sub) in PAGINAS.items():
         try:
