@@ -877,6 +877,32 @@ def _norm(x):
     return str(x or "").strip().lower()
 
 
+def _sem_acento(t):
+    import unicodedata
+    t = unicodedata.normalize("NFD", str(t or "")).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", t)).strip()
+
+
+def vereador_pelo_nome(u, vereadores):
+    """Vereador cujo usuário ainda não foi ligado na composição: o mesmo critério do painel (lgvr-vereador.js,
+    vereadorPeloNome) — cargo de vereador e um único vereador livre com o nome parecido."""
+    u = u or {}
+    t = f"{u.get('cargo', '')} {u.get('setor', '')} {u.get('cargoId', '')}"
+    if u.get("orgao") == "ambos" or u.get("perfil") == "admin" or not re.search(r"vereador|presidente da c", t, re.I):
+        return None
+    n = _sem_acento(u.get("nome"))
+    if not n:
+        return None
+    achados = []
+    for v in vereadores:
+        if v.get("usuario"):
+            continue
+        a, b = _sem_acento(v.get("nome")), _sem_acento(v.get("completo"))
+        if a == n or b == n or (a and (a in n or n in a)) or (b and len(n.split()) > 1 and n in b):
+            achados.append(v)
+    return achados[0] if len(achados) == 1 else None
+
+
 class Quem:
     """Quem está gravando: perfil, vereador vinculado, Presidente e níveis por painel (calculado uma vez)."""
 
@@ -901,10 +927,11 @@ class Quem:
 
     @property
     def vereador(self):
-        for v in self.comp.get("vereadores", []) or []:
-            if isinstance(v, dict) and str(v.get("usuario") or "").lower() == self.login and self.login:
+        vs = [v for v in self.comp.get("vereadores", []) or [] if isinstance(v, dict)]
+        for v in vs:
+            if str(v.get("usuario") or "").lower() == self.login and self.login:
                 return v
-        return None
+        return vereador_pelo_nome(self.u, vs)
 
     @property
     def presidente(self):

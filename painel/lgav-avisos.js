@@ -87,6 +87,12 @@
   window.lgavL10 = function (id) {   // abre o aviso do painel administrativo e marca como lido
     const n = ler('lgv10_notifications_v1', []).find(x => x.id === id); try { window.lgv10Read && lgv10Read(id); } catch (e) { }
     if (!n) return; const k = n.kind || '';
+    if (window.lgPerfil && lgPerfil() === 'vereador') {   // vereador não abre telas do Painel Administrativo
+      const pid = k.startsWith('protocolo:') ? k.slice(10) : '';
+      if (pid && window.lgprVer) return lgprVer(pid, true);
+      if (window.lgv10Open) return lgv10Open(k === 'mensagem' ? 'inbox' : 'notifications');
+      return;
+    }
     if (k.startsWith('expediente:') && window.lgv20OpenPrivate) return lgv20OpenPrivate(k.slice(11));
     if (k === 'protocolo' && window.lgv9Open) return lgv9Open();
     if (window.lgv10Open) lgv10Open(k === 'mensagem' ? 'inbox' : 'notifications');
@@ -220,6 +226,8 @@
   function executar(x) {
     let area = ''; try { area = sessionStorage.getItem('lg_area') || ''; } catch (e) { }
     const vai = () => { try { (new Function(x.acao))(); } catch (e) { console.warn('Aviso', e); } };
+    // vereador fica sempre no Portal do Vereador: tarefa de outro painel abre a matéria em "Acompanhar matérias"
+    if (window.lgPerfil && lgPerfil() === 'vereador' && x.area && x.area !== 'vereador') { if (window.lgvrAbrir) lgvrAbrir('materias'); return; }
     if (x.area && x.area !== area && window.lgtAreasPermitidas && lgtAreasPermitidas().includes(x.area)) { lgv33TrocarArea(x.area); setTimeout(vai, 120); }
     else vai();
   }

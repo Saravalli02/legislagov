@@ -57,6 +57,7 @@
     if (window.lgVereadorDoUsuario && lgVereadorDoUsuario(u)) return 'vereador';
     if (PERFIS[u.perfil] && u.perfil !== 'adm' && u.perfil !== 'vereador') return u.perfil;
     const t = `${u.cargo || ''} ${u.setor || ''}`;
+    if (/vereador|presidente da c[aâ]mara/i.test(t)) return 'vereador';   // vereador ainda sem vínculo com a composição
     if (/procurad/i.test(t)) return 'procurador';
     if (/tesour|contab|financ/i.test(t)) return 'financeiro';
     if (/secret/i.test(t)) return 'secretaria';
@@ -75,6 +76,7 @@
     u = u || usuario(); if (!u) return 'nenhum';
     if (PAINEIS_OCULTOS.includes(area)) return 'nenhum';
     const p = perfilDe(u); if (p === 'adm') return 'edicao';
+    if (p === 'vereador' && area === 'legislativo') return 'nenhum';   // vereador nunca entra no Painel Administrativo
     const r = (mapaAreas()[loginDe(u)] || {})[area];
     if (r) return r;
     return nivelPadrao(area, u);

@@ -59,22 +59,49 @@
     return c;
   }
   const verPorId = id => comp().vereadores.find(v => v.id === id);
-  function vereadorDoUsuario(u) { const l = loginDe(u); if (!l) return null; return comp().vereadores.find(v => v.usuario && v.usuario.toLowerCase() === l) || null; }
+  function vereadorDoUsuario(u) {
+    const l = loginDe(u); if (!l) return null;
+    const v = comp().vereadores.find(x => x.usuario && x.usuario.toLowerCase() === l); if (v) return v;
+    // ainda sem vínculo na composição: cargo de vereador + um único vereador livre com o nome parecido (mesmo critério do servidor)
+    if (!u || u.orgao === 'ambos' || u.perfil === 'admin' || !/vereador|presidente da c/i.test(`${u.cargo || ''} ${u.setor || ''} ${u.cargoId || ''}`)) return null;
+    return vereadorPeloNome(u);
+  }
   function ehGestor(u) { u = u || usuario(); if (!u) return false; const p = window.lgPerfil ? lgPerfil(u) : (u.orgao === 'ambos' ? 'adm' : ''); return p === 'adm' || p === 'procurador'; }
   window.lgVereadorDoUsuario = vereadorDoUsuario;
   window.lgEhPresidente = u => { const v = vereadorDoUsuario(u || usuario()); return !!v && v.id === comp().presidente; };
   window.lgEhGestor = () => ehGestor();
 
   /* Quem está usando o portal: o vereador vinculado ao usuário; para gestores/administrador, um vereador escolhido para demonstração */
+  const semAcento = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const cargoPresidente = u => /presidente da c[aâ]mara/i.test(`${(u && u.cargo) || ''} ${(u && u.setor) || ''}`);
+  /* vereador cujo usuário ainda não foi ligado na composição: acha pelo nome (só se houver um único parecido) */
+  function vereadorPeloNome(u) {
+    const n = semAcento(u && u.nome); if (!n) return null;
+    const achados = comp().vereadores.filter(v => !v.usuario).filter(v => { const a = semAcento(v.nome), b = semAcento(v.completo); return a === n || b === n || (a && (n.includes(a) || a.includes(n))) || (b && n.split(' ').length > 1 && b.includes(n)); });
+    return achados.length === 1 ? achados[0] : null;
+  }
   function atual() {
     const u = usuario(); if (!u) return null;
     const v = vereadorDoUsuario(u); if (v) return { v, demo: false };
     if (!window.lgNivelArea || lgNivelArea('vereador') === 'nenhum') return null;
+    const perfil = window.lgPerfil ? lgPerfil(u) : '';
+    if (perfil === 'vereador') {   // vereador sem vínculo: nunca vira "demonstração" (que mostrava as funções da Presidência)
+      const pn = vereadorPeloNome(u); if (pn) return { v: pn, demo: false, porNome: true };
+      if (cargoPresidente(u)) { const pv = comp().vereadores.find(x => x.id === comp().presidente); if (pv) return { v: pv, demo: false, porCargo: true }; }
+      return null;
+    }
     let id = ''; try { id = sessionStorage.getItem('lgvr_como') || ''; } catch (e) { }
     const c = comp(); const alvo = c.vereadores.find(x => x.id === id) || c.vereadores.find(x => x.id === c.presidente) || c.vereadores[0];
     return alvo ? { v: alvo, demo: true } : null;
   }
-  window.lgvrPresidenteAtual = () => { const a = atual(); return !!a && a.v.id === comp().presidente; };
+  /* Funções da Presidência: só o Presidente da Câmara (vereador marcado como Presidente na composição ou cargo
+     "Presidente da Câmara" no cadastro) e o administrador do sistema. Os demais vereadores não veem. */
+  window.lgvrPresidenteAtual = () => {
+    const u = usuario(); if (!u) return false;
+    if (window.lgPerfil && lgPerfil(u) === 'adm') { const a = atual(); return !!a && a.v.id === comp().presidente; }
+    const a = atual(); if (!a || a.demo) return false;
+    return a.v.id === comp().presidente || cargoPresidente(u);
+  };
   const podeEditar = () => (window.lgNivelArea ? lgNivelArea('vereador') : 'nenhum') === 'edicao';
 
   /* ================= dados do portal (rascunhos e atos) ================= */
@@ -150,7 +177,7 @@
   let tela = 'inicio';
   window.lgvrAbrir = function (k) {
     const a = atual(); if (!a) { UI().aviso('Seu usuário não tem acesso ao Portal do Vereador.', 'erro'); return; }
-    if (PRES.includes(k) && a.v.id !== comp().presidente) { UI().aviso('Função exclusiva do Presidente da Câmara.', 'erro'); k = 'inicio'; }
+    if (PRES.includes(k) && !window.lgvrPresidenteAtual()) { UI().aviso('Função exclusiva do Presidente da Câmara.', 'erro'); k = 'inicio'; }
     criarTelas(); integrarAdministrativo(); tela = TELAS[k] ? k : 'inicio';
     gotoShared('lgvr-' + tela); if (window.lgv31Mark) lgv31Mark(TELAS[tela]);
     document.documentElement.classList.toggle('lgvr-consulta', !podeEditar());
@@ -193,7 +220,7 @@
   const ICO_TAREFA = x => /assin|coautoria|rascunho|autógrafo|promulg/i.test(x.titulo) ? 'assinar' : /despach/i.test(x.titulo) ? 'despacho' : /comiss|parecer/i.test(x.titulo) ? 'comissoes' : /presen|vot|sess|veto/i.test(x.titulo) ? 'votacao' : /segur|conta/i.test(x.titulo) ? 'cadeado' : /mensag/i.test(x.titulo) ? 'mensagens' : 'notificacoes';
   const VERBO = { assinar: 'Assinar', despacho: 'Despachar', votacao: 'Abrir', comissoes: 'Abrir', cadeado: 'Ver', mensagens: 'Ler', notificacoes: 'Ver' };
   function tInicio(a) {
-    const v = a.v, c = comp(), pres = v.id === c.presidente, prot = listaProt();
+    const v = a.v, c = comp(), pres = !!window.lgvrPresidenteAtual(), prot = listaProt();
     const minhas = prot.filter(p => ehMinha(p, v)); const tram = minhas.filter(p => !['concluido', 'rejeitado', 'devolvido'].includes(p.status));
     const pend = pendentesAssinatura(v); const prox = sessoes()[0];
     const movs = minhas.flatMap(p => (p.timeline || []).map(t => ({ p, t }))).slice(-60).reverse().slice(0, 3);
@@ -384,7 +411,7 @@
   }
 
   /* ================= PRESIDÊNCIA ================= */
-  const exigePres = () => { const a = atual(); if (!a || a.v.id !== comp().presidente) { UI().aviso('Função exclusiva do Presidente da Câmara.', 'erro'); return null; } if (!podeEditar()) { UI().aviso('Seu acesso é somente consulta.', 'erro'); return null; } return a; };
+  const exigePres = () => { const a = atual(); if (!a || !window.lgvrPresidenteAtual()) { UI().aviso('Função exclusiva do Presidente da Câmara.', 'erro'); return null; } if (!podeEditar()) { UI().aviso('Seu acesso é somente consulta.', 'erro'); return null; } return a; };
   const regra = t => `<p class="lgvr-regra">${ic('ajuda')}<span>${t}</span></p>`;
   function tDespacho(a) {
     const prot = listaProt(); const fila = prot.filter(p => p.status === 'protocolado'); const andam = prot.filter(p => p.status === 'analise' || p.status === 'comissao');
@@ -866,6 +893,15 @@
         if (v === 'usuarios') { const lista = $('#usuarios-por-municipio'); if (lista) lista.hidden = false; setTimeout(desenharComposicao, 0); }
         return x;
       }; w.__lgvr = true; window.gotoShared = w; }
+    // vereador nunca abre telas do Painel Administrativo (matérias da Secretaria, protocolo, usuários, expedientes…)
+    const ehVer = () => window.lgPerfil && lgPerfil() === 'vereador';
+    const BLOQ = ['usuarios', 'admin', 'expedientes', 'config', 'lgpr', 'documentos', 'lgt-transp', 'lgt-noticias', 'lgt-acessos', 'lgt-uproto'];
+    const gs2 = window.gotoShared;
+    if (typeof gs2 === 'function' && !gs2.__ver) { const w = function (v, ...r) { if (ehVer() && BLOQ.includes(v)) { lgvrAbrir('inicio'); return; } return gs2.call(this, v, ...r); }; w.__ver = true; w.__lgvr = true; window.gotoShared = w; }
+    const gv = window.gotoV;
+    if (typeof gv === 'function' && !gv.__ver) { const w = function (amb, ...r) { if (ehVer() && (amb === 'cam' || amb === 'exec')) { lgvrAbrir('materias'); return; } return gv.call(this, amb, ...r); }; w.__ver = true; window.gotoV = w; }
+    const l9 = window.lgv9Open;
+    if (typeof l9 === 'function' && !l9.__ver) { const w = function (...r) { if (ehVer()) { lgvrAbrir('materias'); return; } return l9.apply(this, r); }; w.__ver = true; window.lgv9Open = w; }
     if (window.lgv33Render) lgv33Render();
     // sessão reaberta (recarregar a página / nova aba): volta ao painel que estava em uso, ou pergunta qual painel
     // (espera o início padrão do painel, que abre a tela inicial do Administrativo aos 250 ms)

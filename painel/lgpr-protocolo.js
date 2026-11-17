@@ -249,13 +249,14 @@
   }
 
   /* ================= detalhe e andamento ================= */
-  window.lgprVer = function (id) {
+  window.lgprVer = function (id, soLeitura) {
     const r = registros().find(x => x.id === id); if (!r) { aviso('Protocolo não encontrado.', 'erro'); return; }
     const [st, cls] = ST[r.status] || ['—', 'res'];
     const anexos = (r.anexos || []).filter(a => a && a.url);
     const antigo = r.fileName && !anexos.length ? `<li><button type="button" class="lgt-mini" onclick="lgv9Download('${esc(r.id)}')">${esc(r.fileName)}</button></li>` : '';
     const and = (r.andamento || [{ em: r.createdAt, por: r.user, acao: r.status === 'reservado' ? 'Número reservado' : 'Protocolado', para: r.to }]);
     const reservado = ['reservado', 'rascunho'].includes(r.status);
+    const ro = !!soLeitura;
     UI().abrirModal(`<div class="lgt-form lgpr-det"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">${esc(numero(r))}</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
       <div class="lgpr-det-corpo">
         <p class="lgpr-det-assunto">${esc(r.subject)} <span class="lgpr-st ${cls}">${st}</span></p>
@@ -268,17 +269,17 @@
         ${r.description ? `<p class="lgpr-desc">${esc(r.description).replace(/\n/g, '<br>')}</p>` : ''}
         <h3>Anexos</h3>
         <ul class="lgpr-anexos">${anexos.map(a => `<li><a href="${esc(a.url)}" target="_blank" rel="noopener" download="${esc(a.nome)}">${esc(a.nome)}</a></li>`).join('')}${antigo}${!anexos.length && !antigo ? '<li class="lgpr-dica">Nenhum anexo.</li>' : ''}</ul>
-        <label class="lgt-btn lgpr-mais-anexo">Anexar arquivo<input type="file" id="lgpr-add" multiple accept=".pdf,.doc,.docx,.odt,.xls,.xlsx,.jpg,.jpeg,.png,image/*" hidden></label>
+        <label class="lgt-btn lgpr-mais-anexo" ${ro ? 'hidden' : ''}>Anexar arquivo<input type="file" id="lgpr-add" multiple accept=".pdf,.doc,.docx,.odt,.xls,.xlsx,.jpg,.jpeg,.png,image/*" hidden></label>
         <h3>Andamento</h3>
         <ol class="lgpr-and">${and.map(a => `<li><b>${esc(a.acao)}</b>${a.para ? ' → ' + esc(a.para) : ''}<small>${esc(quando(a.em))} · ${esc(a.por || '')}</small>${a.nota ? `<span>${esc(a.nota)}</span>` : ''}</li>`).join('')}</ol>
-        ${reservado ? '' : `<div class="lgpr-encaminhar" ${r.status === 'concluido' ? 'hidden' : ''}>
+        ${reservado || ro ? '' : `<div class="lgpr-encaminhar" ${r.status === 'concluido' ? 'hidden' : ''}>
           <h3>Encaminhar ou concluir</h3>
           <label>Para<select id="lgpr-para">${setores().map(s => `<option ${s === r.to ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
           <label>Observação (opcional)<input id="lgpr-nota" maxlength="300" placeholder="Ex.: Para parecer até sexta-feira"></label>
         </div>`}
       </div>
       <div class="lgt-modal-rod lgpr-rod3">
-        ${reservado ? `<button type="button" class="lgt-btn perigo" onclick="lgprCancelarReserva('${esc(r.id)}')">Cancelar reserva</button><button type="button" class="lgt-btn primario" onclick="lgprNovo('${esc(r.id)}')">Usar este número</button>`
+        ${ro ? '<button type="button" class="lgt-btn primario" onclick="lgtFechar()">Fechar</button>' : reservado ? `<button type="button" class="lgt-btn perigo" onclick="lgprCancelarReserva('${esc(r.id)}')">Cancelar reserva</button><button type="button" class="lgt-btn primario" onclick="lgprNovo('${esc(r.id)}')">Usar este número</button>`
         : r.status === 'concluido' ? `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Imprimir comprovante</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','reabrir')">Reabrir</button>`
         : `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Comprovante</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','concluir')">Concluir</button><button type="button" class="lgt-btn primario" onclick="lgprMover('${esc(r.id)}','encaminhar')">Encaminhar</button>`}
       </div></div>`);
