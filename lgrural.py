@@ -8,17 +8,19 @@ Cada horta é uma "empresa" (código listado em ferramentas/aws/rural.txt). Dent
   - gestor (dono): vê e altera tudo;
   - vendedor: recebe do servidor só o que é dele (rotas, saídas, fiados e comprovantes das
     saídas dele, pedidos e fornecedores das rotas dele, produtos) e só grava isso.
-Entrada por senha de 4 a 6 números (PBKDF2 no servidor, bloqueio após erros seguidos).
+Entrada por usuário e senha (PBKDF2 no servidor, bloqueio após 8 erros em 15 min). Perfis: adm (acesso
+total) e padrão (vendedor: só o que é dele). O primeiro administrador é criado na primeira abertura.
 
 Rotas (prefixo /api/rural/):
-  GET  entrada?e=CÓD        nome da horta e quem pode entrar (sem dados)
-  POST primeiro             {e, pin} cria a senha do gestor (só enquanto não existe)
-  POST entrar               {e, quem, pin} -> {token, sessao}
+  GET  entrada[?e=CÓD]      nome da horta e se ainda falta criar o administrador (sem dados)
+  POST primeiro             {e?, nome, usuario, senha} cria o 1º administrador (só enquanto não existe)
+  POST entrar               {usuario, senha, e?} -> {token, sessao, empresa}
+  GET/POST usuarios         listar / {id?, nome, usuario, perfil, vendedor, senha?} / {acao:'remover', id}  — adm
+  POST minha-senha          {atual, nova}
   POST sair
   GET  dados                tudo o que a pessoa pode ver + seq
   GET  mudancas?desde=N     espera até 25 s por alterações (tempo real)
   POST gravar               {docs:[{col,id,json,base}|{col,id,apagar:true,base}]}
-  POST senha                {para:'gestor'|vendedorId, pin}            — gestor
   POST posicoes             {pontos:[{t,lat,lng,prec,saida,ev}]}       — vendedor
   GET  trajeto?vendedor=&de=&ate=                                       — gestor (ou o próprio vendedor)
   GET  aovivo               última posição de cada vendedor              — gestor
@@ -52,11 +54,6 @@ def _db():
     c = lgapi._db()
     if not _estado["pronto"]:
         c.executescript("""
-        CREATE TABLE IF NOT EXISTS rural_acessos(empresa TEXT NOT NULL, id TEXT NOT NULL, tipo TEXT NOT NULL, pin TEXT,
-            falhas INTEGER NOT NULL DEFAULT 0, janela REAL NOT NULL DEFAULT 0, bloqueio REAL NOT NULL DEFAULT 0,
-            PRIMARY KEY(empresa, id));
-        CREATE TABLE IF NOT EXISTS rural_sessoes(token TEXT PRIMARY KEY, empresa TEXT NOT NULL, quem TEXT NOT NULL,
-            tipo TEXT NOT NULL, expira REAL NOT NULL, criado REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS rural_docs(empresa TEXT NOT NULL, col TEXT NOT NULL, id TEXT NOT NULL, json TEXT,
             seq INTEGER NOT NULL, apagado INTEGER NOT NULL DEFAULT 0, quando REAL, por TEXT, PRIMARY KEY(empresa, col, id));
         CREATE INDEX IF NOT EXISTS ix_rural_docs_seq ON rural_docs(empresa, seq);
@@ -64,6 +61,10 @@ def _db():
             t REAL NOT NULL, lat REAL NOT NULL, lng REAL NOT NULL, prec REAL, saida TEXT, ev TEXT, UNIQUE(empresa, vendedor, t));
         CREATE INDEX IF NOT EXISTS ix_rural_pos ON rural_pos(empresa, vendedor, t);
         CREATE TABLE IF NOT EXISTS rural_seq(empresa TEXT PRIMARY KEY, seq INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS rural_usuarios(empresa TEXT NOT NULL, id TEXT PRIMARY KEY, usuario TEXT NOT NULL UNIQUE, nome TEXT NOT NULL,
+            perfil TEXT NOT NULL, vendedor TEXT NOT NULL DEFAULT '', senha TEXT NOT NULL, falhas INTEGER NOT NULL DEFAULT 0,
+            janela REAL NOT NULL DEFAULT 0, bloqueio REAL NOT NULL DEFAULT 0, criado REAL);
+        CREATE TABLE IF NOT EXISTS rural_sess(token TEXT PRIMARY KEY, empresa TEXT NOT NULL, usuario_id TEXT NOT NULL, expira REAL NOT NULL, criado REAL NOT NULL);
         """)
         _estado["pronto"] = True
     return c
@@ -99,9 +100,10 @@ def _resumo(token):
     return hashlib.sha256(("rural:" + str(token)).encode()).hexdigest()
 
 
-# ---------------------------------------------------------------- acesso
-def _acessos(c, empresa):
-    return {r["id"]: r for r in c.execute("SELECT * FROM rural_acessos WHERE empresa=?", (empresa,))}
+# ---------------------------------------------------------------- acesso (usuário e senha)
+# perfil 'adm'    = acesso total (tipo "gestor" no app)
+# perfil 'padrao' = vendedor: só as rotas, saídas, pedidos e fornecedores dele (tipo "vendedor")
+SENHA_MIN = 8
 
 
 def _docs(c, empresa, col):
@@ -114,102 +116,185 @@ def _docs(c, empresa, col):
     return out
 
 
+def _usuarios(c, empresa):
+    return [dict(r) for r in c.execute("SELECT * FROM rural_usuarios WHERE empresa=? ORDER BY nome", (empresa,))]
+
+
+def _empresa_padrao():
+    try:
+        with open(ARQ_EMPRESAS, encoding="utf-8") as f:
+            for linha in f:
+                p = linha.split("#", 1)[0].split()
+                if p and p[0] in empresas():
+                    return p[0]
+    except OSError:
+        pass
+    return ""
+
+
 def entrada(c, empresa):
-    ac = _acessos(c, empresa)
     cfg = next(iter(_docs(c, empresa, "config")), {}) or {}
-    vend = [{"id": v.get("id"), "nome": v.get("nome", ""), "temSenha": bool(ac.get(v.get("id")) and ac[v.get("id")]["pin"])}
-            for v in _docs(c, empresa, "vendedores") if v.get("id")]
-    vend.sort(key=lambda x: x["nome"].lower())
-    return {"ok": True, "empresa": empresa, "nome": cfg.get("nomeHorta") or "", "gestorDefinido": bool(ac.get("gestor") and ac["gestor"]["pin"]),
-            "vendedores": vend}
+    tem_adm = c.execute("SELECT 1 FROM rural_usuarios WHERE empresa=? AND perfil='adm' LIMIT 1", (empresa,)).fetchone()
+    return {"ok": True, "empresa": empresa, "nome": cfg.get("nomeHorta") or "", "primeiroAcesso": not tem_adm}
 
 
-def _criar_sessao(c, empresa, quem, tipo):
+def _criar_sessao(c, empresa, uid):
     token = secrets.token_urlsafe(32)
     agora = time.time()
-    c.execute("INSERT INTO rural_sessoes(token, empresa, quem, tipo, expira, criado) VALUES(?,?,?,?,?,?)",
-              (_resumo(token), empresa, quem, tipo, agora + SESSAO_DIAS * 86400, agora))
+    c.execute("INSERT INTO rural_sess(token, empresa, usuario_id, expira, criado) VALUES(?,?,?,?,?)",
+              (_resumo(token), empresa, uid, agora + SESSAO_DIAS * 86400, agora))
     return token
+
+
+def _sessao_de(u):
+    adm = u["perfil"] == "adm"
+    return {"tipo": "gestor" if adm else "vendedor", "id": "gestor" if adm else u["vendedor"], "nome": u["nome"],
+            "usuario": u["usuario"], "perfil": u["perfil"], "uid": u["id"]}
 
 
 def sessao(c, token):
     if not token:
         return None
-    r = c.execute("SELECT * FROM rural_sessoes WHERE token=?", (_resumo(token),)).fetchone()
-    if not r or r["expira"] < time.time():
+    r = c.execute("SELECT * FROM rural_sess WHERE token=?", (_resumo(token),)).fetchone()
+    if not r or r["expira"] < time.time() or r["empresa"] not in empresas():
         return None
-    if r["empresa"] not in empresas():
-        return None
-    if r["tipo"] == "vendedor":
-        a = c.execute("SELECT pin FROM rural_acessos WHERE empresa=? AND id=?", (r["empresa"], r["quem"])).fetchone()
-        if not a or not a["pin"]:
-            return None   # gestor removeu o acesso
-    # renova devagar (uma vez por dia)
+    u = c.execute("SELECT * FROM rural_usuarios WHERE empresa=? AND id=?", (r["empresa"], r["usuario_id"])).fetchone()
+    if not u or (u["perfil"] != "adm" and not u["vendedor"]):
+        return None   # usuário removido ou sem vendedor
     if r["expira"] - time.time() < (SESSAO_DIAS - 1) * 86400:
-        c.execute("UPDATE rural_sessoes SET expira=? WHERE token=?", (time.time() + SESSAO_DIAS * 86400, r["token"]))
-    return {"empresa": r["empresa"], "quem": r["quem"], "tipo": r["tipo"]}
+        c.execute("UPDATE rural_sess SET expira=? WHERE token=?", (time.time() + SESSAO_DIAS * 86400, r["token"]))
+    sd = _sessao_de(u)
+    return {"empresa": r["empresa"], "quem": sd["id"], "tipo": sd["tipo"], "uid": u["id"], "nome": u["nome"]}
 
 
-def _pin_ok(pin):
-    return bool(re.fullmatch(r"\d{4,6}", str(pin or "")))
+def _login_ok(login):
+    return bool(re.fullmatch(r"[A-Za-zÀ-ÿ0-9._@-]{2,40}", login or ""))
 
 
-def primeiro(c, empresa, pin):
-    if not _pin_ok(pin):
-        return 400, {"ok": False, "erro": "Use de 4 a 6 números."}
-    a = c.execute("SELECT pin FROM rural_acessos WHERE empresa=? AND id='gestor'", (empresa,)).fetchone()
-    if a and a["pin"]:
-        return 409, {"ok": False, "erro": "A senha do gestor já foi criada. Entre com ela."}
-    c.execute("INSERT INTO rural_acessos(empresa, id, tipo, pin) VALUES(?, 'gestor', 'gestor', ?) "
-              "ON CONFLICT(empresa, id) DO UPDATE SET pin=excluded.pin, falhas=0, bloqueio=0", (empresa, lgapi.hash_senha(pin)))
-    token = _criar_sessao(c, empresa, "gestor", "gestor")
-    return 200, {"ok": True, "token": token, "sessao": {"tipo": "gestor", "id": "gestor", "nome": "Gestor"}}
+def _login_livre(c, login, menos_id=None):
+    r = c.execute("SELECT id FROM rural_usuarios WHERE usuario=?", (login.lower(),)).fetchone()
+    return not r or r["id"] == menos_id
 
 
-def entrar(c, empresa, quem, pin):
-    quem = str(quem or "")
-    a = c.execute("SELECT * FROM rural_acessos WHERE empresa=? AND id=?", (empresa, quem)).fetchone()
+def primeiro(c, empresa, nome, login, senha):
+    if c.execute("SELECT 1 FROM rural_usuarios WHERE empresa=? AND perfil='adm' LIMIT 1", (empresa,)).fetchone():
+        return 409, {"ok": False, "erro": "O administrador já foi criado. Entre com o usuário e a senha."}
+    login = str(login or "").strip()
+    nome = str(nome or "").strip()[:60] or login
+    if not _login_ok(login):
+        return 400, {"ok": False, "erro": "Usuário: use de 2 a 40 letras ou números, sem espaço."}
+    if len(str(senha or "")) < SENHA_MIN:
+        return 400, {"ok": False, "erro": f"A senha precisa ter pelo menos {SENHA_MIN} caracteres."}
+    if not _login_livre(c, login):
+        return 409, {"ok": False, "erro": "Este nome de usuário já existe. Escolha outro."}
+    uid = "u" + secrets.token_hex(6)
+    c.execute("INSERT INTO rural_usuarios(empresa, id, usuario, nome, perfil, vendedor, senha, criado) VALUES(?,?,?,?, 'adm', '', ?, ?)",
+              (empresa, uid, login.lower(), nome, lgapi.hash_senha(senha), time.time()))
+    u = c.execute("SELECT * FROM rural_usuarios WHERE id=?", (uid,)).fetchone()
+    return 200, {"ok": True, "empresa": empresa, "token": _criar_sessao(c, empresa, uid), "sessao": _sessao_de(u)}
+
+
+def entrar(c, empresa, login, senha):
+    login = str(login or "").strip().lower()
+    u = c.execute("SELECT * FROM rural_usuarios WHERE usuario=?" + (" AND empresa=?" if empresa else ""),
+                  (login, empresa) if empresa else (login,)).fetchone()
     agora = time.time()
-    if not a or not a["pin"]:
-        return 403, {"ok": False, "erro": "Este usuário ainda não tem senha. Peça ao gestor para criar."}
-    if a["bloqueio"] > agora:
-        minutos = int((a["bloqueio"] - agora) // 60) + 1
-        return 429, {"ok": False, "erro": f"Muitas senhas erradas. Tente de novo em {minutos} minuto(s)."}
-    if not lgapi.confere_senha(str(pin or ""), a["pin"]):
-        falhas = (a["falhas"] if agora - a["janela"] < 900 else 0) + 1
-        janela = a["janela"] if agora - a["janela"] < 900 else agora
-        bloqueio = agora + 900 if falhas >= 6 else 0
-        c.execute("UPDATE rural_acessos SET falhas=?, janela=?, bloqueio=? WHERE empresa=? AND id=?", (falhas, janela, bloqueio, empresa, quem))
+    if not u or u["empresa"] not in empresas():
+        lgapi.hash_senha("x")   # mesmo tempo de resposta de um usuário que existe
+        return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
+    if u["bloqueio"] > agora:
+        minutos = int((u["bloqueio"] - agora) // 60) + 1
+        return 429, {"ok": False, "erro": f"Muitas tentativas erradas. Tente de novo em {minutos} minuto(s)."}
+    if not lgapi.confere_senha(str(senha or ""), u["senha"]):
+        dentro = agora - u["janela"] < 900
+        falhas = (u["falhas"] if dentro else 0) + 1
+        bloqueio = agora + 900 if falhas >= 8 else 0
+        c.execute("UPDATE rural_usuarios SET falhas=?, janela=?, bloqueio=? WHERE id=?", (falhas, u["janela"] if dentro else agora, bloqueio, u["id"]))
         if bloqueio:
-            return 429, {"ok": False, "erro": "Muitas senhas erradas. Espere 15 minutos e tente de novo."}
-        return 401, {"ok": False, "erro": "Senha errada. Tente de novo."}
-    c.execute("UPDATE rural_acessos SET falhas=0, bloqueio=0 WHERE empresa=? AND id=?", (empresa, quem))
-    nome = "Gestor"
-    if a["tipo"] == "vendedor":
-        v = next((x for x in _docs(c, empresa, "vendedores") if x.get("id") == quem), None)
-        if not v:
-            return 403, {"ok": False, "erro": "Vendedor não encontrado."}
-        nome = v.get("nome", "")
-    token = _criar_sessao(c, empresa, quem, a["tipo"])
-    return 200, {"ok": True, "token": token, "sessao": {"tipo": a["tipo"], "id": quem, "nome": nome}}
+            return 429, {"ok": False, "erro": "Muitas tentativas erradas. Espere 15 minutos e tente de novo."}
+        return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
+    if u["perfil"] != "adm" and not u["vendedor"]:
+        return 403, {"ok": False, "erro": "Este usuário ainda não está ligado a um vendedor. Fale com o administrador."}
+    c.execute("UPDATE rural_usuarios SET falhas=0, bloqueio=0 WHERE id=?", (u["id"],))
+    return 200, {"ok": True, "empresa": u["empresa"], "token": _criar_sessao(c, u["empresa"], u["id"]), "sessao": _sessao_de(u)}
 
 
-def definir_pin(c, s, para, pin):
-    if s["tipo"] != "gestor":
-        return 403, {"ok": False, "erro": "Só o gestor muda senhas."}
-    if not _pin_ok(pin):
-        return 400, {"ok": False, "erro": "Use de 4 a 6 números."}
-    para = str(para or "")
-    if para != "gestor" and not any(v.get("id") == para for v in _docs(c, s["empresa"], "vendedores")):
-        return 404, {"ok": False, "erro": "Vendedor não encontrado. Salve o vendedor antes de criar a senha."}
-    tipo = "gestor" if para == "gestor" else "vendedor"
-    c.execute("INSERT INTO rural_acessos(empresa, id, tipo, pin) VALUES(?,?,?,?) "
-              "ON CONFLICT(empresa, id) DO UPDATE SET pin=excluded.pin, falhas=0, bloqueio=0", (s["empresa"], para, tipo, lgapi.hash_senha(pin)))
-    if tipo == "vendedor":   # senha nova do vendedor: ele entra de novo em todos os aparelhos
-        c.execute("DELETE FROM rural_sessoes WHERE empresa=? AND quem=? AND tipo='vendedor'", (s["empresa"], para))
-    seq = _prox_seq(c, s["empresa"])   # o selo "tem senha" muda para todos
-    c.execute("UPDATE rural_docs SET seq=? WHERE empresa=? AND col='vendedores' AND id=?", (seq, s["empresa"], para))
+def listar_usuarios(c, s):
+    return [{"id": u["id"], "usuario": u["usuario"], "nome": u["nome"], "perfil": u["perfil"], "vendedor": u["vendedor"]}
+            for u in _usuarios(c, s["empresa"])]
+
+
+def salvar_usuario(c, s, d):
+    """Administrador cria ou altera um usuário. Senha vazia na alteração = mantém."""
+    emp = s["empresa"]
+    uid = str(d.get("id") or "")
+    atual = c.execute("SELECT * FROM rural_usuarios WHERE empresa=? AND id=?", (emp, uid)).fetchone() if uid else None
+    if uid and not atual:
+        return 404, {"ok": False, "erro": "Usuário não encontrado."}
+    login = str(d.get("usuario") or "").strip()
+    nome = str(d.get("nome") or "").strip()[:60]
+    perfil = "adm" if d.get("perfil") == "adm" else "padrao"
+    vendedor = str(d.get("vendedor") or "") if perfil == "padrao" else ""
+    senha = str(d.get("senha") or "")
+    if not nome:
+        return 400, {"ok": False, "erro": "Informe o nome."}
+    if not _login_ok(login):
+        return 400, {"ok": False, "erro": "Usuário: use de 2 a 40 letras ou números, sem espaço."}
+    if not _login_livre(c, login, uid or None):
+        return 409, {"ok": False, "erro": "Este nome de usuário já existe. Escolha outro."}
+    if (not atual or senha) and len(senha) < SENHA_MIN:
+        return 400, {"ok": False, "erro": f"A senha precisa ter pelo menos {SENHA_MIN} caracteres."}
+    if perfil == "padrao":
+        if not any(v.get("id") == vendedor for v in _docs(c, emp, "vendedores")):
+            return 400, {"ok": False, "erro": "Escolha o vendedor deste usuário (ele vai ver só as rotas desse vendedor)."}
+        outro = c.execute("SELECT nome FROM rural_usuarios WHERE empresa=? AND vendedor=? AND id<>?", (emp, vendedor, uid)).fetchone()
+        if outro:
+            return 409, {"ok": False, "erro": f"Esse vendedor já tem o usuário de {outro['nome']}."}
+    if atual and atual["perfil"] == "adm" and perfil != "adm":
+        n = c.execute("SELECT COUNT(*) FROM rural_usuarios WHERE empresa=? AND perfil='adm'", (emp,)).fetchone()[0]
+        if n <= 1:
+            return 400, {"ok": False, "erro": "Precisa existir pelo menos um administrador."}
+    if atual:
+        c.execute("UPDATE rural_usuarios SET usuario=?, nome=?, perfil=?, vendedor=? WHERE id=?", (login.lower(), nome, perfil, vendedor, uid))
+        if senha:
+            c.execute("UPDATE rural_usuarios SET senha=?, falhas=0, bloqueio=0 WHERE id=?", (lgapi.hash_senha(senha), uid))
+            c.execute("DELETE FROM rural_sess WHERE usuario_id=? AND token<>?", (uid, s.get("_token", "")))
+    else:
+        uid = "u" + secrets.token_hex(6)
+        c.execute("INSERT INTO rural_usuarios(empresa, id, usuario, nome, perfil, vendedor, senha, criado) VALUES(?,?,?,?,?,?,?,?)",
+                  (emp, uid, login.lower(), nome, perfil, vendedor, lgapi.hash_senha(senha), time.time()))
+    _marcar_vendedores(c, emp)
+    return 200, {"ok": True, "id": uid}
+
+
+def remover_usuario(c, s, uid):
+    emp = s["empresa"]
+    u = c.execute("SELECT * FROM rural_usuarios WHERE empresa=? AND id=?", (emp, uid)).fetchone()
+    if not u:
+        return 404, {"ok": False, "erro": "Usuário não encontrado."}
+    if u["perfil"] == "adm" and c.execute("SELECT COUNT(*) FROM rural_usuarios WHERE empresa=? AND perfil='adm'", (emp,)).fetchone()[0] <= 1:
+        return 400, {"ok": False, "erro": "Precisa existir pelo menos um administrador."}
+    c.execute("DELETE FROM rural_usuarios WHERE id=?", (uid,))
+    c.execute("DELETE FROM rural_sess WHERE usuario_id=?", (uid,))
+    _marcar_vendedores(c, emp)
     return 200, {"ok": True}
+
+
+def minha_senha(c, s, atual, nova):
+    u = c.execute("SELECT * FROM rural_usuarios WHERE id=?", (s["uid"],)).fetchone()
+    if not u or not lgapi.confere_senha(str(atual or ""), u["senha"]):
+        return 401, {"ok": False, "erro": "A senha atual não confere."}
+    if len(str(nova or "")) < SENHA_MIN:
+        return 400, {"ok": False, "erro": f"A senha nova precisa ter pelo menos {SENHA_MIN} caracteres."}
+    c.execute("UPDATE rural_usuarios SET senha=? WHERE id=?", (lgapi.hash_senha(nova), u["id"]))
+    c.execute("DELETE FROM rural_sess WHERE usuario_id=? AND token<>?", (u["id"], s.get("_token", "")))
+    return 200, {"ok": True}
+
+
+def _marcar_vendedores(c, emp):
+    """O selo "tem acesso ao app" dos vendedores muda para todos."""
+    seq = _prox_seq(c, emp)
+    c.execute("UPDATE rural_docs SET seq=? WHERE empresa=? AND col='vendedores' AND apagado=0", (seq, emp))
 
 
 # ---------------------------------------------------------------- o que cada um vê
@@ -246,27 +331,34 @@ def _ve(s, ctx, col, obj):
 
 
 def _para_cliente(c, s, col, obj, ac=None):
-    """Tira o que não deve sair do servidor e marca quem tem senha."""
+    """Tira o que não deve sair do servidor e marca quem tem usuário no app."""
     if col == "vendedores":
         obj = dict(obj)
         obj.pop("pin", None)
+        obj.pop("usuarioApp", None)
         if ac is not None:
-            a = ac.get(obj.get("id"))
-            obj["pin"] = bool(a and a["pin"])
+            login = ac.get(obj.get("id"))
+            obj["pin"] = bool(login)
+            if login and s["tipo"] == "gestor":
+                obj["usuarioApp"] = login
     return obj
+
+
+def _ac(c, empresa):
+    return {u["vendedor"]: u["usuario"] for u in _usuarios(c, empresa) if u["vendedor"]}
 
 
 def dados(c, s):
     ctx = _contexto(c, s) if s["tipo"] == "vendedor" else None
-    ac = _acessos(c, s["empresa"])
+    ac = _ac(c, s["empresa"])
     out = []
-    for r in c.execute("SELECT col, id, json FROM rural_docs WHERE empresa=? AND apagado=0", (s["empresa"],)):
+    for r in c.execute("SELECT col, id, json, seq FROM rural_docs WHERE empresa=? AND apagado=0", (s["empresa"],)):
         try:
             obj = json.loads(r["json"])
         except Exception:
             continue
         if _ve(s, ctx, r["col"], obj):
-            out.append({"col": r["col"], "id": r["id"], "json": json.dumps(_para_cliente(c, s, r["col"], obj, ac), ensure_ascii=False, separators=(",", ":"))})
+            out.append({"col": r["col"], "id": r["id"], "seq": r["seq"], "json": json.dumps(_para_cliente(c, s, r["col"], obj, ac), ensure_ascii=False, separators=(",", ":"))})
     return {"ok": True, "seq": _seq_atual(c, s["empresa"]), "completo": True, "docs": out}
 
 
@@ -276,17 +368,17 @@ def mudancas(c, s, desde):
         return None
     if s["tipo"] == "vendedor":
         return dados(c, s)   # vendedor: pouca coisa; manda tudo o que ele vê (assim some o que deixou de ser dele)
-    ac = _acessos(c, s["empresa"])
+    ac = _ac(c, s["empresa"])
     out = []
-    for r in c.execute("SELECT col, id, json, apagado FROM rural_docs WHERE empresa=? AND seq>?", (s["empresa"], desde)):
+    for r in c.execute("SELECT col, id, json, apagado, seq FROM rural_docs WHERE empresa=? AND seq>?", (s["empresa"], desde)):
         if r["apagado"]:
-            out.append({"col": r["col"], "id": r["id"], "apagado": True})
+            out.append({"col": r["col"], "id": r["id"], "seq": r["seq"], "apagado": True})
             continue
         try:
             obj = json.loads(r["json"])
         except Exception:
             continue
-        out.append({"col": r["col"], "id": r["id"], "json": json.dumps(_para_cliente(c, s, r["col"], obj, ac), ensure_ascii=False, separators=(",", ":"))})
+        out.append({"col": r["col"], "id": r["id"], "seq": r["seq"], "json": json.dumps(_para_cliente(c, s, r["col"], obj, ac), ensure_ascii=False, separators=(",", ":"))})
     return {"ok": True, "seq": seq, "completo": False, "docs": out}
 
 
@@ -342,7 +434,7 @@ def _juntar(atual, base, novo):
 def gravar(c, s, docs):
     empresa = s["empresa"]
     ctx = _contexto(c, s) if s["tipo"] == "vendedor" else None
-    ac = _acessos(c, empresa)
+    ac = _ac(c, empresa)
     feitos, recusados, ajustados = [], [], []
     mudou = False
     for d in docs[:500]:
@@ -367,9 +459,9 @@ def gravar(c, s, docs):
         if novo is not None:
             novo["id"] = did
             if col == "vendedores":
-                novo.pop("pin", None)
+                novo.pop("pin", None); novo.pop("usuarioApp", None)
             if base is not None and col == "vendedores":
-                base.pop("pin", None)
+                base.pop("pin", None); base.pop("usuarioApp", None)
         final = None if apagar else (_juntar(atual, base, novo) if atual is not None and base is not None and _norm(atual) != _norm(base) else novo)
         if not _pode_gravar(c, s, ctx, col, atual, final):
             recusados.append({"col": col, "id": did, "json": json.dumps(_para_cliente(c, s, col, atual, ac), ensure_ascii=False, separators=(",", ":")) if atual is not None and _ve(s, ctx, col, atual) else None})
@@ -380,19 +472,20 @@ def gravar(c, s, docs):
                 continue
             c.execute("UPDATE rural_docs SET apagado=1, json=NULL, seq=?, quando=?, por=? WHERE empresa=? AND col=? AND id=?",
                       (seq, time.time(), s["quem"], empresa, col, did))
-            if col == "vendedores":
-                c.execute("DELETE FROM rural_acessos WHERE empresa=? AND id=?", (empresa, did))
-                c.execute("DELETE FROM rural_sessoes WHERE empresa=? AND quem=?", (empresa, did))
+            if col == "vendedores":   # vendedor excluído: o usuário dele deixa de entrar
+                for u in c.execute("SELECT id FROM rural_usuarios WHERE empresa=? AND vendedor=?", (empresa, did)).fetchall():
+                    c.execute("DELETE FROM rural_sess WHERE usuario_id=?", (u["id"],))
+                c.execute("DELETE FROM rural_usuarios WHERE empresa=? AND vendedor=?", (empresa, did))
         else:
             txt = json.dumps(final, ensure_ascii=False, separators=(",", ":"))
             c.execute("INSERT INTO rural_docs(empresa, col, id, json, seq, apagado, quando, por) VALUES(?,?,?,?,?,0,?,?) "
                       "ON CONFLICT(empresa, col, id) DO UPDATE SET json=excluded.json, seq=excluded.seq, apagado=0, quando=excluded.quando, por=excluded.por",
                       (empresa, col, did, txt, seq, time.time(), s["quem"]))
-            if final is not novo:
-                ajustados.append({"col": col, "id": did, "json": json.dumps(_para_cliente(c, s, col, final, ac), ensure_ascii=False, separators=(",", ":"))})
             if s["tipo"] == "vendedor" and col == "saidas":
                 ctx["saidas"].add(did)
-        feitos.append({"col": col, "id": did})
+        # devolve a versão gravada (com a junção, se houve) e o número dela: o app não confunde com versões mais novas
+        feitos.append({"col": col, "id": did, "seq": seq, "apagado": True} if apagar else
+                      {"col": col, "id": did, "seq": seq, "json": json.dumps(_para_cliente(c, s, col, final, ac), ensure_ascii=False, separators=(",", ":"))})
         mudou = True
     return {"ok": True, "seq": _seq_atual(c, empresa), "feitos": feitos, "recusados": recusados, "ajustados": ajustados}, mudou
 
@@ -518,20 +611,23 @@ def rota(h, metodo):
             return True
         if acao in ("entrada", "primeiro", "entrar"):
             empresa = str((q.get("e") if metodo == "GET" else corpo.get("e")) or "").strip().lower()
-            if empresa not in empresas():
-                return _resp(h, 404, {"ok": False, "erro": "Código da horta não encontrado. Confira o link que você recebeu."})
+            if empresa and empresa not in empresas():
+                return _resp(h, 404, {"ok": False, "erro": "Este link não é de uma horta cadastrada. Confira o link que você recebeu."})
             with lgapi._trava:
                 c = _db()
+                if acao == "entrar" and metodo == "POST":   # o usuário já diz de qual horta é
+                    cod, r = entrar(c, empresa, corpo.get("usuario"), corpo.get("senha"))
+                    lgapi.registrar("rural:" + (r.get("empresa") or empresa or "?"), str(corpo.get("usuario"))[:40], "Rural: entrou" if cod == 200 else "Rural: senha errada", "", _ip(h))
+                    return _resp(h, cod, r)
+                empresa = empresa or _empresa_padrao()
+                if not empresa:
+                    return _resp(h, 404, {"ok": False, "erro": "Nenhuma horta cadastrada neste servidor."})
                 if acao == "entrada" and metodo == "GET":
                     return _resp(h, 200, entrada(c, empresa))
                 if acao == "primeiro" and metodo == "POST":
-                    cod, r = primeiro(c, empresa, corpo.get("pin"))
+                    cod, r = primeiro(c, empresa, corpo.get("nome"), corpo.get("usuario"), corpo.get("senha"))
                     if cod == 200:
-                        lgapi.registrar("rural:" + empresa, "gestor", "Rural: senha do gestor criada", "", _ip(h))
-                    return _resp(h, cod, r)
-                if acao == "entrar" and metodo == "POST":
-                    cod, r = entrar(c, empresa, corpo.get("quem"), corpo.get("pin"))
-                    lgapi.registrar("rural:" + empresa, str(corpo.get("quem"))[:40], "Rural: entrou" if cod == 200 else "Rural: senha errada", "", _ip(h))
+                        lgapi.registrar("rural:" + empresa, str(corpo.get("usuario"))[:40], "Rural: administrador criado", "", _ip(h))
                     return _resp(h, cod, r)
             return _resp(h, 405, {"ok": False})
 
@@ -569,17 +665,31 @@ def rota(h, metodo):
             if mudou:
                 _avisar()
             return _resp(h, 200, r)
-        if acao == "senha" and metodo == "POST":
+        s["_token"] = _resumo(token)
+        if acao == "usuarios":
+            if s["tipo"] != "gestor":
+                return _resp(h, 403, {"ok": False, "erro": "Só o administrador mexe nos usuários."})
             with lgapi._trava:
-                cod, r = definir_pin(_db(), s, corpo.get("para"), corpo.get("pin"))
+                c = _db()
+                if metodo == "GET":
+                    return _resp(h, 200, {"ok": True, "usuarios": listar_usuarios(c, s)})
+                if corpo.get("acao") == "remover":
+                    cod, r = remover_usuario(c, s, str(corpo.get("id") or ""))
+                else:
+                    cod, r = salvar_usuario(c, s, corpo)
                 if cod == 200:
-                    lgapi.registrar("rural:" + s["empresa"], s["quem"], "Rural: senha definida", str(corpo.get("para"))[:40], _ip(h))
+                    lgapi.registrar("rural:" + s["empresa"], s["uid"], "Rural: usuário " + ("removido" if corpo.get("acao") == "remover" else "salvo"),
+                                    str(corpo.get("usuario") or corpo.get("id") or "")[:40], _ip(h))
             if cod == 200:
                 _avisar()
             return _resp(h, cod, r)
+        if acao == "minha-senha" and metodo == "POST":
+            with lgapi._trava:
+                cod, r = minha_senha(_db(), s, corpo.get("atual"), corpo.get("nova"))
+            return _resp(h, cod, r)
         if acao == "sair" and metodo == "POST":
             with lgapi._trava:
-                _db().execute("DELETE FROM rural_sessoes WHERE token=?", (_resumo(token),))
+                _db().execute("DELETE FROM rural_sess WHERE token=?", (_resumo(token),))
             return _resp(h, 200, {"ok": True})
         if acao == "posicoes" and metodo == "POST":
             with lgapi._trava:

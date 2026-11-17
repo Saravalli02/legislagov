@@ -208,8 +208,8 @@ function trocaValorPonto(pid,mes){let v=0;S.saidas.filter(x=>(x.data||'').starts
 const COLS=['vendedores','produtos','pontos','rotas','saidas','fiados','comprovantes','pedidos','custos','funcionarios'];
 const API='/api/rural/';
 let EMP=(()=>{let e=new URLSearchParams(location.search).get('e');try{if(e){e=e.trim().toLowerCase();localStorage.setItem('lgr_empresa',e)}else e=localStorage.getItem('lgr_empresa')}catch(x){}return (e||'').trim().toLowerCase()})();
-let TOKEN='';try{TOKEN=localStorage.getItem('lgr_token_'+EMP)||''}catch(e){}
-let pronto=false, SEQ=0, ultimo={config:{}}, online=true, enviando=false, entradaInfo=null, renderPendente=false;
+let TOKEN='';try{TOKEN=localStorage.getItem('lgr_token')||''}catch(e){}
+let pronto=false, SEQ=0, ultimo={config:{}}, vers={}, online=true, enviando=false, entradaInfo=null, renderPendente=false;
 COLS.forEach(c=>ultimo[c]={});
 const espera=ms=>new Promise(r=>setTimeout(r,ms));
 function chaveCache(){return 'lgrural:'+EMP+':'+(ui.sess?ui.sess.tipo+':'+ui.sess.id:'')}
@@ -223,10 +223,10 @@ async function api(acao,{metodo='GET',corpo=null,q=''}={}){
   if(!r.ok){const e=new Error(d.erro||('Erro '+r.status));e.status=r.status;throw e}
   return d;
 }
-function zerarDados(){S=JSON.parse(JSON.stringify(VAZIO));ultimo={config:{}};COLS.forEach(c=>ultimo[c]={});SEQ=0}
-function guardarCache(){if(!ui.sess)return;try{localStorage.setItem(chaveCache(),JSON.stringify({S,ultimo,SEQ}))}catch(e){}}
+function zerarDados(){S=JSON.parse(JSON.stringify(VAZIO));ultimo={config:{}};vers={};COLS.forEach(c=>ultimo[c]={});SEQ=0}
+function guardarCache(){if(!ui.sess)return;try{localStorage.setItem(chaveCache(),JSON.stringify({S,ultimo,vers,SEQ}))}catch(e){}}
 function lerCache(){try{const c=JSON.parse(localStorage.getItem(chaveCache())||'null');if(!c)return false;
-  S=Object.assign(JSON.parse(JSON.stringify(VAZIO)),c.S);ultimo=c.ultimo||{};ultimo.config=ultimo.config||{};COLS.forEach(k=>ultimo[k]=ultimo[k]||{});SEQ=c.SEQ||0;return true}catch(e){return false}}
+  S=Object.assign(JSON.parse(JSON.stringify(VAZIO)),c.S);ultimo=c.ultimo||{};ultimo.config=ultimo.config||{};COLS.forEach(k=>ultimo[k]=ultimo[k]||{});vers=c.vers||{};SEQ=c.SEQ||0;return true}catch(e){return false}}
 function salvar(){guardarCache();if(!ui.sess||!TOKEN)return;marcar('salvando…');clearTimeout(salvarTimer);salvarTimer=setTimeout(enviar,350)}
 const cfgTxt=()=>JSON.stringify(Object.assign({},S.config||{},{id:'geral'}));
 function pendentes(){
@@ -244,11 +244,14 @@ async function enviar(){
   enviando=true;
   try{
     const r=await api('gravar',{metodo:'POST',corpo:{docs}});
-    const recusa=new Set((r.recusados||[]).map(x=>x.col+'/'+x.id));
-    docs.forEach(d=>{if(recusa.has(d.col+'/'+d.id))return;if(d.apagar)delete ultimo[d.col][d.id];else ultimo[d.col][d.id]=d.json});
-    (r.ajustados||[]).forEach(a=>aplicarDoc(a.col,a.id,a.json,true));
+    const enviados={};docs.forEach(d=>enviados[d.col+'/'+d.id]=d);
+    (r.feitos||[]).forEach(f=>{const d=enviados[f.col+'/'+f.id];if(!d)return;
+      if(versao(f.col,f.id)>f.seq)return;   // já chegou uma versão mais nova (de outra pessoa)
+      if(f.apagado){delete ultimo[f.col][f.id];marcarVersao(f.col,f.id,f.seq);return}
+      const igual=f.col==='config'?cfgTxt()===d.json:JSON.stringify((S[f.col]||[]).find(x=>x&&x.id===f.id))===d.json;
+      aplicarDoc(f.col,f.id,f.json,igual,f.seq)});
     if((r.recusados||[]).length){r.recusados.forEach(a=>aplicarDoc(a.col,a.id,a.json,true));toast('Essa alteração não é permitida para você');renderSuave()}
-    else if((r.ajustados||[]).length)renderSuave();
+    else if((r.feitos||[]).some(f=>f.json&&f.json!==(enviados[f.col+'/'+f.id]||{}).json))renderSuave();
     online=true;guardarCache();
   }catch(e){if(e.message!=='sessao')online=false}
   enviando=false;marcarEstado();
@@ -256,7 +259,11 @@ async function enviar(){
 }
 async function enviarAgora(){clearTimeout(salvarTimer);for(let i=0;i<40&&enviando;i++)await espera(150);await enviar()}
 function trocarConteudo(alvo,o){for(const k of Object.keys(alvo))delete alvo[k];Object.assign(alvo,o)}
-function aplicarDoc(col,id,raw,forcar){
+const versao=(col,id)=>(vers[col]||{})[id]||0;
+function marcarVersao(col,id,seq){if(seq==null)return;(vers[col]=vers[col]||{})[id]=seq}
+function aplicarDoc(col,id,raw,forcar,seq){
+  if(seq!=null&&versao(col,id)>seq)return;   // versão velha chegando depois de uma nova
+  marcarVersao(col,id,seq);
   if(col==='config'){
     if(raw==null){if(forcar||cfgTxt()===(ultimo.config.geral||'{"id":"geral"}'))S.config={};delete ultimo.config.geral;return}
     const o=JSON.parse(raw);if(forcar||cfgTxt()===(ultimo.config.geral||'{"id":"geral"}'))S.config=o;ultimo.config.geral=JSON.stringify(o);return}
@@ -269,11 +276,11 @@ function aplicarDoc(col,id,raw,forcar){
   ultimo[col][id]=JSON.stringify(o);
 }
 function aplicarTudo(docs){
-  const por={};docs.forEach(d=>{(por[d.col]=por[d.col]||{})[d.id]=d.json});
-  if(por.config&&por.config.geral)aplicarDoc('config','geral',por.config.geral);
+  const por={},sq={};docs.forEach(d=>{(por[d.col]=por[d.col]||{})[d.id]=d.json;(sq[d.col]=sq[d.col]||{})[d.id]=d.seq});
+  if(por.config&&por.config.geral)aplicarDoc('config','geral',por.config.geral,false,sq.config.geral);
   else if(!ehGestor()){S.config={};ultimo.config={}}
   for(const col of COLS){const rem=por[col]||{};
-    Object.keys(rem).forEach(id=>aplicarDoc(col,id,rem[id]));
+    Object.keys(rem).forEach(id=>aplicarDoc(col,id,rem[id],false,(sq[col]||{})[id]));
     // sumiram do servidor (apagados ou deixaram de ser desta pessoa); os criados aqui e ainda não enviados ficam
     S[col]=S[col].filter(x=>x&&(rem[x.id]!==undefined||ultimo[col][x.id]===undefined));
     Object.keys(ultimo[col]).forEach(id=>{if(rem[id]===undefined)delete ultimo[col][id]});
@@ -292,7 +299,7 @@ async function ouvir(){
   while(TOKEN&&ui.sess){
     try{
       const r=await api('mudancas',{q:'desde='+SEQ});online=true;
-      if(r.completo||(r.docs&&r.docs.length)){if(r.completo)aplicarTudo(r.docs);else r.docs.forEach(d=>aplicarDoc(d.col,d.id,d.apagado?null:d.json));SEQ=r.seq;guardarCache();renderSuave()}
+      if(r.completo||(r.docs&&r.docs.length)){if(r.completo)aplicarTudo(r.docs);else r.docs.forEach(d=>aplicarDoc(d.col,d.id,d.apagado?null:d.json,false,d.seq));SEQ=r.seq;guardarCache();renderSuave()}
       else if(r.seq>SEQ)SEQ=r.seq;
       marcarEstado();if(pendentes().length)enviar();
     }catch(e){if(e.message==='sessao')break;online=false;marcarEstado();await espera(5000)}
@@ -305,10 +312,10 @@ async function carregar(){
   try{const r=await api('dados');aplicarTudo(r.docs);SEQ=r.seq;online=true;guardarCache();renderSuave();marcarEstado();enviar();ouvir();enviarPos()}
   catch(e){if(e.message!=='sessao'){online=false;marcarEstado();setTimeout(carregar,8000)}}
 }
-function sessaoTerminou(){TOKEN='';ui.sess=null;entradaInfo=null;try{localStorage.removeItem('lgr_token_'+EMP);localStorage.removeItem('lgr_sessao_'+EMP)}catch(e){}zerarDados();render();toast('Entre de novo com a sua senha')}
+function sessaoTerminou(){TOKEN='';ui.sess=null;entradaInfo=null;try{localStorage.removeItem('lgr_token');localStorage.removeItem('lgr_sessao')}catch(e){}zerarDados();render();toast('Entre de novo com a sua senha')}
 async function iniciar(){
   if(EMP&&!new URLSearchParams(location.search).get('e')){try{history.replaceState(null,'',location.pathname+'?e='+encodeURIComponent(EMP))}catch(e){}}
-  try{const se=localStorage.getItem('lgr_sessao_'+EMP);if(se&&TOKEN)ui.sess=JSON.parse(se)}catch(e){}
+  try{const se=localStorage.getItem('lgr_sessao');if(se&&TOKEN)ui.sess=JSON.parse(se)}catch(e){}
   if(ui.sess)lerCache();
   pronto=true;render();
   if(ui.sess)carregar();
@@ -350,19 +357,19 @@ function render(){
   if(!sessaoValida()){ui.sess=null;document.body.classList.add('login');$('#quem').textContent='Gestão da horta';$('#app').innerHTML=vLogin();ligarLogin();marcar('');return}
   document.body.classList.remove('login');
   const g=ehGestor();
-  $('#quem').innerHTML=`${g?'👑 Gestor':'🧑‍🌾 '+esc(eu().nome)} · <u id="btnSair">sair</u>`;
+  $('#quem').innerHTML=`${g?'👑 '+esc(ui.sess.nome||'Administrador'):'🧑‍🌾 '+esc(ui.sess.nome||eu().nome)} · <u id="btnSair">sair</u>`;
   $('#btnSair').onclick=e=>{e.stopPropagation();confirmarSair()};
   document.querySelectorAll('nav button').forEach(b=>b.style.display=g||ABAS_VEND.includes(b.dataset.tab)?'':'none');
   if(!g){bl.onclick=null;if(!ABAS_VEND.includes(ui.tab))ui.tab='inicio'}
   if(ui.tab!=='equipe'&&MAPA){MAPA.remove();MAPA=null}
-  if(ui.tab==='licenca'&&g){$('#app').innerHTML=vLicenca(false)+vSenhaGestor();ligarSenhaGestor();ligarLicenca();document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));return}
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===ui.tab||(b.dataset.tab==='mais'&&['cadastros','custos'].includes(ui.tab))));
+  if(ui.tab==='licenca'&&g){$('#app').innerHTML=vLicenca(false);ligarLicenca();document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));return}
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===ui.tab||(b.dataset.tab==='mais'&&['cadastros','custos','usuarios','equipe'].includes(ui.tab))));
   const app=$('#app');
   if(ui.tab==='saidas'&&ui.saidaId){app.innerHTML=vSaidaDetalhe();ligarSaidaDetalhe();return}
   if(ui.tab==='rotas'&&ui.rotaId){app.innerHTML=vRotaDetalhe();ligarRotaDetalhe();return}
   if(!g&&ui.tab==='inicio'){app.innerHTML=vInicioVend();ligar();rastrear();return}
   if(g&&ui.tab==='equipe'&&ui.vendId){app.innerHTML=vVendedorDia();ligar();ligarVendedorDia();return}
-  app.innerHTML=({inicio:vInicio,saidas:vSaidas,rotas:vRotas,cadastros:vCadastros,custos:vCustos,fiado:vFiado,pedidos:vPedidos,mais:vMais,equipe:vEquipe})[ui.tab]();
+  app.innerHTML=({inicio:vInicio,saidas:vSaidas,rotas:vRotas,cadastros:vCadastros,custos:vCustos,fiado:vFiado,pedidos:vPedidos,mais:vMais,equipe:vEquipe,usuarios:vUsuarios})[ui.tab]();
   ligar();
   if(!g)rastrear();
   marcarEstado();
@@ -373,70 +380,129 @@ const ehGestor=()=>ui.sess?.tipo==='gestor';
 const eu=()=>ui.sess?.tipo==='vendedor'?(vend(ui.sess.id)||{id:ui.sess.id,nome:ui.sess.nome||''}):null;
 const ABAS_VEND=['inicio','pedidos','saidas','rotas'];
 function logado(r){
-  TOKEN=r.token;ui.sess=r.sessao;
-  try{localStorage.setItem('lgr_token_'+EMP,TOKEN);localStorage.setItem('lgr_sessao_'+EMP,JSON.stringify(ui.sess))}catch(e){}
+  TOKEN=r.token;ui.sess=r.sessao;if(r.empresa)EMP=r.empresa;
+  try{localStorage.setItem('lgr_empresa',EMP);history.replaceState(null,'',location.pathname+'?e='+encodeURIComponent(EMP));localStorage.setItem('lgr_token',TOKEN);localStorage.setItem('lgr_sessao',JSON.stringify(ui.sess))}catch(e){}
   zerarDados();lerCache();ui.tab='inicio';ui.saidaId=null;ui.rotaId=null;ui.vendId=null;render();scrollTo(0,0);carregar();
 }
 function sair(){
   api('sair',{metodo:'POST'}).catch(()=>{});
-  try{localStorage.removeItem(chaveCache());localStorage.removeItem('lgr_token_'+EMP);localStorage.removeItem('lgr_sessao_'+EMP)}catch(e){}
+  try{localStorage.removeItem(chaveCache());localStorage.removeItem('lgr_token');localStorage.removeItem('lgr_sessao')}catch(e){}
   TOKEN='';ui.sess=null;entradaInfo=null;zerarDados();if(GEO.watch!=null){navigator.geolocation.clearWatch(GEO.watch);GEO.watch=null}render();
 }
 function sessaoValida(){return !!(TOKEN&&ui.sess)}
 let carregandoEnt=false;
 async function carregarEntrada(){
   if(carregandoEnt)return;carregandoEnt=true;
-  try{entradaInfo=await api('entrada',{q:'e='+encodeURIComponent(EMP)})}
-  catch(e){entradaInfo={erro:e.status===404?'Código da horta não encontrado. Confira o link que você recebeu.':'Sem internet. Para entrar, o celular precisa estar conectado.'}}
+  try{entradaInfo=await api('entrada',{q:EMP?'e='+encodeURIComponent(EMP):''})}
+  catch(e){entradaInfo={erro:e.status===404?e.message:'Sem internet. Para entrar, o celular precisa estar conectado.'}}
   carregandoEnt=false;render();
 }
-const pinInput=id=>`<input id="${id}" type="password" inputmode="numeric" autocomplete="off" maxlength="6" style="font-size:26px;letter-spacing:.35em;text-align:center">`;
+const campo=(id,rot,tipo,auto,extra)=>`<label>${rot}</label><input id="${id}" type="${tipo}" autocomplete="${auto}" autocapitalize="none" spellcheck="false" ${extra||''} style="font-size:18px">`;
 function vLogin(){
-  if(!EMP)return `<div style="text-align:center;padding:24px 6px 6px"><div style="font-size:50px">🌱</div><h2>Bem-vindo</h2>
-    <p style="color:var(--sub);margin-top:0">Digite o código da horta. Ele vem no link que você recebeu.</p></div>
-    <div class="card"><label style="margin-top:0">Código da horta</label><input id="codEmp" autocapitalize="none" autocomplete="off" style="font-size:20px;text-align:center">
-    <button class="btn" id="okEmp" style="margin-top:14px">Continuar</button></div>`;
   if(!entradaInfo){carregarEntrada();return '<div class="vazio">Carregando…</div>'}
-  if(entradaInfo.erro)return `<div class="vazio"><b>⚠️</b>${esc(entradaInfo.erro)}<br><br><button class="btn" id="tentaEnt">Tentar de novo</button><br><br><button class="btn sec" id="trocaEmp">Usar outro código</button></div>`;
-  if(!entradaInfo.gestorDefinido)return `<div style="text-align:center;padding:24px 6px 6px"><div style="font-size:50px">👑</div><h2>Primeiro acesso</h2>
-    <p style="color:var(--sub);margin-top:0">Crie a senha do <b>gestor</b> (dono). Ela dá acesso a tudo: vendas, conferência, custos, cadastros e o acompanhamento dos vendedores.</p></div>
-    <div class="card"><label style="margin-top:0">Senha do gestor (4 a 6 números)</label>${pinInput('pg1')}
-    <label>Repita a senha</label>${pinInput('pg2')}
-    <button class="btn" id="criarPin" style="margin-top:14px">Criar e entrar</button><div id="pinMsg" class="neg" style="margin-top:8px;font-size:14px"></div></div>`;
-  return `<div style="text-align:center;padding:18px 6px 4px"><div style="font-size:46px">👋</div><h2 style="margin-bottom:4px">Quem está usando?</h2><p style="color:var(--sub);margin-top:0">Toque no seu nome</p></div>
-  <button class="tile grande" data-login="gestor" style="width:100%;margin-bottom:10px"><span>👑</span><div><b>Gestor / Dono</b><small>acesso completo</small></div></button>
-  ${entradaInfo.vendedores.map(v=>`<button class="card item" data-login="${esc(v.id)}" data-nome="${esc(v.nome)}" data-tem="${v.temSenha?1:0}" style="width:100%;text-align:left;font:inherit;${v.temSenha?'':'opacity:.5'}"><div style="font-size:28px">🧑‍🌾</div><div class="info"><div class="t">${esc(v.nome)}</div><div class="s">${v.temSenha?'vendedor':'sem senha — peça ao gestor'}</div></div><div style="color:var(--sub)">›</div></button>`).join('')}`;
+  if(entradaInfo.primeiroAcesso)return `<div style="text-align:center;padding:20px 6px 4px"><div style="font-size:48px">👑</div><h2>Primeiro acesso</h2>
+    <p style="color:var(--sub);margin-top:0">Crie o <b>administrador</b> da horta. Ele tem acesso a tudo e cria os outros usuários.</p></div>
+    <div class="card">${campo('pNome','Nome','text','name')}${campo('pUsu','Usuário (para entrar)','text','username')}${campo('pS1','Senha (mínimo 8 caracteres)','password','new-password')}${campo('pS2','Repita a senha','password','new-password')}
+    <button class="btn" id="criarAdm" style="margin-top:14px">Criar e entrar</button><div id="logMsg" class="neg" style="margin-top:8px;font-size:14px"></div></div>${botaoBaixar()}`;
+  return `<div style="text-align:center;padding:20px 6px 4px"><div style="font-size:48px">🌱</div><h2 style="margin-bottom:4px">Entrar</h2><p style="color:var(--sub);margin-top:0">Use o usuário e a senha que você recebeu.</p></div>
+    ${entradaInfo.erro?`<div class="aviso">${esc(entradaInfo.erro)}</div>`:''}
+    <form class="card" id="fLogin" onsubmit="return false">${campo('lUsu','Usuário','text','username')}${campo('lSen','Senha','password','current-password')}
+    <button class="btn" id="entrarBt" type="submit" style="margin-top:14px">Entrar</button><div id="logMsg" class="neg" style="margin-top:8px;font-size:14px"></div></form>${botaoBaixar()}`;
 }
 function ligarLogin(){
-  const oe=$('#okEmp');if(oe){const ir=()=>{const v=$('#codEmp').value.trim().toLowerCase().replace(/\s+/g,'');if(!v){toast('Digite o código');return}
-    EMP=v;try{localStorage.setItem('lgr_empresa',EMP);history.replaceState(null,'',location.pathname+'?e='+encodeURIComponent(EMP))}catch(e){}entradaInfo=null;TOKEN='';render()};
-    oe.onclick=ir;$('#codEmp').onkeydown=e=>{if(e.key==='Enter')ir()}}
-  const te=$('#tentaEnt');if(te)te.onclick=()=>{entradaInfo=null;render()};
-  const tr=$('#trocaEmp');if(tr)tr.onclick=()=>{EMP='';try{localStorage.removeItem('lgr_empresa')}catch(e){}entradaInfo=null;render()};
-  const c=$('#criarPin');if(c)c.onclick=async()=>{const a=$('#pg1').value.trim(),b=$('#pg2').value.trim();
-    if(!/^\d{4,6}$/.test(a)){$('#pinMsg').textContent='Use de 4 a 6 números.';return}
-    if(a!==b){$('#pinMsg').textContent='As senhas não são iguais.';return}
-    c.disabled=true;try{logado(await api('primeiro',{metodo:'POST',corpo:{e:EMP,pin:a}}));toast('Senha criada')}catch(e){$('#pinMsg').textContent=e.message;c.disabled=false}};
-  document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>{
-    const id=b.dataset.login, g=id==='gestor', nome=b.dataset.nome||'';
-    if(!g&&b.dataset.tem!=='1'){toast('Peça ao gestor para criar sua senha');return}
-    modal(`<h2>${g?'👑 Gestor':'🧑‍🌾 '+esc(nome)}</h2><label>Digite sua senha</label>${pinInput('pinIn')}
-      <div id="pinErr" class="neg" style="margin-top:8px;font-size:14px"></div>
-      <div class="acoes"><button class="btn sec" id="pc">Cancelar</button><button class="btn" id="pok">Entrar</button></div>`,f=>{
-      const inp=f.querySelector('#pinIn');setTimeout(()=>inp.focus(),50);
-      const ok=async()=>{const pin=inp.value.trim();if(!pin)return;f.querySelector('#pok').disabled=true;
-        try{const r=await api('entrar',{metodo:'POST',corpo:{e:EMP,quem:id,pin}});fecharModal();logado(r);toast(g?'Bem-vindo, gestor':'Olá, '+nome)}
-        catch(e){f.querySelector('#pinErr').textContent=e.message;inp.value='';inp.focus();f.querySelector('#pok').disabled=false}};
-      f.querySelector('#pok').onclick=ok;inp.onkeydown=e=>{if(e.key==='Enter')ok()};
-      f.querySelector('#pc').onclick=fecharModal;
-    });
-  });
+  const msg=t=>{const m=$('#logMsg');if(m)m.textContent=t};
+  const ba=$('#baixarApp');if(ba)ba.onclick=baixarApp;
+  const ca=$('#criarAdm');if(ca)ca.onclick=async()=>{const nome=$('#pNome').value.trim(),usuario=$('#pUsu').value.trim(),a=$('#pS1').value,b=$('#pS2').value;
+    if(!nome||!usuario){msg('Preencha o nome e o usuário.');return}
+    if(a.length<8){msg('A senha precisa ter pelo menos 8 caracteres.');return}
+    if(a!==b){msg('As senhas não são iguais.');return}
+    ca.disabled=true;try{logado(await api('primeiro',{metodo:'POST',corpo:{e:EMP||undefined,nome,usuario,senha:a}}));toast('Administrador criado')}catch(e){msg(e.message);ca.disabled=false}};
+  const fl=$('#fLogin');if(fl){setTimeout(()=>{const u=$('#lUsu');if(u&&!u.value)u.focus()},60);
+    fl.onsubmit=async ev=>{ev.preventDefault();const usuario=$('#lUsu').value.trim(),senha=$('#lSen').value;if(!usuario||!senha){msg('Digite o usuário e a senha.');return}
+      const bt=$('#entrarBt');bt.disabled=true;msg('');
+      try{const r=await api('entrar',{metodo:'POST',corpo:{usuario,senha,e:EMP||undefined}});logado(r);toast('Olá, '+(r.sessao.nome||usuario))}
+      catch(e){msg(e.status?e.message:'Sem internet. Tente de novo quando conectar.');$('#lSen').value='';$('#lSen').focus();bt.disabled=false}}}
 }
 
-function confirmarSair(){const p=pendentes().length;modal(`<h2>Sair?</h2><p>Você vai voltar para a tela "Quem está usando?".</p>${p?`<p class="neg"><b>Atenção:</b> ${p} lançamento(s) ainda não chegaram ao servidor${online?'':' (sem internet)'}. Se sair agora, eles se perdem. Espere aparecer "✓ em tempo real".</p>`:''}<div class="acoes"><button class="btn sec" id="sn">Cancelar</button><button class="btn" id="ss">Sair</button></div>`,f=>{f.querySelector('#sn').onclick=fecharModal;f.querySelector('#ss').onclick=()=>{fecharModal();sair()}})}
-function vSenhaGestor(){return `<div class="card"><b>Senha do gestor</b><label>Nova senha (4 a 6 números)</label><input id="ng1" type="password" inputmode="numeric" maxlength="6"><label>Repita</label><input id="ng2" type="password" inputmode="numeric" maxlength="6"><button class="btn sec" id="trocaPin" style="margin-top:10px">Trocar senha</button></div>`}
-function ligarSenhaGestor(){$('#trocaPin').onclick=async()=>{const a=$('#ng1').value.trim(),b=$('#ng2').value.trim();if(!/^\d{4,6}$/.test(a)){toast('Use de 4 a 6 números');return}if(a!==b){toast('As senhas não são iguais');return}
-  try{await api('senha',{metodo:'POST',corpo:{para:'gestor',pin:a}});$('#ng1').value=$('#ng2').value='';toast('Senha trocada')}catch(e){toast(e.message)}}}
+function confirmarSair(){const p=pendentes().length;modal(`<h2>Sair?</h2><p>Você vai voltar para a tela de entrada.</p>${p?`<p class="neg"><b>Atenção:</b> ${p} lançamento(s) ainda não chegaram ao servidor${online?'':' (sem internet)'}. Se sair agora, eles se perdem. Espere aparecer "✓ em tempo real".</p>`:''}<div class="acoes"><button class="btn sec" id="sn">Cancelar</button><button class="btn" id="ss">Sair</button></div>`,f=>{f.querySelector('#sn').onclick=fecharModal;f.querySelector('#ss').onclick=()=>{fecharModal();sair()}})}
+function modalMinhaSenha(){modal(`<h2>Trocar minha senha</h2>${campo('ms0','Senha atual','password','current-password')}${campo('ms1','Senha nova (mínimo 8 caracteres)','password','new-password')}${campo('ms2','Repita a senha nova','password','new-password')}
+  <div id="msMsg" class="neg" style="margin-top:8px;font-size:14px"></div><div class="acoes"><button class="btn sec" id="msc">Cancelar</button><button class="btn" id="mss">Trocar</button></div>`,f=>{
+  f.querySelector('#msc').onclick=fecharModal;
+  f.querySelector('#mss').onclick=async()=>{const a=f.querySelector('#ms0').value,n=f.querySelector('#ms1').value,r=f.querySelector('#ms2').value,m=f.querySelector('#msMsg');
+    if(n.length<8){m.textContent='A senha nova precisa ter pelo menos 8 caracteres.';return}if(n!==r){m.textContent='As senhas novas não são iguais.';return}
+    try{await api('minha-senha',{metodo:'POST',corpo:{atual:a,nova:n}});fecharModal();toast('Senha trocada')}catch(e){m.textContent=e.message}};
+})}
+/* ===================== Baixar o app (instalar na tela do celular) ===================== */
+let PEDIDO_INSTALAR=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();PEDIDO_INSTALAR=e;if(!sessaoValida())renderSuave()});
+addEventListener('appinstalled',()=>{PEDIDO_INSTALAR=null;toast('App instalado! Abra pelo ícone verde.');renderSuave()});
+const appInstalado=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const ehIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function botaoBaixar(){
+  if(appInstalado())return '';
+  return `<div class="card" style="margin-top:14px;display:flex;align-items:center;gap:12px">
+    <img src="icone-192.png" alt="" width="48" height="48" style="border-radius:12px;flex:none">
+    <div style="flex:1;min-width:0"><b>Baixe o app no celular</b><div class="s" style="color:var(--sub);font-size:13px">Abre direto pela tela inicial, como os outros apps.</div></div>
+    <button class="btn peq" id="baixarApp" type="button" style="flex:none">📲 Baixar</button></div>`;
+}
+const ICO_COMP='<svg viewBox="0 0 24 24" width="18" height="18" aria-label="Compartilhar" style="vertical-align:-3px"><path d="M12 3v12M8 7l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+async function baixarApp(){
+  if(PEDIDO_INSTALAR){const p=PEDIDO_INSTALAR;PEDIDO_INSTALAR=null;p.prompt();try{await p.userChoice}catch(e){}renderSuave();return}
+  const link=location.origin+location.pathname+(EMP?'?e='+encodeURIComponent(EMP):'');
+  const ios=ehIOS(), android=/Android/i.test(navigator.userAgent);
+  const passosIos=`<ol style="padding-left:20px;margin:6px 0"><li>Abra este link no <b>Safari</b>.</li><li>Toque em ${ICO_COMP} <b>Compartilhar</b>, embaixo da tela.</li><li>Toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.</li><li>Abra pelo ícone verde e entre com o seu usuário e senha.</li></ol>`;
+  const passosAnd=`<ol style="padding-left:20px;margin:6px 0"><li>Abra este link no <b>Chrome</b>.</li><li>Toque nos três pontinhos <b>⋮</b> no canto de cima.</li><li>Toque em <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>) e confirme.</li><li>Abra pelo ícone verde e entre com o seu usuário e senha.</li></ol>`;
+  modal(`<h2>📲 Baixar o app</h2>
+    ${ios?`<b>iPhone</b>${passosIos}`:android?`<b>Android</b>${passosAnd}`:`<b>Android</b>${passosAnd}<b>iPhone</b>${passosIos}`}
+    <div class="ajuda" style="margin:10px 0 0">No iPhone, entre só depois de instalar: o app instalado pede a senha de novo.</div>
+    <a class="btn" style="margin-top:12px;background:#25a244" href="https://wa.me/?text=${encodeURIComponent('Baixe o app LegislaGov Rural: '+link)}" target="_blank" rel="noopener">💬 Mandar o link pelo WhatsApp</a>
+    <div class="acoes"><button class="btn sec" id="bxf">Fechar</button></div>`,f=>f.querySelector('#bxf').onclick=fecharModal);
+}
+/* ===================== USUÁRIOS (administrador) ===================== */
+let USUARIOS=null;
+async function carregarUsuarios(){try{USUARIOS=(await api('usuarios')).usuarios}catch(e){USUARIOS=USUARIOS||[]}if(ui.tab==='usuarios')renderSuave()}
+function vUsuarios(){
+  if(!USUARIOS){carregarUsuarios();return '<button class="voltar" data-ir="mais">‹ Mais</button><h2>Usuários</h2><div class="vazio">Carregando…</div>'}
+  return `<button class="voltar" data-ir="mais">‹ Mais</button><h2>Usuários e senhas</h2>
+  <div class="ajuda"><b>Administrador</b>: acesso total. <b>Padrão</b>: vê só as rotas, os fornecedores, as saídas e os pedidos do vendedor dele, sem os valores gerais da horta.</div>
+  ${USUARIOS.map(u=>{const v=vend(u.vendedor);return `<div class="card item" data-usu="${u.id}" style="cursor:pointer"><div style="font-size:26px">${u.perfil==='adm'?'👑':'🧑‍🌾'}</div>
+    <div class="info"><div class="t">${esc(u.nome)}${ui.sess.uid===u.id?' <span class="tag fe">você</span>':''}</div><div class="s">usuário: <b>${esc(u.usuario)}</b></div>
+    <div class="s">${u.perfil==='adm'?'Administrador · acesso total':'Padrão · vendedor: '+esc(v?v.nome:'(removido)')}</div></div><div style="color:var(--sub)">›</div></div>`}).join('')}
+  <button class="fab" id="novoUsu">+ Usuário</button>`;
+}
+function modalUsuario(u){
+  const livres=S.vendedores.filter(v=>!USUARIOS.some(x=>x.vendedor===v.id&&(!u||x.id!==u.id)));
+  modal(`<h2>${u?'Editar usuário':'Novo usuário'}</h2>
+    <label>Nome</label><input id="un" value="${esc(u?.nome||'')}" placeholder="Ex.: Maria">
+    <label>Usuário (para entrar)</label><input id="uu" autocapitalize="none" spellcheck="false" autocomplete="off" value="${esc(u?.usuario||'')}" placeholder="Ex.: maria">
+    <label>${u?'Senha nova (deixe em branco para manter)':'Senha (mínimo 8 caracteres)'}</label><input id="us1" type="password" autocomplete="new-password">
+    <label>Repita a senha</label><input id="us2" type="password" autocomplete="new-password">
+    <label>Perfil</label>
+    <div class="seg"><button type="button" data-perf="padrao">🧑‍🌾 Padrão</button><button type="button" data-perf="adm">👑 Administrador</button></div>
+    <div id="uvBox"><label>Vendedor (ele vê só as rotas deste vendedor)</label><select id="uv"><option value="">— escolher —</option>${livres.map(v=>`<option value="${v.id}" ${u?.vendedor===v.id?'selected':''}>${esc(v.nome)}</option>`).join('')}<option value="__novo">+ Cadastrar vendedor com este nome</option></select></div>
+    <div id="uMsg" class="neg" style="margin-top:8px;font-size:14px"></div>
+    <div class="acoes">${u?`<button class="btn perigo" id="ux">Remover</button>`:`<button class="btn sec" id="uc">Cancelar</button>`}<button class="btn" id="us">Salvar</button></div>`,f=>{
+    let perfil=u?.perfil||'padrao';
+    const pinta=()=>{f.querySelectorAll('[data-perf]').forEach(b=>b.classList.toggle('on',b.dataset.perf===perfil));f.querySelector('#uvBox').style.display=perfil==='padrao'?'':'none'};
+    f.querySelectorAll('[data-perf]').forEach(b=>b.onclick=()=>{perfil=b.dataset.perf;pinta()});pinta();
+    const m=t=>f.querySelector('#uMsg').textContent=t;
+    const c=f.querySelector('#uc');if(c)c.onclick=fecharModal;
+    const x=f.querySelector('#ux');if(x)x.onclick=()=>confirmar(`Remover o usuário <b>${esc(u.nome)}</b>? Ele não vai mais conseguir entrar. Os lançamentos dele continuam.`,async()=>{
+      try{await api('usuarios',{metodo:'POST',corpo:{acao:'remover',id:u.id}});USUARIOS=null;render();toast('Usuário removido')}catch(e){toast(e.message)}},'Sim, remover');
+    f.querySelector('#us').onclick=async()=>{
+      const nome=f.querySelector('#un').value.trim(),usuario=f.querySelector('#uu').value.trim(),s1=f.querySelector('#us1').value,s2=f.querySelector('#us2').value;
+      let vendedor=f.querySelector('#uv').value;
+      if(!nome||!usuario){m('Preencha o nome e o usuário.');return}
+      if((!u||s1)&&s1.length<8){m('A senha precisa ter pelo menos 8 caracteres.');return}
+      if(s1!==s2){m('As senhas não são iguais.');return}
+      if(perfil==='padrao'&&!vendedor){m('Escolha o vendedor deste usuário.');return}
+      f.querySelector('#us').disabled=true;
+      if(perfil==='padrao'&&vendedor==='__novo'){const nv={id:uid(),nome};S.vendedores.push(nv);vendedor=nv.id;salvar();await enviarAgora()}
+      try{await api('usuarios',{metodo:'POST',corpo:{id:u?.id,nome,usuario,perfil,vendedor:perfil==='padrao'?vendedor:'',senha:s1||undefined}});
+        fecharModal();USUARIOS=null;render();toast('Usuário salvo')}
+      catch(e){m(e.message);f.querySelector('#us').disabled=false}};
+  });
+}
 const STATUS={aberta:['ab','Em rota'],entregue:['az','Aguardando conferência'],fechada:['fe','Conferida']};
 function tagStatus(s){const st=STATUS[s.status||'aberta']||STATUS.aberta;return `<span class="tag ${st[0]}">${st[1]}</span>`}
 /* ===================== INÍCIO DO VENDEDOR ===================== */
@@ -453,7 +519,8 @@ function vInicioVend(){
   ${rs.length?`<h3>Minha rota</h3>`+rs.map(r=>{const lk=linkRota(r.pontos||[]);return `<div class="card"><div class="item" data-rota="${r.id}"><div style="font-size:24px">🗺️</div><div class="info"><div class="t">${esc(r.nome)}</div><div class="s">${(r.pontos||[]).length} fornecedor(es)${(r.dias||[]).length?' · '+r.dias.map(d=>DIAS[d]).join(', '):''}</div></div><div style="color:var(--sub)">›</div></div>
     ${lk?`<a class="btn sec" style="margin-top:10px" href="${lk}" target="_blank" rel="noopener">🧭 Abrir caminho no mapa</a>`:''}</div>`}).join(''):''}
   <h3>Minhas últimas saídas</h3>
-  ${minhas.slice(0,5).map(cardSaida).join('')||'<div class="card s" style="color:var(--sub)">Nenhuma saída ainda.</div>'}`;
+  ${minhas.slice(0,5).map(cardSaida).join('')||'<div class="card s" style="color:var(--sub)">Nenhuma saída ainda.</div>'}
+  <button class="btn sec" id="maisSenha" style="margin-top:16px">🔐 Trocar minha senha</button>`;
 }
 
 /* ===================== INÍCIO ===================== */
@@ -740,7 +807,7 @@ function vVendedores(){
     const ss=S.saidas.filter(s=>s.vendedorId===v.id);
     const dif=ss.reduce((a,s)=>{const c=calcSaida(s);return a+(c.dif||0)},0);
     return `<div class="card item" data-vend="${v.id}"><div style="font-size:26px">🧑‍🌾</div>
-    <div class="info"><div class="t">${esc(v.nome)}</div><div class="s">${[v.telefone,v.veiculo].filter(Boolean).map(esc).join(' · ')||'Toque para editar'}</div><div class="s">${v.pin?'🔐 tem acesso ao app':'<span class="neg">sem senha de acesso</span>'}</div>
+    <div class="info"><div class="t">${esc(v.nome)}</div><div class="s">${[v.telefone,v.veiculo].filter(Boolean).map(esc).join(' · ')||'Toque para editar'}</div><div class="s">${v.pin?'🔐 entra no app como <b>'+esc(v.usuarioApp||'')+'</b>':'<span style="color:var(--sub)">sem acesso ao app</span>'}</div>
     <div class="s">${ss.length} saída(s)${dif?` · <span class="${dif<0?'neg':'pos'}">${dif<0?'faltas':'sobras'} ${R(Math.abs(dif))}</span>`:''}</div></div>
     <div style="color:var(--sub)">›</div></div>`}).join('')
   :`<div class="vazio"><b>🧑‍🌾</b>Nenhum vendedor ainda.<br>Cadastre quem sai para vender (ex.: Dona Sueli).</div>`}
@@ -751,8 +818,7 @@ function modalVendedor(v){
     <label>Nome</label><input id="vn" value="${esc(v?.nome||'')}" placeholder="Ex.: Dona Sueli">
     <label>Telefone / WhatsApp</label><input id="vt" inputmode="tel" value="${esc(v?.telefone||'')}" placeholder="(00) 00000-0000">
     <label>Veículo / placa</label><input id="vv" value="${esc(v?.veiculo||'')}" placeholder="Ex.: Saveiro ABC-1234">
-    <label>Senha de acesso ao app (4 a 6 números)</label><input id="vpin" type="password" inputmode="numeric" maxlength="6" placeholder="${v?.pin?'senha cadastrada ✓ — deixe vazio para manter':'crie a senha do vendedor'}">
-    <div class="ajuda" style="margin:4px 0 0">Com essa senha ele entra no app e vê <b>só as saídas e a rota dele</b>.</div>
+    <div class="ajuda" style="margin:10px 0 0">${v?.pin?`🔐 Entra no app com o usuário <b>${esc(v.usuarioApp||'')}</b>.`:'Para ele entrar no app, crie o usuário em <b>Mais › Usuários e senhas</b>.'}</div>
     <div class="acoes">${v?`<button class="btn perigo" id="vd">Excluir</button>`:`<button class="btn sec" id="vc">Cancelar</button>`}<button class="btn" id="vs">Salvar</button></div>`,f=>{
     setTimeout(()=>f.querySelector('#vn').focus(),50);
     const c=f.querySelector('#vc');if(c)c.onclick=fecharModal;
@@ -762,13 +828,8 @@ function modalVendedor(v){
     f.querySelector('#vs').onclick=()=>{
       const nome=f.querySelector('#vn').value.trim();if(!nome){toast('Informe o nome');return}
       const dados={nome,telefone:f.querySelector('#vt').value.trim(),veiculo:f.querySelector('#vv').value.trim()};
-      const pin=f.querySelector('#vpin').value.trim();
-      if(pin&&!/^\d{4,6}$/.test(pin)){toast('Senha: use de 4 a 6 números');return}
-      let alvo=v;if(v)Object.assign(v,dados);else{alvo={id:uid(),...dados};S.vendedores.push(alvo)}
-      salvar();fecharModal();render();
-      if(!pin){toast('Vendedor salvo');return}
-      (async()=>{await enviarAgora();try{await api('senha',{metodo:'POST',corpo:{para:alvo.id,pin}});alvo.pin=true;ultimo.vendedores[alvo.id]=JSON.stringify(alvo);guardarCache();renderSuave();toast('Vendedor salvo com senha')}
-        catch(e){toast(online?e.message:'Sem internet: a senha não foi criada. Tente de novo.')}})();
+      if(v)Object.assign(v,dados);else S.vendedores.push({id:uid(),...dados});
+      salvar();fecharModal();render();toast('Vendedor salvo');
     };
   });
 }
@@ -1249,7 +1310,8 @@ function vMais(){
   ${LICENCA_OBRIGATORIA?'':'<!--'}<button class="tile" id="maisLic"><span>🔑</span><b>Chave de ativação</b><small>${diasRestantes()} dias restantes</small></button>${LICENCA_OBRIGATORIA?'':'-->'}
   <button class="tile" data-ir="equipe"><span>📍</span><b>Vendedores</b><small>acompanhar no mapa</small></button>
   <button class="tile" id="maisNome"><span>🏡</span><b>Nome da horta</b><small>${esc(S.config.nomeHorta||'não definido')}</small></button>
-  <button class="tile" id="maisSenha"><span>🔐</span><b>Senha do gestor</b><small>trocar</small></button>
+  <button class="tile" data-ir="usuarios"><span>👥</span><b>Usuários e senhas</b><small>quem entra no app</small></button>
+  <button class="tile" id="maisSenha"><span>🔐</span><b>Minha senha</b><small>trocar</small></button>
   <button class="tile" id="maisSair"><span>🚪</span><b>Sair</b><small>trocar de usuário</small></button>
   </div>`;
 }
@@ -1493,7 +1555,9 @@ function ligar(){
   on('#maisLic',()=>{ui.tab='licenca';render();scrollTo(0,0)});
   on('#maisSair',()=>confirmarSair());
   on('#maisNome',()=>modal(`<h2>Nome da horta</h2><label>Aparece no topo do app e na tela de entrada</label><input id="nh" value="${esc(S.config.nomeHorta||'')}" placeholder="Ex.: Horta Boa Vista"><div class="acoes"><button class="btn sec" id="nhc">Cancelar</button><button class="btn" id="nhs">Salvar</button></div>`,f=>{f.querySelector('#nhc').onclick=fecharModal;f.querySelector('#nhs').onclick=()=>{S.config.nomeHorta=f.querySelector('#nh').value.trim();salvar();fecharModal();render();toast('Nome salvo')}}));
-  on('#maisSenha',()=>{modal(vSenhaGestor()+'<div class="acoes"><button class="btn sec" id="sgf">Fechar</button></div>',f=>{f.querySelector('#sgf').onclick=fecharModal;ligarSenhaGestor()})});
+  on('#maisSenha',()=>modalMinhaSenha());
+  on('#novoUsu',()=>modalUsuario());
+  on('[data-usu]',e=>modalUsuario(USUARIOS.find(u=>u.id===e.dataset.usu)));
   on('[data-vendhoje]',e=>{ui.tab='equipe';ui.vendId=e.dataset.vendhoje;ui.equipeDia=hoje();ui.mapaVista=null;render();scrollTo(0,0)});
   on('[data-edia]',e=>{ui.equipeDia=somaDias(ui.equipeDia||hoje(),+e.dataset.edia);ui.mapaVista=null;render()});
   on('#voltaEquipe',()=>{ui.vendId=null;render();scrollTo(0,0)});
