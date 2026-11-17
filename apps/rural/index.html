@@ -219,6 +219,7 @@ function marcarEstado(){const p=TOKEN&&ui.sess?pendentes().length:0;document.bod
 async function api(acao,{metodo='GET',corpo=null,q=''}={}){
   const r=await fetch(API+acao+(q?'?'+q:''),{method:metodo,cache:'no-store',headers:Object.assign({'Content-Type':'application/json'},TOKEN?{Authorization:'Bearer '+TOKEN}:{}),body:corpo?JSON.stringify(corpo):undefined});
   let d={};try{d=await r.json()}catch(e){}
+  if(r.status===410&&d.encerrada){demoEncerrada();throw new Error('sessao')}
   if(r.status===401&&TOKEN&&!['entrar','primeiro'].includes(acao)){sessaoTerminou();throw new Error('sessao')}
   if(!r.ok){const e=new Error(d.erro||('Erro '+r.status));e.status=r.status;throw e}
   return d;
@@ -313,7 +314,38 @@ async function carregar(){
   catch(e){if(e.message!=='sessao'){online=false;marcarEstado();setTimeout(carregar,8000)}}
 }
 function sessaoTerminou(){TOKEN='';ui.sess=null;entradaInfo=null;try{localStorage.removeItem('lgr_token');localStorage.removeItem('lgr_sessao')}catch(e){}zerarDados();render();toast('Entre de novo com a sua senha')}
+/* ===================== Demonstração (link da Central LegislaGov) ===================== */
+let ENCERRADA=false;
+function demoInfo(){try{return EMP.startsWith('demo-')&&EMP!=='demo-rural'?JSON.parse(localStorage.getItem('lgr_demo')||'null'):null}catch(e){return null}}
+function demoEncerrada(){
+  if(ENCERRADA)return;ENCERRADA=true;TOKEN='';ui.sess=null;
+  try{Object.keys(localStorage).filter(k=>/^lgr/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
+  try{caches&&caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)))}catch(e){}
+  document.body.className='';document.body.style.cssText='margin:0;background:#fff';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><div style="font-size:44px">🌱</div><h1 style="font-size:22px;margin:12px 0 6px">Demonstração encerrada</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O prazo desta demonstração do LegislaGov Rural terminou e os dados de exemplo foram apagados deste aparelho.</p><p style="max-width:34ch;color:#5b6b5e;line-height:1.5">Para usar na sua horta, fale com a LegislaGov.</p><a href="https://legislagov.com.br" style="color:#2e7d32;font-weight:700">legislagov.com.br</a></div>';
+}
+async function entrarDemo(){
+  const ps=new URLSearchParams(location.search),dm=(ps.get('demo')||'').trim().toLowerCase();if(!dm)return;
+  try{const r=await api('demo',{q:'c='+encodeURIComponent(dm)+(ps.get('perfil')==='vendedor'?'&perfil=vendedor':'')});
+    TOKEN=r.token;ui.sess=r.sessao;EMP=r.empresa;
+    try{localStorage.setItem('lgr_empresa',EMP);localStorage.setItem('lgr_token',TOKEN);localStorage.setItem('lgr_sessao',JSON.stringify(ui.sess));localStorage.setItem('lgr_demo',JSON.stringify(r.demo))}catch(e){}
+    history.replaceState(null,'',location.pathname+'?e='+encodeURIComponent(EMP));ui.tab='inicio';
+  }catch(e){if(e.status===410||e.status===404)demoEncerrada()}
+}
+function faixaDemo(){
+  const d=demoInfo();let f=$('#faixaDemo');if(!d||!ui.sess){if(f)f.remove();return}
+  if(d.expira&&d.expira*1000<Date.now()){demoEncerrada();return}
+  if(!f){f=document.createElement('div');f.id='faixaDemo';document.body.insertBefore(f,document.body.firstChild);
+    const st=document.createElement('style');st.textContent='#faixaDemo{position:relative;z-index:60;background:#fff4cc;color:#4a3b00;font:600 13px system-ui,Arial;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid #e8d18a}#faixaDemo button{font:700 12.5px system-ui,Arial;border:1px solid #c9a93c;background:#fff;border-radius:999px;padding:5px 10px;color:#4a3b00}';document.head.appendChild(st)}
+  document.body.classList.add('demo');
+  const fim=d.expira?new Date(d.expira*1000):null;
+  f.innerHTML=`<span>Demonstração${fim?' · termina '+fim.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' às '+fim.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span><button type="button" id="demoTroca">${ehGestor()?'Ver como vendedora':'Ver como gestor'}</button><button type="button" id="demoInstalar">Instalar app</button>`;
+  $('#demoTroca').onclick=()=>{location.href=location.pathname+'?demo='+encodeURIComponent(d.codigo)+(ehGestor()?'&perfil=vendedor':'')};
+  $('#demoInstalar').onclick=()=>{try{baixarApp()}catch(e){toast('Use o menu do navegador › Adicionar à tela inicial')}};
+}
+setInterval(()=>{const d=demoInfo();if(d&&d.expira&&d.expira*1000<Date.now())demoEncerrada()},30000);
 async function iniciar(){
+  await entrarDemo();if(ENCERRADA)return;
   if(EMP&&!new URLSearchParams(location.search).get('e')){try{history.replaceState(null,'',location.pathname+'?e='+encodeURIComponent(EMP))}catch(e){}}
   try{const se=localStorage.getItem('lgr_sessao');if(se&&TOKEN)ui.sess=JSON.parse(se)}catch(e){}
   if(ui.sess)lerCache();
@@ -346,6 +378,9 @@ function confirmar(msg,ok,rotulo){
 }
 
 function render(){
+  if(ENCERRADA)return;
+  try{faixaDemo()}catch(e){}
+  if(ENCERRADA)return;
   if(!pronto){$('#app').innerHTML='<div class="vazio">Carregando dados…</div>';return}
   if(LIC.estado==='verificando'||licCache!==(S.licenca?.chave||'')){verificarLicenca().then(()=>render());if(LIC.estado==='verificando'){$('#app').innerHTML='<div class="vazio">Carregando…</div>';return}}
   const ativa=licencaAtiva(), d=diasRestantes();

@@ -15,3 +15,5 @@ www.legislagov.com.br          prefeitura-neves-sp portfolio
 rural.legislagov.com.br        rural               rural
 # Painel de e-mails institucionais (pasta apps/email)
 email.legislagov.com.br        email               email
+# Central LegislaGov (área restrita dos sócios: sistemas e demonstrações) — pasta apps/central
+central.legislagov.com.br      central             central

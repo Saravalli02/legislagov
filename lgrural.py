@@ -83,7 +83,111 @@ def empresas():
         except OSError:
             pass
         _estado.update(empresas=cods, empresas_lidas=time.time())
-    return _estado["empresas"]
+    return _estado["empresas"] | _demos_ativas()
+
+
+def _demos_ativas():
+    """Hortas de demonstração (criadas na Central) que ainda estão no prazo."""
+    if time.time() - _estado.get("demos_lidas", 0) > 15:
+        try:
+            import lgcentral
+            _estado["demos"] = lgcentral.empresas_demo(lgcentral._db())
+        except Exception:
+            _estado["demos"] = set()
+        _estado["demos_lidas"] = time.time()
+    return _estado.get("demos", set())
+
+
+def esquecer_demos():
+    _estado["demos_lidas"] = 0
+
+
+# ---------------------------------------------------------------- demonstração (dados fictícios)
+def _doc(c, empresa, col, obj):
+    c.execute("INSERT OR REPLACE INTO rural_docs(empresa, col, id, json, seq, apagado, quando, por) VALUES(?,?,?,?,?,0,?,?)",
+              (empresa, col, obj["id"], json.dumps(obj, ensure_ascii=False), _prox_seq(c, empresa), time.time(), "demonstração"))
+
+
+def semear_demo(c, empresa, cliente=""):
+    """Cria a horta de demonstração com dados fictícios: produtos, 2 vendedores, fornecedores, rotas,
+    saídas dos últimos dias (com vendas, trocas e despesas), fiado, custos e um funcionário."""
+    import datetime as dt
+    if c.execute("SELECT 1 FROM rural_docs WHERE empresa=? LIMIT 1", (empresa,)).fetchone():
+        return
+    hoje = dt.date.today()
+    dia = lambda n: (hoje - dt.timedelta(days=n)).isoformat()
+    hora = lambda n, h: (dt.datetime.combine(hoje - dt.timedelta(days=n), dt.time(h, 15))).isoformat()
+    _doc(c, empresa, "config", {"id": "geral", "nomeHorta": (cliente + " — demonstração") if cliente else "Horta Exemplo (demonstração)"})
+    prods = [("alface", "Alface crespa", "pé", 3.5), ("rucula", "Rúcula", "maço", 3.0), ("cheiro", "Cheiro-verde", "maço", 2.5),
+             ("couve", "Couve", "maço", 3.0), ("almeirao", "Almeirão", "maço", 3.0), ("espinafre", "Espinafre", "maço", 4.0)]
+    for pid, nome, un, preco in prods:
+        _doc(c, empresa, "produtos", {"id": "p-" + pid, "nome": nome, "unidade": un, "preco": preco})
+    _doc(c, empresa, "vendedores", {"id": "v-ana", "nome": "Ana (exemplo)", "telefone": "", "veiculo": "Saveiro"})
+    _doc(c, empresa, "vendedores", {"id": "v-joao", "nome": "João (exemplo)", "telefone": "", "veiculo": "Strada"})
+    pontos = [("mercado-central", "Mercado Central", "Mirassol", True), ("sacolao-bom-preco", "Sacolão Bom Preço", "Mirassol", False),
+              ("restaurante-sabor", "Restaurante Sabor da Terra", "Mirassol", True), ("padaria-sol", "Padaria do Sol", "Neves Paulista", False),
+              ("mercadinho-ze", "Mercadinho do Zé", "Neves Paulista", True), ("feira-sabado", "Banca da Feira", "Neves Paulista", False)]
+    for oid, nome, cidade, fiado in pontos:
+        _doc(c, empresa, "pontos", {"id": "o-" + oid, "nome": nome, "cidade": cidade, "cep": "", "endereco": "Endereço de exemplo", "bairro": "Centro",
+                                    "contato": "", "telefone": "", "doc": "", "fiado": fiado, "troca": True, "precos": {}, "prazo": 15, "ativo": True})
+    _doc(c, empresa, "rotas", {"id": "r-mirassol", "nome": "Rota Mirassol", "cidade": "Mirassol", "vendedorId": "v-ana", "dias": [1, 3, 5],
+                               "pontos": ["o-mercado-central", "o-sacolao-bom-preco", "o-restaurante-sabor"]})
+    _doc(c, empresa, "rotas", {"id": "r-neves", "nome": "Rota Neves Paulista", "cidade": "Neves Paulista", "vendedorId": "v-joao", "dias": [2, 4, 6],
+                               "pontos": ["o-padaria-sol", "o-mercadinho-ze", "o-feira-sabado"]})
+    precos = {p[0]: p[3] for p in prods}
+    n = 0
+    for d_ in (6, 5, 4, 3, 2, 1):
+        for vid, rid, pts in (("v-ana", "r-mirassol", ["mercado-central", "sacolao-bom-preco", "restaurante-sabor"]),
+                              ("v-joao", "r-neves", ["padaria-sol", "mercadinho-ze", "feira-sabado"])):
+            n += 1
+            carga = {"alface": 60, "rucula": 30, "cheiro": 40, "couve": 25, "almeirao": 20, "espinafre": 15}
+            itens = [{"produtoId": "p-" + k, "nome": next(p[1] for p in prods if p[0] == k), "unidade": next(p[2] for p in prods if p[0] == k),
+                      "preco": precos[k], "qtd": q, "perda": 1 if k == "alface" else 0, "sobra": 2 if k == "rucula" else 0} for k, q in carga.items()]
+            vendas = []
+            for i, pt in enumerate(pts):
+                frac = [0.4, 0.3, 0.25][i]
+                vit = [{"produtoId": "p-" + k, "qtd": int(q * frac), "troca": 1 if (k == "alface" and i == 0) else 0, "preco": precos[k]} for k, q in carga.items()]
+                vendas.append({"id": f"vd{n}-{i}", "pontoId": "o-" + pt, "itens": vit, "hora": hora(d_, 8 + i), "por": vid})
+            total = sum(it["qtd"] * it["preco"] for v in vendas for it in v["itens"])
+            _doc(c, empresa, "saidas", {"id": f"s{n}", "criado": time.time() - d_ * 86400, "vendedorId": vid, "data": dia(d_), "itens": itens, "rotaId": rid,
+                                        "troco": 50, "vendas": vendas, "criadoPor": "gestor", "status": "fechada",
+                                        "despesas": [{"tipo": "Combustível", "valor": 60, "obs": "", "litros": 10, "km": "", "hora": hora(d_, 11)}],
+                                        "contado": round(total + 50 - 60, 2), "declarado": round(total + 50 - 60, 2), "entregueEm": hora(d_, 13), "conferidoEm": hora(d_, 14)})
+    _doc(c, empresa, "fiados", {"id": "f1", "pontoId": "o-mercado-central", "saidaId": "s1", "valor": 85.0, "data": dia(6), "vencimento": dia(-9), "pago": False, "obs": ""})
+    for i, (cat, val, desc) in enumerate((("Sementes e mudas", 180, "Mudas de alface"), ("Adubo", 240, "Adubo orgânico"), ("Água e energia", 150, "Conta do mês"))):
+        _doc(c, empresa, "custos", {"id": f"c{i}", "categoria": cat, "data": dia(3 + i), "valor": val, "descricao": desc})
+    _doc(c, empresa, "funcionarios", {"id": "func1", "nome": "Carlos (exemplo)", "funcao": "Plantio e colheita", "salario": 1600, "ativo": True})
+    # acessos: gestor (adm) e vendedora Ana (padrão) — senhas aleatórias que ninguém usa (entra pelo link)
+    for perfil, vend, nome in (("adm", "", "Gestor da demonstração"), ("padrao", "v-ana", "Ana (exemplo)")):
+        login = ("demo." if perfil == "adm" else "vend.") + empresa[5:]
+        c.execute("INSERT OR IGNORE INTO rural_usuarios(empresa, id, usuario, nome, perfil, vendedor, senha, criado) VALUES(?,?,?,?,?,?,?,?)",
+                  (empresa, "u" + secrets.token_hex(6), login, nome, perfil, vend, "!" + secrets.token_hex(24), time.time()))
+    esquecer_demos()
+
+
+def apagar_empresa(c, empresa):
+    """Apaga todos os dados de uma horta de demonstração vencida."""
+    if not empresa.startswith("demo-") or empresa == "demo-rural":
+        return
+    for t in ("rural_docs", "rural_pos", "rural_seq", "rural_usuarios", "rural_sess"):
+        c.execute(f"DELETE FROM {t} WHERE empresa=?", (empresa,))
+
+
+def entrar_demo(c, codigo, perfil):
+    import lgcentral
+    cc = lgcentral._db()
+    d = lgcentral.demo(cc, codigo)
+    if not d or d["sistema"] != "rural":
+        return 404, {"ok": False, "erro": "Demonstração não encontrada."}
+    if not lgcentral.demo_ativa(cc, codigo):
+        return 410, {"ok": False, "encerrada": True, "erro": "Esta demonstração terminou."}
+    empresa = "demo-" + codigo
+    semear_demo(c, empresa, d["cliente"] or "")
+    u = c.execute("SELECT * FROM rural_usuarios WHERE empresa=? AND perfil=?", (empresa, "padrao" if perfil == "vendedor" else "adm")).fetchone()
+    lgcentral.registrar_acesso(cc, codigo)
+    esquecer_demos()
+    return 200, {"ok": True, "empresa": empresa, "token": _criar_sessao(c, empresa, u["id"]), "sessao": _sessao_de(u),
+                 "demo": {"codigo": codigo, "expira": d["expira"], "ateSair": bool(d["ate_sair"])}}
 
 
 def _prox_seq(c, empresa):
@@ -612,6 +716,10 @@ def rota(h, metodo):
             h.end_headers()
             h.wfile.write(corpo_m)
             return True
+        if acao == "demo" and metodo == "GET":
+            with lgapi._trava:
+                cod, r = entrar_demo(_db(), str(q.get("c", "")).strip().lower(), q.get("perfil", ""))
+            return _resp(h, cod, r)
         if acao in ("entrada", "primeiro", "entrar"):
             empresa = str((q.get("e") if metodo == "GET" else corpo.get("e")) or "").strip().lower()
             if empresa and empresa not in empresas():
@@ -641,6 +749,11 @@ def rota(h, metodo):
             c = _db()
             s = sessao(c, token)
         if not s:
+            if token:
+                with lgapi._trava:
+                    r0 = _db().execute("SELECT empresa FROM rural_sess WHERE token=?", (_resumo(token),)).fetchone()
+                if r0 and r0["empresa"].startswith("demo-") and r0["empresa"] != "demo-rural":
+                    return _resp(h, 410, {"ok": False, "encerrada": True, "erro": "Esta demonstração terminou."})
             return _resp(h, 401, {"ok": False, "erro": "Sua sessão terminou. Entre de novo."})
 
         if acao == "dados" and metodo == "GET":

@@ -40,6 +40,7 @@ import lgapi
 import lgwhats
 import lgrural
 import lgemail
+import lgcentral
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
 PORTA = int(os.environ.get("PORT", "8000"))
@@ -554,22 +555,24 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if lgemail.rota(self, "GET"):
             return
+        if lgcentral.rota(self, "GET"):
+            return
         if self._api("GET"):
             return
         caminho = self.path.split("?", 1)[0].split("#", 1)[0]
         # Apps (LegislaGov Rural, Painel de e-mails): endereço próprio (modo rural/email) ou /rural/, /email/ no endereço de testes
         camara_r, modo_r = camara_do_host(self.headers.get("Host"))
         partes_r = [p for p in caminho.split("/") if p]
-        if modo_r in ("rural", "email") or (camara_r == "teste" and partes_r and partes_r[0] in ("rural", "email")):
+        if modo_r in ("rural", "email", "central") or (camara_r == "teste" and partes_r and partes_r[0] in ("rural", "email", "central")):
             if ".." in caminho:
                 self.send_error(404)
                 return
-            if caminho in ("/rural", "/email"):
+            if caminho in ("/rural", "/email", "/central"):
                 self.send_response(301)
                 self.send_header("Location", caminho + "/")
                 self.end_headers()
                 return
-            self.directory = os.path.join(PASTA, "apps", modo_r) if modo_r in ("rural", "email") else os.path.join(PASTA, "apps")
+            self.directory = os.path.join(PASTA, "apps", modo_r) if modo_r in ("rural", "email", "central") else os.path.join(PASTA, "apps")
             super().do_GET()
             return
         # site LegislaGov (legislagov.com.br): pasta portfolio. Área do cliente e Atendimento WhatsApp
@@ -657,6 +660,8 @@ class Handler(SimpleHTTPRequestHandler):
         if lgrural.rota(self, "POST"):
             return
         if lgemail.rota(self, "POST"):
+            return
+        if lgcentral.rota(self, "POST"):
             return
         if self._api("POST"):
             return

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#10233d">
+<title>LegislaGov Central</title>
+<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="icon" href="icone-192.png">
+<script>(function(){var b=location.pathname.replace(/[^/]*$/,'');var l=document.createElement('link');l.rel='manifest';l.href='/api/central/manifest.json?b='+encodeURIComponent(b);document.head.appendChild(l)})();</script>
+<script src="qr.js" defer></script>
+<style>
+:root{--fundo:#f3f5f8;--papel:#fff;--tinta:#16202c;--sub:#5d6b7b;--linha:#dde3ea;--azul:#10233d;--azul2:#1f4e79;--ok:#1d7a46;--aviso:#8a6200;--erro:#b42318}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--fundo);color:var(--tinta);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button,input,select{font:inherit}
+.topo{background:var(--azul);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px}
+.marca{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;font-size:17px}
+.marca img{width:30px;height:30px;border-radius:8px}
+.marca small{display:block;font-weight:500;font-size:12px;color:#b9c8da;letter-spacing:0}
+.topo .esp{flex:1}
+.topo button{background:transparent;border:1px solid #ffffff40;color:#fff;border-radius:9px;padding:7px 12px;cursor:pointer}
+.topo button:hover{background:#ffffff14}
+main{max-width:1080px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:26px;margin:4px 0 4px;letter-spacing:-.02em}
+h2{font-size:18px;margin:34px 0 10px}
+.sub{color:var(--sub);margin:0 0 20px}
+.sist{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.card{background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--cor)}
+.card h3{margin:0;font-size:17px}
+.card p{margin:0;color:var(--sub);font-size:14px;flex:1}
+.links{display:flex;flex-direction:column;gap:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 14px;border-radius:10px;border:1px solid var(--linha);background:var(--papel);color:var(--tinta);font-weight:600;cursor:pointer;text-decoration:none;text-align:center}
+.btn:hover{border-color:var(--azul2)}
+.btn.pri{background:var(--azul2);border-color:var(--azul2);color:#fff}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.demo{background:#fff8e1;border-color:#e9cf7a;color:#5a4500}
+.btn.perigo{color:var(--erro)}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #1f4e7966;outline-offset:2px}
+.demos{display:flex;flex-direction:column;gap:8px}
+.demo-l{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+.demo-l b{font-size:15px}.demo-l small{color:var(--sub);display:block}
+.demo-l .acoes{grid-row:1/3;grid-column:2;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.st{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;margin-left:6px;vertical-align:1px}
+.st.on{background:#e2f5ea;color:var(--ok)}.st.off{background:#eef0f3;color:var(--sub)}
+.vazio{border:1px dashed var(--linha);border-radius:12px;padding:22px;text-align:center;color:var(--sub)}
+.entrar{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.entrar form{background:var(--papel);border:1px solid var(--linha);border-radius:16px;padding:28px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px}
+.entrar h1{font-size:22px}
+label{display:flex;flex-direction:column;gap:5px;font-weight:600;font-size:14px}
+input,select{height:46px;border:1px solid var(--linha);border-radius:10px;padding:0 12px;font-size:16px;background:#fff;color:var(--tinta)}
+.msg{color:var(--erro);font-weight:600;min-height:1.2em;margin:0}
+.dica{color:var(--sub);font-size:13px;margin:0}
+.fundo{position:fixed;inset:0;background:#0c1626aa;display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{background:var(--papel);border-radius:16px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:22px;display:flex;flex-direction:column;gap:12px}
+.modal h2{margin:0;font-size:19px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--linha);background:#fff;font-weight:600;cursor:pointer;color:var(--tinta)}
+.chip[aria-pressed=true]{background:var(--azul2);border-color:var(--azul2);color:#fff}
+.rod{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}
+.link{display:flex;gap:6px}.link input{flex:1;font-size:14px}
+.qr{align-self:center;padding:10px;background:#fff;border:1px solid var(--linha);border-radius:12px}
+.qr svg{display:block;width:200px;height:200px}
+.fim{color:var(--sub);font-size:12.5px;text-align:center;margin-top:40px}
+@media(max-width:640px){.topo{padding:12px 14px}.topo .nome{display:none}main{padding:18px 14px 50px}h1{font-size:22px}.demo-l{grid-template-columns:1fr}.demo-l .acoes{grid-row:auto;grid-column:auto;justify-content:flex-start}.rod .btn{flex:1}}
+</style>
+</head>
+<body>
+<div id="app"><p style="padding:30px;text-align:center;color:#5d6b7b">Carregando…</p></div>
+<script>
+const $=(s,e=document)=>e.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let TOKEN='';try{TOKEN=localStorage.getItem('lgc_token')||''}catch(e){}
+let P=null, MSG='';
+async function api(acao,{metodo='GET',corpo=null}={}){
+  const r=await fetch('/api/central/'+acao,{method:metodo,cache:'no-store',headers:Object.assign({'Content-Type':'application/json','X-LG':'1'},TOKEN?{Authorization:'Bearer '+TOKEN}:{}),body:corpo?JSON.stringify(corpo):undefined});
+  let d={};try{d=await r.json()}catch(e){}
+  if(r.status===401&&acao!=='entrar'){TOKEN='';try{localStorage.removeItem('lgc_token')}catch(e){}P=null;MSG='Sua sessão terminou. Entre de novo.';tela();throw new Error('sessao')}
+  if(!r.ok){const e=new Error(d.erro||('Erro '+r.status));e.status=r.status;throw e}
+  return d;
+}
+const quando=t=>{const d=new Date(t*1000);return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' às '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
+function linkDemo(d){
+  const base=location.hostname==='central.legislagov.com.br'?'https://rural.legislagov.com.br/':location.origin+'/rural/';
+  return base+'?demo='+d.codigo;
+}
+function nomeSist(id){return (P&&P.sistemas.find(s=>s.id===id)||{nome:id}).nome}
+
+async function tela(){
+  if(!TOKEN){telaEntrar();return}
+  try{P=await api('eu')}catch(e){if(e.message!=='sessao'){$('#app').innerHTML=`<div class="entrar"><div class="vazio">Sem conexão com o servidor. <button class="btn" onclick="tela()">Tentar de novo</button></div></div>`}return}
+  const s=P.sessao, nome=(s.nome||'').split(' ')[0];
+  const ativas=P.demos.filter(d=>d.ativa), velhas=P.demos.filter(d=>!d.ativa).slice(0,15);
+  $('#app').innerHTML=`<header class="topo"><div class="marca"><img src="icone-192.png" alt=""><div>LegislaGov Central<small>Área restrita</small></div></div><div class="esp"></div><span class="nome">${esc(s.nome)}</span><button id="senhaBt">Trocar senha</button><button id="sairBt">Sair</button></header>
+  <main>
+    <h1>Olá, ${esc(nome)}. Qual sistema você quer abrir?</h1>
+    <p class="sub">Os sistemas abrem em outra aba. Para mostrar a um cliente, crie uma demonstração: ela tem prazo e para de funcionar sozinha.</p>
+    <div class="sist">${P.sistemas.map(x=>`<section class="card" style="--cor:${esc(x.cor)}"><h3>${esc(x.nome)}</h3><p>${esc(x.desc)}</p>
+      <div class="links">${x.links.map((l,i)=>`<a class="btn ${i?'':'pri'}" href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}
+      ${x.demo?`<button class="btn demo" data-demo="${esc(x.id)}">Criar demonstração</button>`:''}</div></section>`).join('')}</div>
+    <h2>Demonstrações ativas</h2>
+    <div class="demos">${ativas.length?ativas.map(linhaDemo).join(''):'<div class="vazio">Nenhuma demonstração ativa. Use "Criar demonstração" no sistema que quer mostrar.</div>'}</div>
+    ${velhas.length?`<h2>Encerradas</h2><div class="demos">${velhas.map(linhaDemo).join('')}</div>`:''}
+    <p class="fim">LegislaGov · este site não é governamental.</p>
+  </main>`;
+  $('#sairBt').onclick=sair;$('#senhaBt').onclick=trocarSenha;
+  document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>novaDemo(b.dataset.demo));
+  document.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>mostrarDemo(P.demos.find(d=>d.id===b.dataset.ver)));
+  document.querySelectorAll('[data-fim]').forEach(b=>b.onclick=()=>encerrar(b.dataset.fim));
+}
+function linhaDemo(d){
+  const fim=d.encerrada?'encerrada em '+quando(d.encerrada):d.ativa?(d.ateSair?'até você sair (no máximo '+quando(d.expira)+')':'termina '+quando(d.expira)):'terminou '+quando(d.expira);
+  return `<div class="demo-l"><div><b>${esc(d.cliente||'Sem nome')}</b><span class="st ${d.ativa?'on':'off'}">${d.ativa?'Ativa':'Encerrada'}</span><small>${esc(nomeSist(d.sistema))} · ${fim}</small><small>${d.acessos?d.acessos+' acesso(s), último em '+quando(d.ultimo):'Ainda não foi aberta'} · criada por ${esc(d.criadoPor)}</small></div>
+    <div class="acoes">${d.ativa?`<button class="btn" data-ver="${esc(d.id)}">Link e QR code</button><button class="btn perigo" data-fim="${esc(d.id)}">Encerrar agora</button>`:''}</div></div>`;
+}
+function modal(html,montar){fechar();const f=document.createElement('div');f.className='fundo';f.id='modal';f.innerHTML=`<div class="modal" role="dialog" aria-modal="true">${html}</div>`;f.addEventListener('click',e=>{if(e.target===f)fechar()});document.body.appendChild(f);montar&&montar(f);setTimeout(()=>f.querySelector('input,button')?.focus(),30)}
+function fechar(){$('#modal')?.remove()}
+addEventListener('keydown',e=>{if(e.key==='Escape')fechar()});
+
+function novaDemo(sistema){
+  let horas=24, ateSair=false;
+  modal(`<h2>Demonstração · ${esc(nomeSist(sistema))}</h2>
+    <p class="dica">O cliente abre pelo link ou QR code, com todas as funções e dados de exemplo. No fim do prazo a tela fica "Demonstração encerrada" e os dados saem do aparelho dele.</p>
+    <label>Para quem é (opcional)<input id="dc" maxlength="60" placeholder="Ex.: Horta do Sr. Antônio"></label>
+    <div><b style="font-size:14px">Por quanto tempo</b><div class="chips" role="group" aria-label="Prazo" style="margin-top:6px">${P.prazos.map(p=>`<button type="button" class="chip" data-h="${p.horas}" aria-pressed="${p.horas===24}">${esc(p.nome)}</button>`).join('')}<button type="button" class="chip" data-h="sair" aria-pressed="false">Até eu sair da minha conta</button></div></div>
+    <p class="msg" id="dm"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Criar demonstração</button></div>`,f=>{
+    f.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{f.querySelectorAll('[data-h]').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');ateSair=b.dataset.h==='sair';horas=ateSair?24:+b.dataset.h});
+    $('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{const bt=$('#ok',f);bt.disabled=true;bt.textContent='Criando…';
+      try{const r=await api('demos',{metodo:'POST',corpo:{sistema,cliente:$('#dc',f).value.trim(),horas,ateSair}});await tela();mostrarDemo(r.demo)}
+      catch(e){if(e.message!=='sessao'){$('#dm',f).textContent=e.message;bt.disabled=false;bt.textContent='Criar demonstração'}}};
+  });
+}
+function mostrarDemo(d){
+  if(!d)return;const l=linkDemo(d);
+  const txt=`Olá${d.cliente?' '+d.cliente:''}! Esta é a demonstração do ${nomeSist(d.sistema)}. Abra no celular: ${l} (vale até ${quando(d.expira)}).`;
+  modal(`<h2>Demonstração pronta</h2>
+    <p class="dica">${esc(d.cliente||'Sem nome')} · ${d.ateSair?'vale até você sair da sua conta (no máximo '+quando(d.expira)+')':'vale até '+quando(d.expira)}</p>
+    <div class="qr" id="qr" aria-label="QR code da demonstração"></div>
+    <p class="dica" style="text-align:center">Peça para o cliente apontar a câmera do celular para o QR code.</p>
+    <div class="link"><input id="lk" readonly value="${esc(l)}" aria-label="Link da demonstração"><button class="btn" id="cp">Copiar</button></div>
+    <div class="rod"><a class="btn" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">Enviar no WhatsApp</a>${navigator.share?'<button class="btn" id="sh">Compartilhar</button>':''}<a class="btn" href="${esc(l)}" target="_blank" rel="noopener">Abrir aqui</a><button class="btn pri" id="fx">Pronto</button></div>`,f=>{
+    $('#fx',f).onclick=fechar;
+    $('#cp',f).onclick=async()=>{try{await navigator.clipboard.writeText(l)}catch(e){$('#lk',f).select();document.execCommand('copy')}$('#cp',f).textContent='Copiado'};
+    const sh=$('#sh',f);if(sh)sh.onclick=()=>navigator.share({title:'Demonstração LegislaGov',text:txt}).catch(()=>{});
+    const desenhar=()=>{if(window.LGQR){$('#qr',f).innerHTML=LGQR.svg(l,200)}else setTimeout(desenhar,150)};desenhar();
+  });
+}
+function encerrar(id){
+  modal(`<h2>Encerrar a demonstração?</h2><p class="dica">Quem estiver usando vê "Demonstração encerrada" na hora e os dados saem do aparelho.</p><div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok">Encerrar agora</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;$('#ok',f).onclick=async()=>{try{await api('demos/encerrar',{metodo:'POST',corpo:{id}});fechar();tela()}catch(e){}}});
+}
+async function sair(){
+  const ativas=P?P.demos.filter(d=>d.ativa&&d.ateSair&&d.criadoPor===P.sessao.usuario).length:0;
+  const fim=async()=>{try{await api('sair',{metodo:'POST'})}catch(e){}TOKEN='';try{localStorage.removeItem('lgc_token')}catch(e){}P=null;MSG='';fechar();tela()};
+  if(!ativas){fim();return}
+  modal(`<h2>Sair da Central?</h2><p class="dica">${ativas} demonstração(ões) "até eu sair" vão ser encerradas agora.</p><div class="rod"><button class="btn" id="cn">Ficar</button><button class="btn pri" id="ok">Sair e encerrar</button></div>`,f=>{$('#cn',f).onclick=fechar;$('#ok',f).onclick=fim});
+}
+function trocarSenha(){
+  modal(`<h2>Trocar minha senha</h2><label>Senha atual<input type="password" id="sa" autocomplete="current-password"></label><label>Nova senha (mínimo 8)<input type="password" id="sn" autocomplete="new-password"></label><label>Repita a nova senha<input type="password" id="sn2" autocomplete="new-password"></label><p class="msg" id="sm"></p><div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Trocar</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{if($('#sn',f).value!==$('#sn2',f).value){$('#sm',f).textContent='As duas senhas novas não são iguais.';return}
+      try{await api('minha-senha',{metodo:'POST',corpo:{atual:$('#sa',f).value,nova:$('#sn',f).value}});fechar();alertar('Senha trocada.')}catch(e){if(e.message!=='sessao')$('#sm',f).textContent=e.message}};
+  });
+}
+function alertar(t){modal(`<h2>${esc(t)}</h2><div class="rod"><button class="btn pri" id="ok">Ok</button></div>`,f=>$('#ok',f).onclick=fechar)}
+function telaEntrar(){
+  $('#app').innerHTML=`<div class="entrar"><form id="fe" autocomplete="on"><div class="marca" style="color:var(--azul)"><img src="icone-192.png" alt="">LegislaGov Central</div>
+    <h1>Área restrita</h1><p class="dica">No primeiro acesso, use o mesmo usuário e senha do painel da Câmara.</p>
+    <label>Usuário<input id="eu" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+    <label>Senha<input id="es" type="password" autocomplete="current-password" required></label>
+    <p class="msg" id="em" role="alert">${esc(MSG)}</p>
+    <button class="btn pri" id="eb" type="submit">Entrar</button>
+    <p class="dica" style="text-align:center">Este site não é governamental.</p></form></div>`;
+  $('#fe').onsubmit=async e=>{e.preventDefault();const bt=$('#eb');bt.disabled=true;
+    try{const r=await api('entrar',{metodo:'POST',corpo:{usuario:$('#eu').value.trim(),senha:$('#es').value}});TOKEN=r.token;try{localStorage.setItem('lgc_token',TOKEN)}catch(x){}MSG='';tela()}
+    catch(x){$('#em').textContent=x.message;bt.disabled=false}};
+}
+tela();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
