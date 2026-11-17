@@ -86,6 +86,26 @@ def main():
     except Exception as e:
         rel["usuarios"] = "erro: " + str(e)
     rel["inventario"] = inventario(con)
+    # diagnóstico do Portal do Vereador: perfis dos usuários (sem senha) e vínculos com a composição
+    try:
+        diag = {}
+        for cam, in con.execute("SELECT DISTINCT camara FROM usuarios").fetchall():
+            us = []
+            for login_, dados in con.execute("SELECT usuario, dados FROM usuarios WHERE camara=?", (cam,)):
+                d = json.loads(dados or "{}")
+                us.append({k: d.get(k) for k in ("nome", "perfil", "cargo", "cargoId", "setor", "orgao", "ativo", "pendente")} | {"usuario": login_})
+            r0 = con.execute("SELECT valor FROM dados WHERE camara=? AND chave='lgv_camara_v1'", (cam,)).fetchone()
+            comp = json.loads(r0[0]) if r0 else {}
+            r1 = con.execute("SELECT valor FROM dados WHERE camara=? AND chave='lgt_areas_v1'", (cam,)).fetchone()
+            r2 = con.execute("SELECT valor FROM dados WHERE camara=? AND chave='lgv10_notifications_v1'", (cam,)).fetchone()
+            notifs = [{k: n.get(k) for k in ("to", "title", "kind")} for n in (json.loads(r2[0]) if r2 else [])[:30]]
+            diag[cam] = {"usuarios": us, "presidente": comp.get("presidente"),
+                         "vereadores": [{k: v.get(k) for k in ("id", "nome", "usuario")} for v in comp.get("vereadores", [])],
+                         "comissoes": [{k: c.get(k) for k in ("nome", "presidente", "vice", "relator")} for c in comp.get("comissoes", [])],
+                         "areas": json.loads(r1[0]) if r1 else None, "avisos": notifs}
+        rel["diagnostico_vereador"] = diag
+    except Exception as e:
+        rel["diagnostico_vereador"] = "erro: " + str(e)
     con.close()
     os.makedirs(SAIDA, exist_ok=True)
     nome = "relatorio-" + dt.datetime.now().strftime("%Y%m%d-%H%M") + ".json"
