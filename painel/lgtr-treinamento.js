@@ -83,7 +83,7 @@
       { alvo: M('sessoes'), menu: true, titulo: 'Sessões e agenda', texto: 'Calendário de sessões, audiências e reuniões.' },
       { alvo: M('plenario'), menu: true, titulo: 'Sessão plenária', texto: 'A Mesa/Secretaria pode montar a pauta, marcar presença, registrar votos e preparar a ata junto com o Presidente.' },
       { abrir: 'expedientes', alvo: ['#view-expedientes .btn-primary', '#view-expedientes'], titulo: 'Expedientes', texto: 'Ofícios, comunicações internas e correspondências com a Prefeitura e outros órgãos, com número e acompanhamento.' },
-      { alvo: M('protocolo'), menu: true, titulo: 'Protocolo e numeração', texto: 'Protocola documentos que chegam à Câmara e controla a numeração oficial de cada tipo.' },
+      { alvo: M('protocolo'), menu: true, titulo: 'Protocolo', texto: 'Todo documento que entra ou sai da Câmara recebe número, data e hora. Aqui você protocola, imprime o comprovante e encaminha para o setor.' },
       { alvo: M('editor'), menu: true, titulo: 'Editor de documentos', texto: 'Escreva ofícios, pareceres e atos a partir de modelos, já com o cabeçalho da Câmara.' },
       { abrir: 'livro', alvo: ['#view-lgfx-livro .lgt-tabela', '#view-lgfx-livro'], titulo: 'Livro de leis', texto: 'As normas aprovadas no sistema entram sozinhas, com o próximo número sugerido na sanção. Leis antigas podem ser cadastradas com o texto.', como: ['“Registrar alteração”: nova redação, acréscimo ou revogação de um artigo; o texto compilado se atualiza.'] },
       { abrir: 'oficios', alvo: ['#view-lgfx-oficios .lgf-abas', '#view-lgfx-oficios'], titulo: 'Ofícios e respostas', texto: 'Indicações e requerimentos aprovados: registre o ofício enviado e a resposta da Prefeitura. O autor recebe o aviso.' },

@@ -472,6 +472,16 @@ class Handler(SimpleHTTPRequestHandler):
                     url = lgapi.salvar_arquivo(camara, str(d.get("tipo", ""))[:80], bruto, lgapi._eh_publico(str(d.get("chave", ""))), u["usuario"],
                                                d.get("acesso") if isinstance(d.get("acesso"), dict) else None)
                 return self._json(200, {"ok": True, "url": url})
+            if caminho == "/api/protocolo/numero" and metodo == "POST":
+                if not lgapi.pode_gravar(lgapi.CHAVE_PROTOCOLO, u):
+                    return self._json(403, {"ok": False, "erro": "Sem permissão para protocolar."})
+                d = self._corpo(5_000)
+                try:
+                    n = lgapi.proximo_protocolo(camara, d.get("tipo"), d.get("ano"), d.get("manual") or None)
+                except ValueError as e:
+                    return self._json(409, {"ok": False, "erro": str(e)})
+                lgapi.registrar(camara, u["usuario"], "Número de protocolo", f"{d.get('tipo')} {n:04d}/{d.get('ano')}", self._ip())
+                return self._json(200, {"ok": True, "numero": n})
             if caminho == "/api/mudancas" and metodo == "GET":
                 desde = int((re.search(r"desde=(\d+)", self.path) or [0, "0"])[1])
                 dados, seq = lgapi.mudancas(camara, desde, u)

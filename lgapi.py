@@ -311,6 +311,40 @@ def _limpeza_v3(camara):
     c.execute("INSERT INTO contador(nome, valor) VALUES(?, 1)", (marca,))
 
 
+CHAVE_PROTOCOLO = "lgv9_numeracao_v1"
+
+
+def proximo_protocolo(camara, tipo, ano, manual=None):
+    """Número oficial do protocolo, dado pelo servidor (dois computadores nunca recebem o mesmo).
+    Cada tipo tem a sua sequência por ano. 'manual' = registro antigo com número já conhecido."""
+    tipo = re.sub(r"\s+", " ", str(tipo or "")).strip()[:60]
+    ano = int(ano)
+    if not tipo or not 2000 <= ano <= 2100:
+        raise ValueError("Tipo ou ano inválido.")
+    c = _db()
+    usados = set()
+    r = c.execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, CHAVE_PROTOCOLO)).fetchone()
+    if r:
+        try:
+            for x in json.loads(r["valor"] or "[]"):
+                if isinstance(x, dict) and x.get("type") == tipo and int(x.get("year") or 0) == ano:
+                    usados.add(int(x.get("sequence") or 0))
+        except Exception:
+            pass
+    nome = f"prot:{camara}:{tipo}:{ano}"
+    if manual:
+        n = int(manual)
+        if n < 1 or n in usados:
+            raise ValueError(f"O número {n} já foi usado em {tipo} {ano}.")
+        return n
+    atual = c.execute("SELECT valor FROM contador WHERE nome=?", (nome,)).fetchone()
+    n = max(atual[0] if atual else 0, max(usados, default=0)) + 1
+    while n in usados:
+        n += 1
+    c.execute("INSERT INTO contador(nome, valor) VALUES(?, ?) ON CONFLICT(nome) DO UPDATE SET valor=excluded.valor", (nome, n))
+    return n
+
+
 def definir_senha(login_, senha, camara=None):
     """Usado pelo comando legislagov-senha no servidor (a pessoa digita a senha lá)."""
     q = "UPDATE usuarios SET senha=? WHERE lower(usuario)=lower(?)" + (" AND camara=?" if camara else "")
