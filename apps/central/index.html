@@ -193,6 +193,7 @@ async function tela(){
   ligarTema();$('#segBt').onclick=telaSeguranca;
   $('#inicioBt').onclick=e=>{e.preventDefault();fechar();tela().then(()=>scrollTo(0,0))};
   document.querySelectorAll('[data-adm]').forEach(b=>b.onclick=()=>telaAdmin(b.dataset.adm));
+  if(/^#(sistemas|admin)/.test(location.hash)){const ab=location.hash.slice(1)==='admin'?'avisos':'sistemas';history.replaceState(null,'',location.pathname);telaAdmin(ab);return}
   avisoAoEntrar();
   $('#sairBt').onclick=sair;$('#senhaBt').onclick=trocarSenha;
   document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>novaDemo(b.dataset.demo));
