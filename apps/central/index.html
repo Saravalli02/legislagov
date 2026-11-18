@@ -172,7 +172,7 @@ async function tela(){
     <section class="horta"><div class="hl"><div><b>Endereços (IP) bloqueados</b><span class="st ${P.bloqueados?'off susp':'on'}">${P.bloqueados?P.bloqueados+' bloqueado(s) agora':'nenhum agora'}</span>
       <small>O servidor bloqueia sozinho quem erra senha muitas vezes ou faz acessos demais: 1 hora na 1ª vez, 24 horas na 2ª e 7 dias da 3ª em diante. Aqui você vê, desbloqueia ou bloqueia para sempre.</small></div>
       <div class="acoes"><button class="btn" id="segBt">Ver e gerenciar</button></div></div></section>
-    <p class="fim">LegislaGov · este site não é governamental.</p>
+    <p class="fim">LegislaGov · CNPJ 70.200.706/0001-82 · este site não é governamental.</p>
   </main>`;
   ligarTema();$('#segBt').onclick=telaSeguranca;
   $('#inicioBt').onclick=e=>{e.preventDefault();fechar();tela().then(()=>scrollTo(0,0))};
