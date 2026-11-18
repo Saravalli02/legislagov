@@ -22,6 +22,7 @@ a{color:inherit}
 .topo-in{max-width:1120px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:14px}
 .marca{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;font-size:16px;color:var(--forte);text-decoration:none}
 .marca img{height:30px;width:auto}
+a.marca{border-radius:10px;padding:2px 6px 2px 2px;margin-left:-2px}a.marca:hover{background:var(--chip)}a.marca:focus-visible{outline:3px solid color-mix(in srgb,var(--acento) 55%,transparent);outline-offset:2px}
 .marca span b{color:var(--acento);font-weight:700}
 .marca small{display:block;font-weight:500;font-size:11.5px;color:var(--sub);letter-spacing:0}
 .esp{flex:1}
@@ -148,7 +149,7 @@ async function tela(){
   const s=P.sessao, nome=(s.nome||'').split(' ')[0];
   const ativas=P.demos.filter(d=>d.ativa), velhas=P.demos.filter(d=>!d.ativa).slice(0,15);
   const seta='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
-  $('#app').innerHTML=`<header class="topo"><div class="topo-in"><span class="marca"><img src="em-camara.png" alt=""><span>Legisla<b>Gov</b> Central<small>Área restrita</small></span></span><div class="esp"></div>
+  $('#app').innerHTML=`<header class="topo"><div class="topo-in"><a class="marca" href="./" id="inicioBt" title="Voltar para a Central"><img src="em-camara.png" alt=""><span>Legisla<b>Gov</b> Central<small>Área restrita</small></span></a><div class="esp"></div>
     <span class="quem">${esc(s.nome)}</span>${seletorTema()}<button class="tbtn" id="senhaBt">Senha</button><button class="tbtn" id="sairBt">Sair</button></div></header>
   <main>
     <h1>Olá, ${esc(nome)}.</h1>
@@ -174,6 +175,7 @@ async function tela(){
     <p class="fim">LegislaGov · este site não é governamental.</p>
   </main>`;
   ligarTema();$('#segBt').onclick=telaSeguranca;
+  $('#inicioBt').onclick=e=>{e.preventDefault();fechar();tela().then(()=>scrollTo(0,0))};
   document.querySelectorAll('[data-adm]').forEach(b=>b.onclick=()=>telaAdmin(b.dataset.adm));
   avisoAoEntrar();
   $('#sairBt').onclick=sair;$('#senhaBt').onclick=trocarSenha;
