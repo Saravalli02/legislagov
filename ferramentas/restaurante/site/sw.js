@@ -1,5 +1,5 @@
 const C='lg-v2';
-self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(['/','/garcom','/icon-192.png'])).catch(()=>{}))});
+self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(['/','/garcom','https://central.legislagov.com.br/restaurante/icon-192.png'])).catch(()=>{}))});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);
   if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;
