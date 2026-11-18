@@ -74,7 +74,8 @@ input,select{height:46px;border:1px solid var(--linha);border-radius:10px;paddin
 .dica{color:var(--sub);font-size:13px;margin:0}
 .fundo{position:fixed;inset:0;background:rgba(3,6,12,.66);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .modal{background:var(--papel);border:1px solid var(--linha);border-radius:18px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:12px}
-.modal h2{margin:0;font-size:19px;color:var(--forte);letter-spacing:-.01em}
+.modal h2{margin:0;font-size:19px;color:var(--forte);letter-spacing:-.01em;padding-right:44px}
+.modal{position:relative}.mx{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:10px;border:1px solid var(--linha);background:var(--papel);color:var(--sub);font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0}.mx:hover{color:var(--tinta);border-color:var(--sub)}.mx:focus-visible{outline:3px solid color-mix(in srgb,var(--acento) 55%,transparent);outline-offset:2px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--linha);background:var(--papel);font-weight:600;cursor:pointer;color:var(--tinta)}
 .chip[aria-pressed=true]{background:var(--forte);border-color:var(--forte);color:var(--fundo)}
@@ -207,9 +208,16 @@ function linhaDemo(d){
   return `<div class="demo-l"><div><b>${esc(d.cliente||'Sem nome')}</b><span class="st ${d.ativa?'on':'off'}">${d.ativa?'Ativa':'Encerrada'}</span><small>${esc(nomeSist(d.sistema))} · ${fim}</small><small>${d.acessos?d.acessos+' acesso(s), último em '+quando(d.ultimo):'Ainda não foi aberta'} · criada por ${esc(d.criadoPor)}</small></div>
     <div class="acoes">${d.ativa?`<button class="btn" data-ver="${esc(d.id)}">Link e QR code</button><button class="btn perigo" data-fim="${esc(d.id)}">Encerrar agora</button>`:''}</div></div>`;
 }
-function modal(html,montar){fechar();const f=document.createElement('div');f.className='fundo';f.id='modal';f.innerHTML=`<div class="modal" role="dialog" aria-modal="true">${html}</div>`;f.addEventListener('click',e=>{if(e.target===f)fechar()});document.body.appendChild(f);montar&&montar(f);setTimeout(()=>f.querySelector('input,button')?.focus(),30)}
+function modal(html,montar,op){fechar();op=op||{};const f=document.createElement('div');f.className='fundo';f.id='modal';
+  f.innerHTML=`<div class="modal" role="dialog" aria-modal="true"><button type="button" class="mx" aria-label="Fechar" title="Fechar">×</button>${html}</div>`;
+  // só fecha clicando fora quando o clique começou e terminou fora (arrastar para selecionar um texto não fecha);
+  // janelas com usuário e senha (op.travar) só fecham pelo X ou pelo botão
+  let fora=false;f.addEventListener('pointerdown',e=>{fora=e.target===f});
+  f.addEventListener('click',e=>{if(e.target===f&&fora&&!op.travar)fechar();fora=false});
+  f.querySelector('.mx').onclick=fechar;
+  document.body.appendChild(f);montar&&montar(f);setTimeout(()=>(f.querySelector('.modal input,.modal button:not(.mx)')||f.querySelector('.mx'))?.focus(),30)}
 function fechar(){$('#modal')?.remove()}
-addEventListener('keydown',e=>{if(e.key==='Escape')fechar()});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('#modal.travado'))fechar()});
 
 function novaDemo(sistema){
   let horas=24, ateSair=false;
@@ -313,7 +321,7 @@ function senhaRural(id,nome,login,cod){
     <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar senha nova</button></div>`,f=>{
     $('#cn',f).onclick=fechar;
     $('#ok',f).onclick=async()=>{const nova=$('#sn',f).value.trim();try{await api('rural/senha',{metodo:'POST',corpo:{id,senha:nova}});
-      modal(`<h2>Senha trocada</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(nova)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar usuário e senha</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=()=>{fechar();abrirUsuarios(cod)};$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('Usuário: '+login+'\nSenha: '+nova+'\n'+linkHorta(cod));$('#cp',g).textContent='Copiado'}catch(e){}}})}
+      modal(`<h2>Senha trocada</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(nova)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar usuário e senha</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=()=>{fechar();abrirUsuarios(cod)};$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('Usuário: '+login+'\nSenha: '+nova+'\n'+linkHorta(cod));$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true})}
       catch(e){if(e.message!=='sessao')$('#sm',f).textContent=e.message}};
   });
 }
@@ -330,7 +338,7 @@ function novoUsuarioRural(cod,vendedores){
     f.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{perfil=b.dataset.p;f.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#vl',f).hidden=perfil!=='padrao';$('#pd',f).textContent=perfil==='adm'?'Vê tudo da horta (como a Sueli) e cadastra os vendedores. Não troca senhas: isso fica com a LegislaGov.':'Vê só as rotas, saídas, pedidos e fornecedores do vendedor escolhido.'});
     $('#cn',f).onclick=fechar;
     $('#ok',f).onclick=async()=>{const corpo={e:cod,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),perfil,vendedor:perfil==='padrao'?$('#nv',f).value:'',senha:$('#ns',f).value.trim()};
-      try{await api('rural/usuario',{metodo:'POST',corpo});fechar();alertar('Usuário criado: '+corpo.usuario+' / '+corpo.senha);abrirUsuarios(cod);telaRural()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
+      try{await api('rural/usuario',{metodo:'POST',corpo});modal(`<h2>Usuário criado</h2><p class="dica">Passe para ${esc(corpo.nome||corpo.usuario)}:</p><label>Endereço<input value="${esc(linkHorta(cod))}" readonly></label><label>Usuário<input value="${esc(corpo.usuario)}" readonly></label><label>Senha<input value="${esc(corpo.senha)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('LegislaGov Rural\n'+linkHorta(cod)+'\nUsuário: '+corpo.usuario+'\nSenha: '+corpo.senha);$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true});abrirUsuarios(cod);telaRural()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
   });
 }
 function suspender(cod,sim){
@@ -535,7 +543,7 @@ function novoRest(x){
 function mostrarAcessoRest(nome,login,senha){
   const link='https://d1xi1g7etepsye.cloudfront.net/';
   modal(`<h2>Acesso criado</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Endereço<input value="${link}" readonly></label><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(senha)}" readonly style="font-family:ui-monospace,monospace"></label>
-    <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText(`LegislaGov Restaurante\n${link}\nUsuário: ${login}\nSenha: ${senha}`);$('#cp',g).textContent='Copiado'}catch(e){}}});
+    <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{const t=`LegislaGov Restaurante\n${link}\nUsuário: ${login}\nSenha: ${senha}`;try{await navigator.clipboard.writeText(t)}catch(e){const x=document.createElement('textarea');x.value=t;g.appendChild(x);x.select();document.execCommand('copy');x.remove()}$('#cp',g).textContent='Copiado'}},{travar:true});
 }
 function senhaRest(u){
   const s=gerar();
