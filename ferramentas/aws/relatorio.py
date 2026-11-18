@@ -85,6 +85,15 @@ def main():
         rel["usuarios"] = [dict(zip(sel.split(", "), r)) for r in con.execute(f"SELECT {sel} FROM usuarios ORDER BY camara")]
     except Exception as e:
         rel["usuarios"] = "erro: " + str(e)
+    try:   # acessos do Rural (sem senha)
+        import time as _t
+        rel["rural_usuarios"] = [{"empresa": e, "usuario": u, "nome": n, "perfil": pf, "temVendedor": bool(v),
+                                  "falhas": f, "bloqueadoAte": (_t.strftime("%d/%m %H:%M", _t.localtime(b)) if b and b > _t.time() else "")}
+                                 for e, u, n, pf, v, f, b in con.execute("SELECT empresa, usuario, nome, perfil, vendedor, falhas, bloqueio FROM rural_usuarios ORDER BY empresa")]
+        rel["rural_tentativas"] = [list(r) for r in con.execute(
+            "SELECT * FROM registro WHERE camara LIKE 'rural:%' ORDER BY rowid DESC LIMIT 15")]
+    except Exception as e:
+        rel["rural_usuarios"] = "erro: " + str(e)
     rel["inventario"] = inventario(con)
     # diagnóstico do Portal do Vereador: perfis dos usuários (sem senha) e vínculos com a composição
     try:

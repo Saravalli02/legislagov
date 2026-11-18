@@ -408,7 +408,7 @@ def entrar(c, empresa, login, senha):
         bloqueio = agora + 1800 if falhas >= 3 else 0
         c.execute("UPDATE rural_usuarios SET falhas=?, janela=?, bloqueio=? WHERE id=?", (falhas, u["janela"] if dentro else agora, bloqueio, u["id"]))
         if bloqueio:
-            return 429, {"ok": False, "erro": "Muitas tentativas erradas. Espere 15 minutos e tente de novo."}
+            return 429, {"ok": False, "erro": "Muitas tentativas erradas. Espere 30 minutos e tente de novo."}
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
     if u["perfil"] != "adm" and not u["vendedor"]:
         return 403, {"ok": False, "erro": "Este usuário ainda não está ligado a um vendedor. Fale com o administrador."}
