@@ -356,6 +356,9 @@ def sessao(c, token):
     u = c.execute("SELECT * FROM rural_usuarios WHERE empresa=? AND id=?", (r["empresa"], r["usuario_id"])).fetchone()
     if not u or (u["perfil"] != "adm" and not u["vendedor"]):
         return None   # usuário removido ou sem vendedor
+    import lgacesso
+    if lgacesso.bloqueado("rural", r["empresa"], u["id"]):
+        return None
     if r["expira"] - time.time() < (SESSAO_DIAS - 1) * 86400:
         c.execute("UPDATE rural_sess SET expira=? WHERE token=?", (time.time() + SESSAO_DIAS * 86400, r["token"]))
     sd = _sessao_de(u)
@@ -412,6 +415,9 @@ def entrar(c, empresa, login, senha):
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
     if u["perfil"] != "adm" and not u["vendedor"]:
         return 403, {"ok": False, "erro": "Este usuário ainda não está ligado a um vendedor. Fale com o administrador."}
+    import lgacesso
+    if lgacesso.bloqueado("rural", u["empresa"], u["id"]):
+        return 423, {"ok": False, "suspensa": True, "erro": SUSPENSA}
     c.execute("UPDATE rural_usuarios SET falhas=0, bloqueio=0 WHERE id=?", (u["id"],))
     return 200, {"ok": True, "empresa": u["empresa"], "token": _criar_sessao(c, u["empresa"], u["id"]), "sessao": _sessao_de(u)}
 

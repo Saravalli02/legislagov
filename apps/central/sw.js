@@ -1,6 +1,6 @@
 /* Central LegislaGov: guarda o app no celular para abrir mesmo sem internet.
    Sempre tenta a versão nova primeiro; sem internet, usa a cópia guardada. Os dados (/api/) nunca vêm da cópia. */
-const CACHE = 'lgcentral-v6';
+const CACHE = 'lgcentral-v7';
 const ARQS = ['./', 'index.html', 'icone-192.png', 'icone-512.png', 'icone-180.png', 'qr.js', 'em-camara.png', 'em-rural.png', 'em-email.png', 'em-atendimento.png', 'em-site.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARQS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

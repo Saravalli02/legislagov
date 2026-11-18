@@ -99,6 +99,9 @@ def sessao(c, token):
     u = c.execute("SELECT * FROM em_usuarios WHERE id=?", (r["usuario_id"],)).fetchone()
     if not u:
         return None
+    import lgacesso
+    if u["org"] and lgacesso.bloqueado("email", u["org"], u["id"]):
+        return None
     s = _sessao_pub(u)
     s["_token"] = r["token"]
     return s
@@ -133,6 +136,9 @@ def entrar(c, login, senha):
         c.execute("UPDATE em_usuarios SET falhas=?, janela=?, bloqueio=? WHERE id=?",
                   (falhas, u["janela"] if dentro else agora, agora + 1800 if falhas >= 3 else 0, u["id"]))
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
+    import lgacesso
+    if u["org"] and lgacesso.bloqueado("email", u["org"], u["id"]):
+        return 423, {"ok": False, "erro": lgacesso.MSG}
     c.execute("UPDATE em_usuarios SET falhas=0, bloqueio=0 WHERE id=?", (u["id"],))
     return 200, {"ok": True, "token": _nova_sessao(c, u["id"]), "sessao": _sessao_pub(u)}
 

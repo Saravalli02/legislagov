@@ -337,6 +337,25 @@ def rota(h, metodo):
             h.end_headers()
             h.wfile.write(b)
             return True
+        if acao.startswith("rest/") and metodo == "POST":
+            # chamado pelo servidor do LegislaGov Restaurante (Lambda na Amazon)
+            import lgacesso
+            with lgapi._trava:
+                rc = lgacesso._db()
+                if acao == "rest/entrar":
+                    return _resp(h, *lgacesso.rest_entrar(rc, corpo.get("usuario"), corpo.get("senha")))
+                if acao == "rest/sessao":
+                    return _resp(h, *lgacesso.rest_sessao(rc, str(corpo.get("token") or "")))
+                if acao == "rest/sair":
+                    return _resp(h, *lgacesso.rest_sair(rc, str(corpo.get("token") or "")))
+            return _resp(h, 404, {"ok": False})
+        if acao == "licenca" and metodo == "GET":
+            # consultado pelo servidor do LegislaGov Restaurante (e futuros sistemas fora deste servidor)
+            import lgacesso
+            sis, cli = str(q.get("s", "")), str(q.get("c", ""))
+            if sis not in lgacesso.SISTEMAS or not re.fullmatch(r"[a-z0-9-]{1,60}", cli):
+                return _resp(h, 400, {"ok": False})
+            return _resp(h, 200, {"ok": True, "ativo": not lgacesso.bloqueado(sis, cli)})
         with lgapi._trava:
             c = _db()
             if acao == "entrar" and metodo == "POST":
@@ -378,6 +397,37 @@ def rota(h, metodo):
                                       sempre=corpo.get("acao") == "sempre")
                 _log(c, s["usuario"], "Endereço " + ("desbloqueado" if corpo.get("acao") == "desbloquear" else "bloqueado"), alvo, ip)
                 return _resp(h, 200, {"ok": True})
+            # ---- sistemas e clientes: liga e desliga o acesso
+            if acao in ("admin/sistemas", "admin/acesso", "admin/cliente"):
+                import lgacesso
+                ac = lgacesso._db()
+                if acao == "admin/sistemas" and metodo == "GET":
+                    return _resp(h, 200, lgacesso.painel(ac))
+                if acao == "admin/acesso" and metodo == "POST":
+                    bloq = bool(corpo.get("bloquear"))
+                    cod, r = lgacesso.definir(str(corpo.get("sistema", "")), str(corpo.get("cliente", "")), str(corpo.get("usuario", "")),
+                                              bloq, corpo.get("motivo"), s["usuario"])
+                    if cod == 200:
+                        _log(c, s["usuario"], "Acesso " + ("cortado" if bloq else "liberado"),
+                             f"{corpo.get('sistema')}/{corpo.get('cliente')}" + (f"/{corpo.get('nome') or corpo.get('usuario')}" if corpo.get("usuario") else ""), ip)
+                    return _resp(h, cod, r)
+                if acao == "admin/cliente" and metodo == "POST":
+                    return _resp(h, *lgacesso.salvar_cliente(ac, corpo))
+            if acao in ("admin/rest/usuario", "admin/rest/senha", "admin/rest/excluir") and metodo == "POST":
+                import lgacesso
+                ac = lgacesso._db()
+                if acao == "admin/rest/usuario":
+                    cod, r = lgacesso.rest_criar(ac, corpo)
+                    if cod == 200:
+                        _log(c, s["usuario"], "Restaurante: usuário criado", str(corpo.get("usuario")), ip)
+                    return _resp(h, cod, r)
+                if acao == "admin/rest/senha":
+                    cod, r = lgacesso.rest_senha(ac, corpo.get("id"), corpo.get("senha"))
+                    if cod == 200:
+                        _log(c, s["usuario"], "Restaurante: senha nova", r["usuario"], ip)
+                    return _resp(h, cod, r)
+                _log(c, s["usuario"], "Restaurante: usuário excluído", str(corpo.get("id")), ip)
+                return _resp(h, *lgacesso.rest_excluir(ac, corpo.get("id")))
             # ---- administração geral: monitoramento, gastos e vencimentos, mensagens da equipe técnica
             if acao.startswith("admin/"):
                 import lgmonitor

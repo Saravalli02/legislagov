@@ -118,6 +118,22 @@ input,select{height:46px;border:1px solid var(--linha);border-radius:10px;paddin
 .grade2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:860px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.adm{grid-template-columns:1fr}.adm .selo{display:none}.grade2{grid-template-columns:1fr}.tab.gastos td:nth-child(4){grid-row:auto;grid-column:auto}}
+.sisblk{margin-top:26px}.sisblk>header{display:flex;align-items:center;gap:12px;margin-bottom:12px}.sisblk>header img{height:30px}.sisblk>header h3{margin:0;font-size:17px;color:var(--forte)}.sisblk>header small{color:var(--sub);font-size:13px}
+.cli{background:var(--papel);border:1px solid var(--linha);border-radius:16px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--sombra)}
+.cli.off{border-color:color-mix(in srgb,var(--erro) 50%,var(--linha));background:color-mix(in srgb,var(--erro) 4%,var(--papel))}
+.cli-c{display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:center}.cli-c b{font-size:16px;color:var(--forte)}.cli-c small{display:block;color:var(--sub);font-size:13px}
+.sw{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--linha);background:var(--papel);border-radius:999px;padding:5px 14px 5px 5px;cursor:pointer;font-weight:700;font-size:13.5px;min-height:40px;color:var(--ok)}
+.sw i{width:46px;height:28px;border-radius:999px;background:#1f9d55;position:relative;flex:none;transition:background .15s}
+.sw i::after{content:"";position:absolute;top:3px;left:21px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0004;transition:left .15s}
+.sw[aria-checked=false]{color:var(--erro)}.sw[aria-checked=false] i{background:#d92d20}.sw[aria-checked=false] i::after{left:3px}
+.sw.p{min-height:34px;font-size:12.5px;padding:4px 10px 4px 4px}.sw.p i{width:38px;height:22px}.sw.p i::after{width:16px;height:16px;left:19px}.sw.p[aria-checked=false] i::after{left:3px}
+.usgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--linha)}
+.usr{border:1px solid var(--linha);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--papel2)}
+.usr.off{border-color:color-mix(in srgb,var(--erro) 45%,var(--linha))}
+.usr b{font-size:14.5px;color:var(--forte);display:block}.usr small{color:var(--sub);font-size:12.5px;display:block}
+.usr .ln{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.lkbtn{border:0;background:none;color:var(--acento);font-weight:600;font-size:12.5px;cursor:pointer;padding:4px 2px}
+@media(max-width:640px){.cli-c{grid-template-columns:1fr}.usgrid{grid-template-columns:1fr}}
 @media(max-width:960px){.sist{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.topo-in{padding:10px 14px;gap:8px}.quem,.marca small{display:none}main{padding:22px 14px 50px}h1{font-size:23px}.sist{grid-template-columns:1fr}.demo-l{grid-template-columns:1fr}.demo-l .acoes{grid-row:auto;grid-column:auto;justify-content:flex-start}.rod .btn{flex:1}.tbtn{padding:0 9px}.topo-in{gap:6px}.tema button{padding:0 8px}.marca img{height:26px}}
 </style>
@@ -364,15 +380,15 @@ function desenharAdmin(){
   const d=ADM.d,vistos=new Set(d.msgsVistas||[]);
   const novas=d.mensagens.filter(m=>!vistos.has(m.id)).length,nAv=d.alertas.length+d.vencimentos.length;
   const voltar='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
-  const abas=[['avisos','Avisos',nAv],['situacao','Situação dos sistemas',0],['gastos','Gastos e vencimentos',0],['mensagens','Mensagens',novas],['historico','Histórico',0]];
+  const abas=[['avisos','Avisos',nAv],['sistemas','Sistemas e clientes',0],['situacao','Situação dos sistemas',0],['gastos','Gastos e vencimentos',0],['mensagens','Mensagens',novas],['historico','Histórico',0]];
   $('main').innerHTML=`<button class="tbtn" id="volta" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:18px">${voltar}Sistemas</button>
     <div class="rcab"><div class="selo" style="background:var(--chip);border-color:var(--linha)">${ICADM.replace('<svg','<svg width="28" height="28"')}</div><div><h1 style="margin:0">Administração</h1>
     <p class="sub">${d.ultima?'Última conferência '+quando(d.ultima)+'.':'O servidor ainda não fez a primeira conferência.'} A próxima é automática em até 10 minutos.</p></div></div>
     <div class="abas" role="tablist">${abas.map(([k,n,c])=>`<button role="tab" data-aba="${k}" aria-selected="${ADM.aba===k}">${n}${c?`<span class="cont">${c}</span>`:''}</button>`).join('')}</div>
-    <div id="admc">${({avisos:abaAvisos,situacao:abaSituacao,gastos:abaGastos,mensagens:abaMensagens,historico:abaHistorico}[ADM.aba]||abaAvisos)(d)}</div>`;
+    <div id="admc">${ADM.aba==='sistemas'?'<div class="vazio">Carregando…</div>':({avisos:abaAvisos,situacao:abaSituacao,gastos:abaGastos,mensagens:abaMensagens,historico:abaHistorico}[ADM.aba]||abaAvisos)(d)}</div>`;
   $('#volta').onclick=()=>tela();
   document.querySelectorAll('[data-aba]').forEach(b=>b.onclick=()=>{ADM.aba=b.dataset.aba;desenharAdmin()});
-  ligarAdmin();
+  ligarAdmin();if(ADM.aba==='sistemas')carregarSistemas();
   if(ADM.aba==='mensagens'&&novas)api('admin/visto',{metodo:'POST',corpo:{ids:d.mensagens.map(m=>m.id)}}).then(()=>{d.msgsVistas=d.mensagens.map(m=>m.id)}).catch(()=>{});
 }
 function botaoConferir(){return `<button class="btn" id="conf">Conferir agora</button>`}
@@ -465,6 +481,75 @@ function editarGasto(id){
       try{await api('admin/gasto',{metodo:'POST',corpo});fechar();telaAdmin()}catch(e){if(e.message!=='sessao')$('#ge',f).textContent=e.message}};
     const ex=$('#ex',f);if(ex)ex.onclick=()=>modal(`<h2>Excluir “${esc(g.nome)}”?</h2><p class="dica">Some da lista de gastos. Os pagamentos já registrados continuam no histórico. Se só cancelou o serviço, prefira desmarcar “Gasto ativo”.</p><div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok" style="background:var(--erro);border-color:var(--erro);color:#fff">Excluir</button></div>`,h=>{$('#cn',h).onclick=()=>editarGasto(id);$('#ok',h).onclick=async()=>{try{await api('admin/gasto/excluir',{metodo:'POST',corpo:{id}});fechar();telaAdmin()}catch(e){}}});
   });
+}
+/* ===================== Sistemas e clientes: liga e desliga o acesso ===================== */
+let SIS=null;
+const SISINFO=[['camara','LegislaGov Câmara','em-camara.png','Cada Câmara é um cliente. Cortar a Câmara bloqueia o painel de todos os usuários dela (o site público continua no ar).'],
+  ['rural','LegislaGov Rural','em-rural.png','Cada horta é um cliente. O administrador da horta e os vendedores aparecem embaixo.'],
+  ['restaurante','LegislaGov Restaurante','em-restaurante.png','Quem compra o sistema entra com usuário e senha criados aqui. Cortar o acesso trava a tela do caixa e dos garçons em segundos.'],
+  ['email','Painel de e-mails','em-email.png','Cada órgão é um cliente.']];
+const chave=(on,txt,cl)=>`<button type="button" class="sw ${cl||''}" role="switch" aria-checked="${on}"><i></i>${txt||(on?'Ativo':'Bloqueado')}</button>`;
+async function carregarSistemas(){
+  try{SIS=await api('admin/sistemas')}catch(e){if(e.message!=='sessao')$('#admc').innerHTML=`<div class="vazio">${esc(e.message)}</div>`;return}
+  $('#admc').innerHTML=`<p class="dica" style="margin-top:16px">Verde: funcionando. Toque para deixar vermelho e cortar o acesso na hora. Os dados ficam guardados; ao ligar de novo, tudo volta como estava.</p>`+
+    SISINFO.map(([k,n,ic,tx])=>{const cl=SIS[k]||[];return `<section class="sisblk"><header><img src="${ic}" alt=""><div><h3>${n}</h3><small>${tx}</small></div></header>
+      ${cl.length?cl.map(x=>cartaoCliente(k,x)).join(''):'<div class="vazio">Nenhum cliente ainda.</div>'}</section>`}).join('');
+  $('#admc').querySelectorAll('[data-cli]').forEach(el=>{const [k,id]=el.dataset.cli.split('|');const x=SIS[k].find(c=>c.id===id);
+    el.querySelector('.cli-c .sw').onclick=()=>trocarAcesso(k,x,null);
+    el.querySelectorAll('[data-u]').forEach(u=>{const us=x.usuarios.find(y=>y.id===u.dataset.u);u.querySelector('.sw').onclick=()=>trocarAcesso(k,x,us);
+      const sn=u.querySelector('[data-sn]');if(sn)sn.onclick=()=>senhaRest(us);const ex=u.querySelector('[data-ex]');if(ex)ex.onclick=()=>excluirRest(us)});
+    const nu=el.querySelector('[data-nu]');if(nu)nu.onclick=()=>novoRest(x);const ed=el.querySelector('[data-ed]');if(ed)ed.onclick=()=>editarCliRest(x)});
+}
+function cartaoCliente(k,x){
+  const on=!x.bloqueado,us=x.usuarios||[];
+  const sub=k==='restaurante'?`Responsável: ${esc(x.responsavel||'—')} · ${us.length} usuário(s)`:`${us.length} usuário(s)`;
+  return `<div class="cli ${on?'':'off'}" data-cli="${k}|${esc(x.id)}"><div class="cli-c"><div><b>${esc(x.nome)}</b><small>${sub}${x.bloqueado&&x.desde?' · cortado em '+quando(x.desde):''}${x.motivo?' · '+esc(x.motivo):''}</small></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${k==='restaurante'?'<button class="btn" data-ed>Editar</button><button class="btn" data-nu>+ Usuário</button>':''}${chave(on,on?'Cliente ativo':'Cliente bloqueado')}</div></div>
+    ${us.length?`<div class="usgrid">${us.map(u=>{const uon=!u.bloqueado;return `<div class="usr ${uon&&on?'':'off'}" data-u="${esc(u.id)}"><div><b>${esc(u.nome)}</b><small>${esc(u.cargo||'')}${u.usuario?' · '+esc(u.usuario):''}</small>${u.ativo===false?'<small style="color:var(--erro)">desativado pelo administrador da Câmara</small>':''}${u.bloqueado&&u.motivo?`<small>${esc(u.motivo)}</small>`:''}</div>
+      <div class="ln">${chave(uon,null,'p')}${k==='restaurante'?'<span><button class="lkbtn" data-sn>Senha nova</button><button class="lkbtn" data-ex style="color:var(--erro)">Excluir</button></span>':''}</div></div>`}).join('')}</div>`:k==='restaurante'?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o acesso da dona do restaurante.</p>':''}</div>`;
+}
+function trocarAcesso(k,x,u){
+  const alvo=u||x,ligar=!!alvo.bloqueado;
+  const enviar=async motivo=>{try{
+      if(k==='rural'&&!u)await api('rural/suspender',{metodo:'POST',corpo:{e:x.id,suspender:!ligar,motivo}});
+      else await api('admin/acesso',{metodo:'POST',corpo:{sistema:k,cliente:x.id,usuario:u?u.id:'',nome:u?u.nome:'',bloquear:!ligar,motivo}});
+      fechar();carregarSistemas()}catch(e){if(e.message!=='sessao')alertar(e.message)}};
+  if(ligar){enviar('');return}
+  modal(`<h2>Cortar o acesso de ${esc(alvo.nome)}?</h2><p class="dica">${u?'Só esta pessoa':'Todos os usuários de '+esc(x.nome)} perde${u?'':'m'} o acesso na hora e passa${u?'':'m'} a ver “Acesso suspenso”. Os dados ficam guardados; para voltar, é só ligar de novo.</p>
+    <label>Motivo (só vocês veem)<input id="mt" maxlength="200" placeholder="Ex.: mensalidade de dezembro em aberto"></label>
+    <div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok" style="background:var(--erro);border-color:var(--erro);color:#fff">Cortar o acesso</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;$('#ok',f).onclick=()=>enviar($('#mt',f).value)});
+}
+function novoRest(x){
+  const s=gerar();
+  modal(`<h2>Novo usuário · ${esc(x.nome)}</h2><p class="dica">É o acesso de quem comprou o sistema. Ela entra no caixa com este usuário e senha, uma vez em cada aparelho (no celular do garçom também; depois o garçom escolhe o nome e o PIN).</p>
+    <label>Nome<input id="nn" maxlength="60" placeholder="Ex.: Marina"></label><label>Usuário<input id="nu" autocapitalize="none" spellcheck="false" placeholder="Ex.: marina"></label>
+    <label>Senha<input id="ns" value="${s}" style="font-family:ui-monospace,monospace"></label><p class="msg" id="nm"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Criar usuário</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{const corpo={cliente:x.id,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),senha:$('#ns',f).value.trim()};
+      try{await api('admin/rest/usuario',{metodo:'POST',corpo});mostrarAcessoRest(corpo.nome,corpo.usuario,corpo.senha);carregarSistemas()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
+  });
+}
+function mostrarAcessoRest(nome,login,senha){
+  const link='https://d1xi1g7etepsye.cloudfront.net/';
+  modal(`<h2>Acesso criado</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Endereço<input value="${link}" readonly></label><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(senha)}" readonly style="font-family:ui-monospace,monospace"></label>
+    <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText(`LegislaGov Restaurante\n${link}\nUsuário: ${login}\nSenha: ${senha}`);$('#cp',g).textContent='Copiado'}catch(e){}}});
+}
+function senhaRest(u){
+  const s=gerar();
+  modal(`<h2>Senha nova · ${esc(u.nome)}</h2><p class="dica">A pessoa sai de todos os aparelhos e entra de novo com a senha nova.</p><label>Senha nova<input id="sn" value="${s}" style="font-family:ui-monospace,monospace"></label><p class="msg" id="sm"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar senha nova</button></div>`,f=>{$('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{const nova=$('#sn',f).value.trim();try{await api('admin/rest/senha',{metodo:'POST',corpo:{id:u.id,senha:nova}});mostrarAcessoRest(u.nome,u.usuario,nova);carregarSistemas()}catch(e){if(e.message!=='sessao')$('#sm',f).textContent=e.message}}});
+}
+function excluirRest(u){
+  modal(`<h2>Excluir o usuário ${esc(u.nome)}?</h2><p class="dica">A pessoa sai de todos os aparelhos e o usuário deixa de existir. Os dados do restaurante continuam guardados. Para só pausar, prefira o botão verde/vermelho.</p><div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok" style="background:var(--erro);border-color:var(--erro);color:#fff">Excluir</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;$('#ok',f).onclick=async()=>{try{await api('admin/rest/excluir',{metodo:'POST',corpo:{id:u.id}});fechar();carregarSistemas()}catch(e){}}});
+}
+function editarCliRest(x){
+  modal(`<h2>Cliente do restaurante</h2><label>Nome do restaurante<input id="cn1" maxlength="80" value="${esc(x.nome)}"></label><label>Responsável (quem comprou)<input id="cr1" maxlength="80" value="${esc(x.responsavel)}"></label><label>Observação<input id="co1" maxlength="200" value="${esc(x.obs)}"></label><p class="msg" id="ce1"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar</button></div>`,f=>{$('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{try{await api('admin/cliente',{metodo:'POST',corpo:{sistema:'restaurante',id:x.id,nome:$('#cn1',f).value,responsavel:$('#cr1',f).value,obs:$('#co1',f).value}});fechar();carregarSistemas()}catch(e){if(e.message!=='sessao')$('#ce1',f).textContent=e.message}}});
 }
 /* ===================== Segurança: endereços bloqueados ===================== */
 async function telaSeguranca(){

@@ -484,6 +484,9 @@ def sessao(token, camara):
     u = _usuario(r["usuario_id"])
     if not u or u.get("ativo") is False or u.get("pendente"):
         return None
+    import lgacesso
+    if lgacesso.bloqueado("camara", camara, u["id"]):
+        return None
     return u
 
 
@@ -681,6 +684,10 @@ def login(camara, usuario, senha, ip):
         return None, "Seu cadastro ainda está aguardando liberação do administrador."
     if u.get("ativo") is False:
         return None, "Este usuário está desativado. Fale com o administrador."
+    import lgacesso
+    if lgacesso.bloqueado("camara", camara, u["id"]):
+        registrar(camara, u["usuario"], "Login recusado (acesso suspenso pela LegislaGov)", "", ip)
+        return None, lgacesso.MSG
     if u.get("falhasSenha") or u.get("bloqueada"):
         _gravar_dados_usuario(u["id"], lambda d: (d.pop("falhasSenha", None), d.pop("bloqueada", None)))
         _marcar_usuarios(camara)
