@@ -41,6 +41,7 @@ import lgwhats
 import lgrural
 import lgemail
 import lgcentral
+import lgmonitor
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
 PORTA = int(os.environ.get("PORT", "8000"))
@@ -822,6 +823,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     iniciar_youtube()
+    lgmonitor.iniciar()          # monitoramento dos sistemas (Central > Administração)
     ThreadingHTTPServer.request_queue_size = 128   # muitos abrindo ao mesmo tempo (o padrão é 5)
     ThreadingHTTPServer.daemon_threads = True
     servidor = ThreadingHTTPServer(("0.0.0.0", PORTA), partial(Handler, directory=PASTA))

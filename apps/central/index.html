@@ -95,8 +95,30 @@ input,select{height:46px;border:1px solid var(--linha);border-radius:10px;paddin
 .tab{width:100%;border-collapse:collapse;font-size:14px}.tab th{text-align:left;font-size:12px;color:var(--sub);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--linha)}
 .tab td{padding:9px 8px;border-bottom:1px solid var(--linha);vertical-align:middle}.tab tr:last-child td{border-bottom:0}.tab .dir{text-align:right}.tab code{font-size:13px}
 @media(max-width:640px){.hl{grid-template-columns:1fr}.hl .acoes{justify-content:flex-start}.tab thead{display:none}.tab tr{display:grid;grid-template-columns:1fr auto;padding:8px 0;border-bottom:1px solid var(--linha)}.tab td{border:0;padding:2px 4px}.tab td:nth-child(4){grid-row:1/4;grid-column:2;align-self:center}}
+.faixa{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:22px 0 0;padding:14px 18px;border-radius:14px;border:1px solid var(--demo-borda);background:var(--demo);color:var(--demo-ink)}
+.faixa.crit{border-color:color-mix(in srgb,var(--erro) 45%,var(--linha));background:color-mix(in srgb,var(--erro) 10%,var(--papel));color:var(--erro)}
+.faixa b{display:block;font-size:15px}.faixa ul{margin:4px 0 0;padding-left:18px;font-size:13.5px}
+.adm{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center}
+.adm .selo{--cor:#5b6676}.adm .selo svg{width:28px;height:28px;color:var(--forte)}
+.adm-n{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px;color:var(--sub);margin-top:4px}.adm-n b{color:var(--forte);font-size:15px}
+.abas{display:flex;gap:6px;flex-wrap:wrap;margin:22px 0 6px;border-bottom:1px solid var(--linha)}
+.abas button{border:0;background:transparent;padding:10px 12px;font-weight:600;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.abas button[aria-selected=true]{color:var(--forte);border-color:var(--forte)}
+.abas .cont{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:var(--erro);color:#fff;font-size:11.5px;margin-left:6px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.tile{background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:14px 16px}
+.tile small{display:block;color:var(--sub);font-size:12.5px}.tile b{display:block;font-size:21px;color:var(--forte);letter-spacing:-.02em;margin-top:2px}.tile span{font-size:12.5px;color:var(--sub)}
+.pt{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:0;background:var(--ok)}
+.pt.aviso{background:#d9a400}.pt.critico{background:var(--erro)}.pt.info{background:var(--acento)}
+.st.aviso{background:color-mix(in srgb,#d9a400 18%,var(--papel));color:var(--demo-ink)}.st.critico{background:color-mix(in srgb,var(--erro) 14%,var(--papel));color:var(--erro)}.st.info{background:color-mix(in srgb,var(--acento) 14%,var(--papel));color:var(--acento)}
+.av{display:flex;flex-direction:column;gap:10px}.av .horta{display:grid;grid-template-columns:1fr auto;gap:6px 14px;align-items:center}.av .horta p{margin:2px 0 0;color:var(--sub);font-size:13.5px;grid-column:1}
+.msg-c{border-left:4px solid var(--acento)}.msg-c.aviso{border-left-color:#d9a400}.msg-c.critico{border-left-color:var(--erro)}.msg-c.novo{box-shadow:0 0 0 2px color-mix(in srgb,var(--acento) 35%,transparent)}
+.msg-c p{white-space:pre-line}
+.grade2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:860px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.adm{grid-template-columns:1fr}.adm .selo{display:none}.grade2{grid-template-columns:1fr}.tab.gastos td:nth-child(4){grid-row:auto;grid-column:auto}}
 @media(max-width:960px){.sist{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:640px){.topo-in{padding:10px 14px;gap:8px}.quem,.marca small{display:none}main{padding:22px 14px 50px}h1{font-size:23px}.sist{grid-template-columns:1fr}.demo-l{grid-template-columns:1fr}.demo-l .acoes{grid-row:auto;grid-column:auto;justify-content:flex-start}.rod .btn{flex:1}.tbtn{padding:0 9px}}
+@media(max-width:640px){.topo-in{padding:10px 14px;gap:8px}.quem,.marca small{display:none}main{padding:22px 14px 50px}h1{font-size:23px}.sist{grid-template-columns:1fr}.demo-l{grid-template-columns:1fr}.demo-l .acoes{grid-row:auto;grid-column:auto;justify-content:flex-start}.rod .btn{flex:1}.tbtn{padding:0 9px}.topo-in{gap:6px}.tema button{padding:0 8px}.marca img{height:26px}}
 </style>
 </head>
 <body>
@@ -131,6 +153,7 @@ async function tela(){
   <main>
     <h1>Olá, ${esc(nome)}.</h1>
     <p class="sub">Escolha o sistema. Cada um abre em outra aba. Para mostrar a um cliente, use “Criar demonstração”: tem prazo e para de funcionar sozinha.</p>
+    ${faixaAdmin()}
     <div class="sist">${P.sistemas.map(x=>`<section class="card" style="--cor:${esc(x.cor)}" aria-labelledby="t-${esc(x.id)}">
       <div class="cab"><div class="selo"><img src="${esc(x.icone)}" alt=""></div><div><h3 id="t-${esc(x.id)}">${esc(x.nome)}</h3><p>${esc(x.desc)}</p></div></div>
       ${x.id==='rural'?`<button class="btn" data-clientes="rural">Clientes, senhas e acesso</button>`:''}
@@ -139,6 +162,8 @@ async function tela(){
       <a class="abrir" href="${esc(x.abrir[1])}" target="_blank" rel="noopener"><span>${esc(x.abrir[0])}</span>${seta}</a>
       ${(x.outros||[]).length?`<div class="outros">${x.outros.map(l=>`<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>`:''}
     </section>`).join('')}</div>
+    <h2>Administração</h2>
+    ${cartaoAdmin()}
     <h2>Demonstrações ativas</h2>
     <div class="${ativas.length?'demos':''}">${ativas.length?ativas.map(linhaDemo).join(''):'<div class="vazio">Nenhuma demonstração ativa. Use “Criar demonstração” no sistema que quer mostrar.</div>'}</div>
     ${velhas.length?`<h2>Encerradas</h2><div class="demos">${velhas.map(linhaDemo).join('')}</div>`:''}
@@ -149,6 +174,8 @@ async function tela(){
     <p class="fim">LegislaGov · este site não é governamental.</p>
   </main>`;
   ligarTema();$('#segBt').onclick=telaSeguranca;
+  document.querySelectorAll('[data-adm]').forEach(b=>b.onclick=()=>telaAdmin(b.dataset.adm));
+  avisoAoEntrar();
   $('#sairBt').onclick=sair;$('#senhaBt').onclick=trocarSenha;
   document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>novaDemo(b.dataset.demo));
   document.querySelectorAll('[data-clientes]').forEach(b=>b.onclick=()=>telaRural());
@@ -296,6 +323,146 @@ function suspender(cod,sim){
 function novaHorta(){
   modal(`<h2>Nova horta</h2><p class="dica">Cria um cliente novo do Rural, com link próprio. Depois crie o administrador da horta em “Usuários e senhas”.</p><label>Nome da horta<input id="hn" maxlength="60" placeholder="Ex.: Horta Boa Vista"></label><p class="msg" id="hm"></p><div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Criar</button></div>`,f=>{
     $('#cn',f).onclick=fechar;$('#ok',f).onclick=async()=>{try{const r=await api('rural/horta',{metodo:'POST',corpo:{nome:$('#hn',f).value}});fechar();RURAL.aberta=r.codigo;telaRural()}catch(e){if(e.message!=='sessao')$('#hm',f).textContent=e.message}}});
+}
+/* ===================== Administração: monitoramento, gastos e vencimentos, mensagens ===================== */
+const ICADM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>';
+const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const moeda=(v,m)=>m==='USD'?'US$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):brl(v);
+const dataBR=d=>d?d.split('-').reverse().join('/'):'';
+const PER={mensal:'por mês',anual:'por ano',trimestral:'a cada 3 meses',semestral:'a cada 6 meses',uso:'conforme o uso',unico:'uma vez'};
+function itensAdmin(){const a=P&&P.admin;return a?a.itens||[]:[]}
+function faixaAdmin(){
+  const a=P.admin;if(!a)return'';const n=a.alertas+a.vencimentos;if(!n&&!a.mensagens)return'';
+  const crit=a.criticos||itensAdmin().some(i=>i.nivel==='critico');
+  const t=[n?n+' aviso(s)':'',a.mensagens?a.mensagens+' mensagem(ns) nova(s)':''].filter(Boolean).join(' e ');
+  return `<div class="faixa ${crit?'crit':''}" role="status"><div><b>${esc(t)} na administração</b>${itensAdmin().length?`<ul>${itensAdmin().slice(0,4).map(i=>`<li>${esc(i.titulo)}</li>`).join('')}</ul>`:''}</div><button class="btn" data-adm="avisos">Ver agora</button></div>`;
+}
+function cartaoAdmin(){
+  const a=P.admin;const n=a?a.alertas+a.vencimentos:0;
+  return `<section class="horta adm"><div class="selo">${ICADM}</div><div><b style="font-size:16px;color:var(--forte)">Monitoramento, gastos e vencimentos</b>
+    <small class="dica" style="display:block">O servidor confere tudo a cada 10 minutos: se os sistemas estão no ar, disco, memória, banco de dados, cópias e cadeados. Os pagamentos avisam 10 dias antes.</small>
+    <div class="adm-n">${a?`<span><b>${n}</b> aviso(s)</span><span><b>${a.mensagens}</b> mensagem(ns) nova(s)</span>`:'<span>Ainda sem leitura</span>'}</div></div>
+    <div class="acoes"><button class="btn pri" data-adm="avisos">Abrir administração</button></div></section>`;
+}
+function avisoAoEntrar(){
+  const a=P.admin;if(!a)return;const it=itensAdmin();if(!it.length&&!a.mensagens)return;
+  let ja='';try{ja=sessionStorage.getItem('lgc_aviso')||''}catch(e){}
+  const chave=TOKEN.slice(-12);if(ja===chave)return;try{sessionStorage.setItem('lgc_aviso',chave)}catch(e){}
+  modal(`<h2>Avisos da administração</h2>
+    <div class="av">${it.map(i=>`<div><span class="pt ${esc(i.nivel)}"></span>${esc(i.titulo)}</div>`).join('')}${a.mensagens?`<div><span class="pt info"></span>${a.mensagens} mensagem(ns) nova(s) da equipe técnica</div>`:''}</div>
+    <div class="rod"><button class="btn" id="dp">Depois</button><button class="btn pri" id="vr">Ver na administração</button></div>`,f=>{$('#dp',f).onclick=fechar;$('#vr',f).onclick=()=>{fechar();telaAdmin('avisos')}});
+}
+let ADM={aba:'avisos',d:null};
+async function telaAdmin(aba){
+  if(aba)ADM.aba=aba;
+  try{ADM.d=await api('admin/resumo')}catch(e){if(e.message!=='sessao')alertar(e.message);return}
+  desenharAdmin();scrollTo(0,0);
+}
+function desenharAdmin(){
+  const d=ADM.d,vistos=new Set(d.msgsVistas||[]);
+  const novas=d.mensagens.filter(m=>!vistos.has(m.id)).length,nAv=d.alertas.length+d.vencimentos.length;
+  const voltar='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+  const abas=[['avisos','Avisos',nAv],['situacao','Situação dos sistemas',0],['gastos','Gastos e vencimentos',0],['mensagens','Mensagens',novas],['historico','Histórico',0]];
+  $('main').innerHTML=`<button class="tbtn" id="volta" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:18px">${voltar}Sistemas</button>
+    <div class="rcab"><div class="selo" style="background:var(--chip);border-color:var(--linha)">${ICADM.replace('<svg','<svg width="28" height="28"')}</div><div><h1 style="margin:0">Administração</h1>
+    <p class="sub">${d.ultima?'Última conferência '+quando(d.ultima)+'.':'O servidor ainda não fez a primeira conferência.'} A próxima é automática em até 10 minutos.</p></div></div>
+    <div class="abas" role="tablist">${abas.map(([k,n,c])=>`<button role="tab" data-aba="${k}" aria-selected="${ADM.aba===k}">${n}${c?`<span class="cont">${c}</span>`:''}</button>`).join('')}</div>
+    <div id="admc">${({avisos:abaAvisos,situacao:abaSituacao,gastos:abaGastos,mensagens:abaMensagens,historico:abaHistorico}[ADM.aba]||abaAvisos)(d)}</div>`;
+  $('#volta').onclick=()=>tela();
+  document.querySelectorAll('[data-aba]').forEach(b=>b.onclick=()=>{ADM.aba=b.dataset.aba;desenharAdmin()});
+  ligarAdmin();
+  if(ADM.aba==='mensagens'&&novas)api('admin/visto',{metodo:'POST',corpo:{ids:d.mensagens.map(m=>m.id)}}).then(()=>{d.msgsVistas=d.mensagens.map(m=>m.id)}).catch(()=>{});
+}
+function botaoConferir(){return `<button class="btn" id="conf">Conferir agora</button>`}
+function abaAvisos(d){
+  const it=[...d.alertas.map(a=>({nivel:a.nivel,titulo:a.titulo,texto:a.texto,desde:a.aberto})),...d.vencimentos.map(v=>({nivel:v.nivel,titulo:v.titulo,texto:v.texto,gasto:v.gasto}))];
+  const aws=d.aws;
+  return `<div class="rodape-acoes" style="justify-content:space-between;align-items:center"><p class="dica" style="margin:0">Os avisos fecham sozinhos quando o problema some ou quando o pagamento é registrado.</p>${botaoConferir()}</div>
+    ${it.length?`<div class="av">${it.map(i=>`<section class="horta"><div><span class="pt ${esc(i.nivel)}"></span><b>${esc(i.titulo)}</b><span class="st ${esc(i.nivel)}">${i.nivel==='critico'?'Urgente':'Atenção'}</span></div>
+      ${i.gasto?`<div class="acoes"><button class="btn" data-pagar="${esc(i.gasto)}">Registrar pagamento</button><button class="btn" data-editar="${esc(i.gasto)}">Editar</button></div>`:'<div></div>'}
+      <p>${esc(i.texto||'')}${i.desde?' · desde '+quando(i.desde):''}</p></section>`).join('')}</div>`
+      :'<div class="vazio">Tudo certo: nenhum sistema com problema e nenhum pagamento vencendo nos próximos 10 dias.</div>'}
+    ${aws?`<h2>Conta da AWS (conferida em ${esc(dataBR(aws.quando))})</h2>${tilesAws(aws)}`:''}`;
+}
+function tilesAws(a){
+  return `<div class="tiles"><div class="tile"><small>Gasto em ${esc(a.mes)}</small><b>US$ ${(a.uso+a.suporte).toFixed(2).replace('.',',')}</b><span>uso ${a.uso.toFixed(2).replace('.',',')} + suporte ${a.suporte.toFixed(2).replace('.',',')}</span></div>
+    <div class="tile"><small>A pagar no cartão</small><b>US$ ${a.a_pagar.toFixed(2).replace('.',',')}</b><span>os créditos cobriram US$ ${a.creditos_usados.toFixed(2).replace('.',',')}</span></div>
+    <div class="tile"><small>Créditos da AWS restantes</small><b>US$ ${a.creditos_restantes.toFixed(2).replace('.',',')}</b><span>duram até ${esc(a.creditos_ate)}</span></div>
+    <div class="tile"><small>Gasto por mês estimado</small><b>US$ ${a.estimativa_mensal.toFixed(0)}</b><span>US$ ${a.estimativa_sem_suporte.toFixed(0)} sem o plano de suporte</span></div></div>
+    ${a.obs?`<p class="dica">${esc(a.obs)}</p>`:''}`;
+}
+function abaSituacao(d){
+  const grupos={};d.monitor.forEach(m=>(grupos[m.grupo]=grupos[m.grupo]||[]).push(m));
+  const ordem=['Sistemas','Servidor','Dados','Serviços','Certificados'];
+  const nomes=Object.keys(grupos).sort((a,b)=>(ordem.indexOf(a)+99)%99-(ordem.indexOf(b)+99)%99);
+  return `<div class="rodape-acoes">${botaoConferir()}</div>`+(d.monitor.length?nomes.map(g=>`<h2>${esc(g)}</h2><div class="horta"><table class="tab"><thead><tr><th>Item</th><th>Leitura</th><th>Detalhe</th><th>Conferido</th></tr></thead><tbody>
+    ${grupos[g].map(m=>`<tr><td><span class="pt ${m.estado==='ok'?'':esc(m.estado)}"></span>${esc(m.nome)}</td><td><b>${esc(m.valor)}</b></td><td class="dica">${esc(m.detalhe)}</td><td class="dica">${quando(m.quando)}</td></tr>`).join('')}</tbody></table></div>`).join('')
+    :'<div class="vazio">Ainda sem leitura. Toque em “Conferir agora”.</div>');
+}
+function abaGastos(d){
+  const ativos=d.gastos.filter(g=>g.ativo!==false);
+  const prox=ativos.filter(g=>g.dias!=null).sort((a,b)=>a.dias-b.dias)[0];
+  const venc=g=>g.dias==null?`<span class="dica">${/fatura/.test(g.pagamento||'')?'vem na fatura':'sem data'}</span>`:`${dataBR(g.venc)}<br><small class="dica">${g.dias<0?'venceu há '+(-g.dias)+' dia(s)':g.dias===0?'vence hoje':'em '+g.dias+' dia(s)'}</small>`;
+  return `<div class="tiles"><div class="tile"><small>Por mês (estimado)</small><b>${brl(d.mensal)}</b><span>dólar a ${brl(d.dolar)}</span></div>
+    <div class="tile"><small>Por ano (estimado)</small><b>${brl(d.ano)}</b><span>inclui os anuais</span></div>
+    <div class="tile"><small>Próximo vencimento</small><b>${prox?dataBR(prox.venc):'—'}</b><span>${prox?esc(prox.nome):'cadastre as datas'}</span></div>
+    <div class="tile"><small>Já pago (registrado aqui)</small><b>${brl(d.pago)}</b><span>${d.pagamentos.length} pagamento(s)</span></div></div>
+    ${d.aws?`<p class="dica">Os gastos da Amazon hoje são pagos pelos créditos da AWS (restam US$ ${d.aws.creditos_restantes.toFixed(2).replace('.',',')}). Os valores abaixo são o preço cheio, para vocês saberem quanto vai custar quando os créditos acabarem.</p>`:''}
+    <div class="rodape-acoes" style="gap:8px"><button class="btn" id="dolar">Cotação do dólar</button><button class="btn pri" id="novoG">+ Novo gasto</button></div>
+    <div class="horta"><table class="tab gastos"><thead><tr><th>Gasto</th><th>Valor</th><th>Vencimento</th><th></th></tr></thead><tbody>
+    ${d.gastos.map(g=>`<tr${g.ativo===false?' style="opacity:.55"':''}><td><b>${esc(g.nome)}</b><br><small class="dica">${esc(g.fornecedor||'')}${g.categoria?' · '+esc(g.categoria):''}${g.ativo===false?' · desativado':''}</small>${g.obs?`<br><small class="dica">${esc(g.obs)}</small>`:''}</td>
+      <td style="white-space:nowrap"><b>${moeda(g.valor,g.moeda)}</b><br><small class="dica">${PER[g.period]||''}${g.moeda==='USD'&&g.valor?' · ≈ '+brl(g.valor*d.dolar):''}</small></td>
+      <td style="white-space:nowrap">${venc(g)}</td>
+      <td class="dir" style="white-space:nowrap"><div class="acoes" style="display:flex;gap:6px;justify-content:flex-end">${g.ativo!==false&&g.venc?`<button class="btn" data-pagar="${esc(g.id)}">Pagar</button>`:''}<button class="btn" data-editar="${esc(g.id)}">Editar</button></div></td></tr>`).join('')}</tbody></table></div>
+    <h2>Pagamentos registrados</h2>
+    ${d.pagamentos.length?`<div class="horta"><table class="tab"><thead><tr><th>Data</th><th>Gasto</th><th>Valor</th><th></th></tr></thead><tbody>${d.pagamentos.map(p=>`<tr><td>${dataBR(p.data)}</td><td>${esc(p.nome)}${p.obs?`<br><small class="dica">${esc(p.obs)}</small>`:''}<br><small class="dica">registrado por ${esc(p.por)}</small></td><td><b>${moeda(p.valor,p.moeda)}</b></td><td class="dir"><button class="btn perigo" data-delp="${esc(p.id)}">Apagar</button></td></tr>`).join('')}</tbody></table></div>`
+      :'<div class="vazio">Nenhum pagamento registrado. Quando pagar uma conta, toque em “Pagar”: o sistema guarda o pagamento e passa o vencimento para o próximo período.</div>'}`;
+}
+function abaMensagens(d){
+  const vistos=new Set(d.msgsVistas||[]);
+  return d.mensagens.length?`<p class="dica" style="margin-top:16px">Mensagens da equipe técnica (Claude) sobre a conta, os custos e o que precisa da decisão de vocês.</p><div class="av" style="margin-top:12px">${d.mensagens.map(m=>`<section class="horta msg-c ${esc(m.nivel||'info')} ${vistos.has(m.id)?'':'novo'}"><div><b>${esc(m.titulo)}</b>${vistos.has(m.id)?'':'<span class="st info">Nova</span>'}<small class="dica" style="display:block">${esc(dataBR(m.quando))}</small></div><div></div><p>${esc(m.texto)}</p></section>`).join('')}</div>`
+    :'<div class="vazio">Nenhuma mensagem.</div>';
+}
+function abaHistorico(d){
+  return d.historico.length?`<p class="dica" style="margin-top:16px">Avisos que já foram resolvidos (os 40 mais recentes).</p><div class="horta"><table class="tab"><thead><tr><th>Aviso</th><th>Abriu</th><th>Fechou</th><th></th></tr></thead><tbody>${d.historico.map(a=>`<tr><td><span class="pt ${esc(a.nivel)}"></span>${esc(a.titulo)}</td><td class="dica">${quando(a.aberto)}</td><td class="dica">${quando(a.fechado)}</td><td></td></tr>`).join('')}</tbody></table></div>`
+    :'<div class="vazio">Nenhum aviso resolvido ainda.</div>';
+}
+function ligarAdmin(){
+  const c=$('#conf');if(c)c.onclick=async()=>{c.disabled=true;c.textContent='Conferindo… (uns 20 segundos)';try{await api('admin/verificar',{metodo:'POST'});setTimeout(()=>telaAdmin(),20000)}catch(e){c.disabled=false;c.textContent='Conferir agora'}};
+  document.querySelectorAll('[data-pagar]').forEach(b=>b.onclick=()=>pagarGasto(b.dataset.pagar));
+  document.querySelectorAll('[data-editar]').forEach(b=>b.onclick=()=>editarGasto(b.dataset.editar));
+  document.querySelectorAll('[data-delp]').forEach(b=>b.onclick=()=>modal(`<h2>Apagar este pagamento?</h2><p class="dica">Só tira o registro daqui. O vencimento do gasto não volta sozinho: ajuste em “Editar” se precisar.</p><div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok">Apagar</button></div>`,f=>{$('#cn',f).onclick=fechar;$('#ok',f).onclick=async()=>{try{await api('admin/pagamento/excluir',{metodo:'POST',corpo:{id:b.dataset.delp}});fechar();telaAdmin()}catch(e){}}}));
+  const nv=$('#novoG');if(nv)nv.onclick=()=>editarGasto('');
+  const dl=$('#dolar');if(dl)dl.onclick=()=>modal(`<h2>Cotação do dólar</h2><p class="dica">Usada para converter os gastos da Amazon e do Render em reais.</p><label>R$ por US$ 1<input id="dv" inputmode="decimal" value="${String(ADM.d.dolar).replace('.',',')}"></label><p class="msg" id="dm"></p><div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar</button></div>`,f=>{$('#cn',f).onclick=fechar;$('#ok',f).onclick=async()=>{try{await api('admin/dolar',{metodo:'POST',corpo:{valor:$('#dv',f).value}});fechar();telaAdmin()}catch(e){if(e.message!=='sessao')$('#dm',f).textContent=e.message}}});
+}
+function pagarGasto(id){
+  const g=ADM.d.gastos.find(x=>x.id===id);if(!g)return;const hoje=new Date().toISOString().slice(0,10);
+  modal(`<h2>Registrar pagamento</h2><p class="dica">${esc(g.nome)}${g.venc?' · vencimento '+dataBR(g.venc):''}</p>
+    <div class="grade2"><label>Valor pago<input id="pv" inputmode="decimal" value="${String(g.valor).replace('.',',')}"></label><label>Moeda<select id="pm"><option value="BRL"${g.moeda==='BRL'?' selected':''}>Real (R$)</option><option value="USD"${g.moeda==='USD'?' selected':''}>Dólar (US$)</option></select></label></div>
+    <label>Data do pagamento<input id="pd" type="date" value="${hoje}"></label><label>Observação (opcional)<input id="po" maxlength="300" placeholder="Ex.: boleto pago pelo Geraldo"></label>
+    ${g.period!=='unico'?`<p class="dica">O próximo vencimento passa para ${PER[g.period]==='por ano'?'daqui a 1 ano':'o próximo período'}.</p>`:''}<p class="msg" id="pe"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Registrar pagamento</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{try{const r=await api('admin/pagar',{metodo:'POST',corpo:{gasto:id,valor:$('#pv',f).value,moeda:$('#pm',f).value,data:$('#pd',f).value,obs:$('#po',f).value}});fechar();await telaAdmin();if(r.proximo)alertar('Pagamento registrado. Próximo vencimento: '+dataBR(r.proximo))}catch(e){if(e.message!=='sessao')$('#pe',f).textContent=e.message}};
+  });
+}
+function editarGasto(id){
+  const g=id?ADM.d.gastos.find(x=>x.id===id):{nome:'',categoria:'',fornecedor:'',valor:0,moeda:'BRL',period:'mensal',venc:'',pagamento:'',obs:'',ativo:true};if(!g)return;
+  modal(`<h2>${id?'Editar gasto':'Novo gasto'}</h2>
+    <label>Nome<input id="gn" maxlength="120" value="${esc(g.nome)}" placeholder="Ex.: Domínio legislagov.com.br"></label>
+    <div class="grade2"><label>Fornecedor<input id="gf" value="${esc(g.fornecedor)}" placeholder="Ex.: Registro.br"></label><label>Categoria<input id="gc" value="${esc(g.categoria)}" placeholder="Ex.: Hospedagem"></label></div>
+    <div class="grade2"><label>Valor<input id="gv" inputmode="decimal" value="${String(g.valor||0).replace('.',',')}"></label><label>Moeda<select id="gm"><option value="BRL"${g.moeda==='BRL'?' selected':''}>Real (R$)</option><option value="USD"${g.moeda==='USD'?' selected':''}>Dólar (US$)</option></select></label></div>
+    <div class="grade2"><label>Cobrança<select id="gp">${Object.entries(PER).map(([k,n])=>`<option value="${k}"${g.period===k?' selected':''}>${n}</option>`).join('')}</select></label><label>Próximo vencimento<input id="gd" type="date" value="${esc(g.venc||'')}"></label></div>
+    <label>Como paga<input id="gpg" value="${esc(g.pagamento)}" placeholder="Ex.: Cartão, boleto, Pix"></label>
+    <label>Observação<input id="go" maxlength="400" value="${esc(g.obs)}"></label>
+    <label style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" id="ga" style="height:20px;width:20px"${g.ativo!==false?' checked':''}> Gasto ativo (desmarque quando cancelar o serviço)</label>
+    <p class="msg" id="ge"></p>
+    <div class="rod">${id?'<button class="btn perigo" id="ex">Excluir</button>':''}<button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{const corpo={id,nome:$('#gn',f).value,fornecedor:$('#gf',f).value,categoria:$('#gc',f).value,valor:$('#gv',f).value,moeda:$('#gm',f).value,period:$('#gp',f).value,venc:$('#gd',f).value,pagamento:$('#gpg',f).value,obs:$('#go',f).value,ativo:$('#ga',f).checked};
+      try{await api('admin/gasto',{metodo:'POST',corpo});fechar();telaAdmin()}catch(e){if(e.message!=='sessao')$('#ge',f).textContent=e.message}};
+    const ex=$('#ex',f);if(ex)ex.onclick=()=>modal(`<h2>Excluir “${esc(g.nome)}”?</h2><p class="dica">Some da lista de gastos. Os pagamentos já registrados continuam no histórico. Se só cancelou o serviço, prefira desmarcar “Gasto ativo”.</p><div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok" style="background:var(--erro);border-color:var(--erro);color:#fff">Excluir</button></div>`,h=>{$('#cn',h).onclick=()=>editarGasto(id);$('#ok',h).onclick=async()=>{try{await api('admin/gasto/excluir',{metodo:'POST',corpo:{id}});fechar();telaAdmin()}catch(e){}}});
+  });
 }
 /* ===================== Segurança: endereços bloqueados ===================== */
 async function telaSeguranca(){

@@ -1,0 +1,24 @@
+{
+ "atualizado": "2026-11-18T17:40:00-03:00",
+ "aws": {
+  "quando": "2026-11-18",
+  "mes": "novembro de 2026 (de 1 a 18)",
+  "uso": 1.11,
+  "suporte": 18.39,
+  "creditos_usados": 19.51,
+  "a_pagar": 0.0,
+  "creditos_restantes": 140.49,
+  "estimativa_mensal": 43.0,
+  "estimativa_sem_suporte": 14.0,
+  "creditos_ate": "fevereiro de 2027 (com o plano de suporte) ou setembro de 2027 (sem ele)",
+  "obs": "Valores do Cost Explorer da AWS. Os créditos estão cobrindo tudo; a fatura do cartão em novembro deve vir zerada."
+ },
+ "mensagens": [
+  {"id": "m-20261118-suporte", "quando": "2026-11-18", "nivel": "aviso", "titulo": "Plano de suporte pago ativo na AWS",
+   "texto": "A conta está no AWS Business Support+, que custa a partir de US$ 29 por mês. Em novembro ele já gastou US$ 18,39 dos créditos. É o maior gasto da conta hoje: sozinho, faz os créditos acabarem uns 7 meses antes. Se vocês não precisam de atendimento técnico da Amazon, voltem para o plano Basic (grátis): Console da AWS > Support > Planos de suporte > Basic. Eu não mudo isso sem vocês pedirem."},
+  {"id": "m-20261118-dominio", "quando": "2026-11-18", "nivel": "aviso", "titulo": "Falta a data de vencimento do domínio",
+   "texto": "O domínio legislagov.com.br (R$ 40 por ano) está na lista de gastos sem data. Entre no Registro.br, veja a data de expiração e coloque em Gastos > Domínio. A partir daí o aviso aparece aqui 10 dias antes."},
+  {"id": "m-20261118-boasvindas", "quando": "2026-11-18", "nivel": "info", "titulo": "Administração ligada",
+   "texto": "A cada 10 minutos o servidor confere disco, memória, banco de dados, cópias, cadeados (HTTPS) e se cada sistema está no ar. Quando algo sai do normal, aparece aqui e no aviso ao entrar na Central; quando volta ao normal, o aviso fecha sozinho. Os gastos da AWS eu atualizo aqui quando conferir a conta."}
+ ]
+}

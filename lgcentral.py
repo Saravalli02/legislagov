@@ -24,6 +24,7 @@ import hashlib
 import json
 import re
 import secrets
+import threading
 import time
 from urllib.parse import parse_qs
 
@@ -269,8 +270,18 @@ def painel(c, s):
         bloq = sum(1 for x in lgapi.ip_lista() if x["ativo"])
     except Exception:
         bloq = 0
+    try:
+        import lgmonitor
+        r = lgmonitor.resumo(lgmonitor._db())
+        vistos = set(r["msgsVistas"])
+        adm = {"alertas": len(r["alertas"]), "criticos": sum(1 for a in r["alertas"] if a["nivel"] == "critico"),
+               "vencimentos": len(r["vencimentos"]), "mensagens": sum(1 for m in r["mensagens"] if m.get("id") not in vistos),
+               "itens": [{"nivel": a["nivel"], "titulo": a["titulo"]} for a in r["alertas"]][:6] + [{"nivel": v["nivel"], "titulo": v["titulo"]} for v in r["vencimentos"]][:6]}
+    except Exception as e:
+        print("central: resumo da administração", repr(e), flush=True)
+        adm = None
     return {"ok": True, "bloqueados": bloq, "sessao": {k: v for k, v in s.items() if not k.startswith("_")}, "sistemas": SISTEMAS,
-            "prazos": [{"horas": h, "nome": n} for h, n in PRAZOS.items()], "demos": demos}
+            "prazos": [{"horas": h, "nome": n} for h, n in PRAZOS.items()], "demos": demos, "admin": adm}
 
 
 # ---------------------------------------------------------------- HTTP
@@ -367,6 +378,37 @@ def rota(h, metodo):
                                       sempre=corpo.get("acao") == "sempre")
                 _log(c, s["usuario"], "Endereço " + ("desbloqueado" if corpo.get("acao") == "desbloquear" else "bloqueado"), alvo, ip)
                 return _resp(h, 200, {"ok": True})
+            # ---- administração geral: monitoramento, gastos e vencimentos, mensagens da equipe técnica
+            if acao.startswith("admin/"):
+                import lgmonitor
+                mc = lgmonitor._db()
+                if acao == "admin/resumo" and metodo == "GET":
+                    return _resp(h, 200, lgmonitor.resumo(mc))
+                if metodo != "POST":
+                    return _resp(h, 404, {"ok": False, "erro": "Rota não encontrada."})
+                if acao == "admin/verificar":
+                    threading.Thread(target=lgmonitor.verificar, daemon=True).start()
+                    return _resp(h, 200, {"ok": True, "rodando": True})
+                if acao == "admin/visto":
+                    return _resp(h, *lgmonitor.marcar_visto(mc, [str(i) for i in (corpo.get("ids") or [])][:200]))
+                if acao == "admin/gasto":
+                    cod, r = lgmonitor.salvar_gasto(mc, corpo, s["usuario"])
+                    if cod == 200:
+                        _log(c, s["usuario"], "Gasto salvo", str(corpo.get("nome", ""))[:80], ip)
+                    return _resp(h, cod, r)
+                if acao == "admin/gasto/excluir":
+                    _log(c, s["usuario"], "Gasto excluído", str(corpo.get("id")), ip)
+                    return _resp(h, *lgmonitor.excluir_gasto(mc, corpo.get("id")))
+                if acao == "admin/pagar":
+                    cod, r = lgmonitor.pagar(mc, corpo, s["usuario"])
+                    if cod == 200:
+                        _log(c, s["usuario"], "Pagamento registrado", str(corpo.get("gasto")), ip)
+                    return _resp(h, cod, r)
+                if acao == "admin/pagamento/excluir":
+                    _log(c, s["usuario"], "Pagamento excluído", str(corpo.get("id")), ip)
+                    return _resp(h, *lgmonitor.excluir_pagamento(mc, corpo.get("id")))
+                if acao == "admin/dolar":
+                    return _resp(h, *lgmonitor.definir_dolar(mc, corpo.get("valor")))
             # ---- administração do LegislaGov Rural (todas as hortas)
             if acao.startswith("rural/"):
                 import lgrural
