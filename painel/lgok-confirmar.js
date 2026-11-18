@@ -28,7 +28,11 @@
     el.innerHTML = `<div class="lgok-fundo"></div><div class="lgok-caixa" role="alertdialog" aria-modal="true" aria-labelledby="lgok-t" aria-describedby="lgok-x">
       <div class="lgok-ic ${o.perigo ? 'perigo' : ''}" aria-hidden="true">${o.perigo ? '!' : '?'}</div>
       <h2 id="lgok-t">${esc(o.titulo || 'Tem certeza?')}</h2>
+      ${o.img ? `<img class="lgok-img" src="${esc(o.img)}" alt="">` : ''}
+      ${o.selo ? `<p class="lgok-selo">${esc(o.selo)}</p>` : ''}
       ${o.item ? `<p class="lgok-item">${esc(o.item)}</p>` : ''}
+      ${o.resumo ? `<p class="lgok-resumo">${esc(o.resumo)}</p>` : ''}
+      ${(o.arquivos || []).length ? `<p class="lgok-rot">${o.arquivos.length === 1 ? 'Arquivo que ficará disponível para baixar' : 'Arquivos que ficarão disponíveis para baixar'}</p><ul class="lgok-arqs">${o.arquivos.map(a => `<li><span>${esc(a.nome)}</span>${a.tam ? `<small>${esc(a.tam)}</small>` : ''}</li>`).join('')}</ul>` : ''}
       <p id="lgok-x">${esc(o.texto || '')}</p>
       ${o.conferir === false ? '' : `<p class="lgok-conf">${esc(o.conferir || CONFERIR)}</p>`}
       ${itens.length ? `<div class="lgok-itens">${itens.map((t, i) => `<label><input type="checkbox" data-i="${i}"> ${esc(t)}</label>`).join('')}</div>` : ''}
@@ -105,6 +109,7 @@
 
   function regra(b) {
     if (b.disabled || b.closest('#lgok') || b.id === 'lgt-sim') return null;
+    if (b.type === 'submit' && b.form && b.form.dataset.lgPublica) return null;   // o próprio formulário mostra “Confirme a publicação” completo (foto, resumo, arquivos)
     const oc = (b.getAttribute('onclick') || '').replace(/^event\.stopPropagation\(\);\s*/, '');
     for (const [re, f] of POR_FUNCAO) if (re.test(oc)) return f(b);
     if (b.classList.contains('lgt-mini') || b.classList.contains('lgok-livre')) return null;   // botões de lista que só abrem uma janela
@@ -115,7 +120,7 @@
     if (form && !form.checkValidity()) return null;   // faltou campo obrigatório: o próprio formulário avisa primeiro
     if (form && form.elements.publicado && form.elements.publicado.type === 'checkbox' && !form.elements.publicado.checked) return null;   // guardado sem publicar
     for (const [re, f] of POR_TEXTO) if (re.test(t)) return f(b);
-    if (SALVAR_SITE.test(t) && telaDoSite(b)) return { titulo: 'Salvar e mostrar no site?', texto: 'A mudança aparece no site da Câmara na hora.', ok: 'Sim, salvar' };
+    if (SALVAR_SITE.test(t) && telaDoSite(b)) return { titulo: 'Confirme a publicação', texto: 'A mudança aparece no site da Câmara na hora.', ok: 'Sim, salvar' };
     return null;
   }
 
@@ -147,6 +152,13 @@
   .lgok-ic.perigo{background:rgba(229,72,77,.16);color:#ff6b70}
   #lgok h2{margin:0 0 6px;font-size:18px;line-height:1.3}
   #lgok p{margin:0 0 8px;color:var(--lg28-muted,#a6abb3)}
+  #lgok .lgok-img{display:block;width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin:2px 0 10px}
+  #lgok .lgok-selo{margin:0 0 4px;color:#b7791f;font-weight:650;font-size:12.5px}
+  #lgok .lgok-resumo{margin:6px 0 0;color:var(--lg28-muted,#9ca3af);font-size:14px}
+  #lgok .lgok-rot{margin:12px 0 6px;font-size:13px;font-weight:650;color:var(--lg28-muted,#9ca3af)}
+  #lgok .lgok-arqs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  #lgok .lgok-arqs li{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid var(--lg28-stroke,#2c3038);font-size:14px}
+  #lgok .lgok-arqs span{overflow-wrap:anywhere}#lgok .lgok-arqs small{white-space:nowrap;color:var(--lg28-muted,#9ca3af)}
   #lgok .lgok-item{color:var(--lg28-ink,#f3f4f6);font-weight:600;padding:8px 10px;border-radius:9px;background:var(--lg28-inset,rgba(255,255,255,.04));border:1px solid var(--lg28-stroke,#2c3038)}
   #lgok .lgok-conf{font-weight:600;color:var(--lg28-ink,#f3f4f6)}
   .lgok-itens{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}

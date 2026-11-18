@@ -55,7 +55,7 @@
   const verSite = (pag, txt = 'Ver no site') => `<a class="lgt-btn" href="../${pag}" target="_blank" rel="noopener">${ic('externo')} ${txt}</a>`;
   const aviso = (m, t) => U().aviso(m, t);
   const somenteLeitura = () => edita() ? '' : '<p class="lgvr-regra">Seu acesso a esta área é somente consulta.</p>';
-  const nota = '<p class="lgsc-nota">As alterações aparecem no site na hora, neste computador. Para valerem para todos os visitantes, o sistema precisa do servidor com banco de dados (próxima fase).</p>';
+  const nota = '<p class="lgsc-nota">Tudo o que você confirma aqui aparece no site para todos os visitantes na hora. Antes de publicar, o sistema sempre pede “Confirme a publicação”.</p>';
 
   /* ================= FOTOS E DESTAQUES DA CAPA ================= */
   const destaques = () => clone(ler(K.dest, null) || BASE.DESTAQUES);
@@ -86,14 +86,18 @@
       <label class="cheio"><span>Texto</span><textarea name="texto" rows="2" maxlength="220">${esc(d.texto)}</textarea></label>
       <label class="cheio"><span>Link do botão</span><input name="link" value="${esc(d.link)}" placeholder="Ex.: sessoes.html ou https://…"></label></div>
       <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Salvar</button></div></form>`);
-    const f = $('#lgt-modal form'); let foto = d.foto || '';
+    const f = $('#lgt-modal form'); f.dataset.lgPublica = '1'; let foto = d.foto || '';
     f.foto.onchange = async () => { const file = f.foto.files[0]; if (!file) return; try { foto = await U().reduzirImagem(file, 1600); $('#lgsc-fimg').src = foto; } catch (e) { aviso('Não foi possível ler a imagem.', 'erro'); } };
     f.onsubmit = e => { e.preventDefault(); const x = Object.fromEntries(new FormData(f)); if (!x.titulo.trim()) { f.querySelector('.lgt-erro').textContent = 'Informe o título.'; return; }
       if (i == null && !foto) { f.querySelector('.lgt-erro').textContent = 'Escolha uma foto para o destaque.'; return; }
       const novo = { ...d, selo: x.selo.trim(), titulo: x.titulo.trim(), texto: x.texto.trim(), botao: x.botao.trim() || 'Saiba mais', link: x.link.trim() || 'index.html', ...(foto ? { foto } : {}) };
-      if (i != null) l[i] = novo; else l.unshift(novo); U().fecharModal(); salvarDest(l, i != null ? 'Destaque atualizado.' : 'Destaque criado no início do carrossel.'); };
+      const publicar = () => { if (i != null) l[i] = novo; else l.unshift(novo); U().fecharModal(); salvarDest(l, i != null ? 'Destaque publicado no site.' : 'Destaque publicado no início do carrossel.'); };
+      if (novo.oculto) return publicar();
+      U().confirmarPublicacao({ titulo: novo.titulo, resumo: novo.texto, selo: novo.selo || 'Destaque da capa', img: fotoDest(novo), texto: 'Depois de confirmar, este destaque aparece no carrossel da página inicial do site, para todos os visitantes, na hora.', ok: publicar }); };
   };
-  window.lgscTrocarImg = async (k, inp) => { if (!edita()) return; const file = inp.files[0]; if (!file) return; try { const d = await U().reduzirImagem(file, 900); const im = ler(K.img, {}) || {}; im[k] = d; if (gravar(K.img, im)) { U().log('Site', 'Trocou imagem: ' + k); aviso('Imagem trocada.'); tFotos(); } } catch (e) { aviso('Não foi possível ler a imagem.', 'erro'); } };
+  window.lgscTrocarImg = async (k, inp) => { if (!edita()) return; const file = inp.files[0]; if (!file) return; let d; try { d = await U().reduzirImagem(file, 900); } catch (e) { inp.value = ''; return aviso('Não foi possível ler a imagem.', 'erro'); }
+    inp.value = '';
+    U().confirmarPublicacao({ titulo: k === 'brasao' ? 'Novo brasão do município' : 'Nova bandeira do município', img: d, texto: 'Depois de confirmar, a imagem antiga é trocada por esta em todo o site, na hora.', botao: 'Confirmar e trocar', ok: () => { const im = ler(K.img, {}) || {}; im[k] = d; if (gravar(K.img, im)) { U().log('Site', 'Trocou imagem: ' + k); aviso('Imagem trocada no site.'); tFotos(); } } }); };
   window.lgscImgOriginal = k => { if (!edita()) return; const im = ler(K.img, {}) || {}; delete im[k]; gravar(K.img, im); aviso('Imagem original restaurada.'); tFotos(); };
   window.lgscRestaurar = qual => { if (!edita()) return; U().confirmar('Voltar ao original? As alterações feitas pelo painel nesta parte serão descartadas.', () => { localStorage.removeItem(K[qual]); U().log('Site', 'Restaurou original: ' + qual); aviso('Original restaurado.'); ({ dest: tFotos, menu: tMenus, ver: tVereadores })[qual](); }); };
 
@@ -142,13 +146,14 @@
       <label><span>Telefone do gabinete</span><input name="telefone" maxlength="20" value="${esc(v.telefone || '')}" placeholder="(17) 3271-1482"></label>
       <label class="cheio"><span>E-mail</span><input name="email" type="email" maxlength="80" value="${esc(v.email || '')}"></label></div>
       <p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Salvar</button></div></form>`);
-    const f = $('#lgt-modal form'); let foto = v.fotoData || '';
+    const f = $('#lgt-modal form'); f.dataset.lgPublica = '1'; let foto = v.fotoData || '';
     f.foto.onchange = async () => { const file = f.foto.files[0]; if (!file) return; try { foto = await quadrado(file, 600); const im = $('#lgsc-vimg'); im.style.visibility = 'visible'; im.src = foto; } catch (e) { aviso('Não foi possível ler a imagem.', 'erro'); } };
     f.onsubmit = e => { e.preventDefault(); const d = Object.fromEntries(new FormData(f)); if (!d.nome.trim() || !d.completo.trim() || !d.partido.trim()) { f.querySelector('.lgt-erro').textContent = 'Preencha nome parlamentar, nome completo e partido.'; return; }
       if (id == null && !foto) { f.querySelector('.lgt-erro').textContent = 'Envie a foto do novo vereador.'; return; }
-      Object.assign(v, { nome: d.nome.trim(), completo: d.completo.trim(), partido: d.partido.trim(), f: !!d.f, telefone: d.telefone.trim(), email: d.email.trim(), ...(foto ? { fotoData: foto } : {}) });
-      if (!v.f) delete v.f; if (id == null) x.vereadores.push(v);
-      U().fecharModal(); salvarVer(x, id != null ? `${v.nome}: dados atualizados no site.` : `${v.nome} cadastrado no site. A Procuradoria cria o login em Vereadores e usuários.`); };
+      const publicar = () => { Object.assign(v, { nome: d.nome.trim(), completo: d.completo.trim(), partido: d.partido.trim(), f: !!d.f, telefone: d.telefone.trim(), email: d.email.trim(), ...(foto ? { fotoData: foto } : {}) });
+        if (!v.f) delete v.f; if (id == null) x.vereadores.push(v);
+        U().fecharModal(); salvarVer(x, id != null ? `${v.nome}: dados atualizados no site.` : `${v.nome} cadastrado no site. A Procuradoria cria o login em Vereadores e usuários.`); };
+      U().confirmarPublicacao({ titulo: d.nome.trim(), resumo: `${d.completo.trim()} · ${d.partido.trim()}`, selo: id != null ? 'Vereador — alteração' : 'Novo vereador', img: foto || (id != null ? fotoV(v) : ''), texto: 'Depois de confirmar, a página dos vereadores no site é atualizada para todos os visitantes, na hora.', ok: publicar }); };
   };
   function quadrado(file, lado) {
     return new Promise((ok, erro) => { const r = new FileReader(); r.onerror = erro; r.onload = () => { const im = new Image(); im.onerror = erro; im.onload = () => { const m = Math.min(im.width, im.height); const c = document.createElement('canvas'); c.width = c.height = lado; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, lado, lado); g.drawImage(im, (im.width - m) / 2, Math.max(0, (im.height - m) / 2 - m * 0.08), m, m, 0, 0, lado, lado); ok(c.toDataURL('image/jpeg', 0.85)); }; im.src = r.result; }; r.readAsDataURL(file); });

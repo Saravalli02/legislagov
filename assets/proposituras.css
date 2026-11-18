@@ -120,3 +120,4 @@ a.pp-autor:hover{background:var(--branco)}
   .pp-filtros .sel{flex:1 1 45%}
 }
 @media print{.pp-ficha{position:static}.acoes,#cabecalho,#rodape{display:none}}
+.pp-docs a{display:flex;align-items:center;gap:8px;font-weight:600}

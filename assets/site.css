@@ -345,6 +345,9 @@ select.sel{height:48px;border:1px solid var(--linha-2);border-radius:12px;paddin
 .leitura .capa-not{border-radius:18px;overflow:hidden;margin:22px 0;background:var(--v100)}
 .leitura .capa-not img{width:100%;max-height:560px;object-fit:contain;background:var(--v100)}
 .leitura .corpo{font-size:1.08rem;line-height:1.75}
+.docs-not{margin:24px 0}.docs-not h2{font-size:1.15rem;margin:0 0 10px}.docs-not ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.docs-not a{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--borda,#d9dee5);border-radius:10px;text-decoration:none;color:inherit;font-weight:600}
+.docs-not a:hover{border-color:currentColor}.docs-not a svg{width:20px;height:20px;flex:none}.docs-not a span{flex:1;overflow-wrap:anywhere}.docs-not small{font-weight:400;opacity:.75;white-space:nowrap}
 .galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:18px 0}
 .galeria img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px}
 .compartilhar{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0;padding:16px 0;border-top:1px solid var(--linha);border-bottom:1px solid var(--linha);align-items:center}

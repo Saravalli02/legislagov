@@ -129,7 +129,7 @@ function noticias() {
   const prev = param('previa') === '1' ? ls.json('lg_previa_noticia', null) : null;
   const painel = [...(prev ? [prev] : []), ...ls.json('lgt_site_noticias_v1', [])].filter(n => n && n.publicado !== false).map(n => ({
     id: n.id, data: n.data, titulo: n.titulo, categoria: n.categoria || 'Notícias da Câmara', resumo: n.resumo || '', corpo: n.corpo || '',
-    capa: n.capa ? { local: n.capa } : null, fotos: n.fotos || [], destaque: !!n.destaque, origem: 'painel',
+    capa: n.capa ? { local: n.capa } : null, fotos: n.fotos || [], docs: (n.docs || []).filter(d => d && d.url && d.nome), destaque: !!n.destaque, origem: 'painel',
   }));
   const arquivo = (window.NOTICIAS_ARQUIVO || []).map(n => ({
     id: String(n.id), data: n.data, titulo: n.titulo, categoria: n.categoria, resumo: n.resumo || '', corpo: '',
@@ -398,6 +398,7 @@ function montarNoticia() {
   ${n.capa ? `<figure class="capa-not">${img(n.capa, '', '', 'brasao')}</figure>` : ''}
   <div class="corpo">${corpo || `<p class="nota">Esta notícia foi publicada originalmente no site anterior da Câmara${n.original ? `. <a href="${n.original}" target="_blank" rel="noopener">Ver a publicação original</a>` : ''}.</p>`}</div>
   ${n.fotos && n.fotos.length ? `<div class="galeria">${n.fotos.map(f => img(f, '')).join('')}</div>` : ''}
+  ${n.docs && n.docs.length ? `<section class="docs-not" aria-labelledby="docs-not-t"><h2 id="docs-not-t">Documentos para baixar</h2><ul>${n.docs.map(d => `<li><a href="${esc(d.url)}" download="${esc(d.nome)}" target="_blank" rel="noopener">${ic('doc')}<span>${esc(d.nome)}</span>${d.tamanho ? `<small>${d.tamanho < 1048576 ? Math.max(1, Math.round(d.tamanho / 1024)) + ' KB' : (d.tamanho / 1048576).toFixed(1).replace('.', ',') + ' MB'}</small>` : ''}</a></li>`).join('')}</ul></section>` : ''}
   <div class="compartilhar"><span>Compartilhar:</span>
     <a class="btn btn-claro" href="https://wa.me/?text=${encodeURIComponent(n.titulo + ' ' + location.href)}" target="_blank" rel="noopener">${ic('whatsapp')} WhatsApp</a>
     <button class="btn btn-claro" type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(location.href);this.lastChild.textContent=' Link copiado'">${ic('link')}<span> Copiar link</span></button>

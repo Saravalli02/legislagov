@@ -247,7 +247,7 @@
       <p class="lgt-erro" id="lgt-erro" role="alert"></p>
       <div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="button" class="lgt-btn" id="lgt-prev-t">👁 Pré-visualizar</button><button type="submit" class="lgt-btn primario">${item ? 'Salvar alterações' : 'Publicar'}</button></div>
     </form>`);
-    const f = $('#lgt-form');
+    const f = $('#lgt-form'); f.dataset.lgPublica = '1';
     $('#lgt-prev-t').onclick = () => {
       const d = Object.fromEntries(new FormData(f)); const erro = $('#lgt-erro'); erro.textContent = '';
       if (!d.cat || !d.sub || !d.titulo.trim()) { erro.textContent = 'Para pré-visualizar, preencha ao menos seção, tipo e título.'; return; }
@@ -272,6 +272,9 @@
       else { const file = f.arquivo.files[0]; if (file) { if (file.size > TRANSP_LIMITE_ARQUIVO) { erro.textContent = `Arquivo maior que ${Math.round(TRANSP_LIMITE_ARQUIVO / 1048576 * 10) / 10} MB. Divida o arquivo ou use um link.`; return; } arquivo = { nome: file.name, tamanho: file.size, dados: await lerArquivo(file) }; } if (!arquivo) { erro.textContent = 'Anexe um arquivo ou escolha “Link de outro sistema”.'; return; } }
       const agora = new Date().toISOString(); const u = usuario() || {};
       const novo = { ...(item || {}), id: item ? item.id : uid('t'), cat: d.cat, sub: d.sub, titulo: d.titulo.trim(), descricao: (d.descricao || '').trim(), data: d.data, competencia: d.competencia || '', numero: (d.numero || '').trim(), valor, fornecedor: (d.fornecedor || '').trim(), arquivo, link, publicado: !!f.publicado.checked, autor: u.nome || '', criadoEm: item ? item.criadoEm : agora, atualizadoEm: agora };
+      if (novo.publicado && !f._confirmado) { const novoArq = arquivo && arquivo.dados && (!item || !item.arquivo || item.arquivo.dados !== arquivo.dados) ? [arquivo] : [];
+        return confirmarPublicacao({ titulo: novo.titulo, resumo: novo.descricao, selo: 'Portal da Transparência · ' + transpCategoria(novo.cat).nome + ' › ' + novo.sub, arquivos: novoArq, ok: () => { f._confirmado = true; f.requestSubmit(); } }); }
+      f._confirmado = false;
       const lista = transpLer().filter(i => i.id !== novo.id); lista.push(novo);
       try { transpSalvar(lista); } catch (x) { alertaArmazenamento(); return; }
       log('Transparência', `${item ? 'Editou' : 'Publicou'}: ${novo.titulo} (${transpCategoria(novo.cat).nome} › ${novo.sub})`);
@@ -304,23 +307,34 @@
         <label class="cheio"><span>Foto de capa</span><input name="foto" type="file" accept="image/*"><small class="lgt-ajuda">${it.capa ? 'Já existe uma foto; envie outra para substituir. ' : ''}A foto é reduzida automaticamente.</small></label>
         <div class="cheio lgt-galeria-ed"><span class="lgt-rot">Galeria de fotos da matéria</span><div id="lgt-gal">${(it.fotos || []).map((f, i) => `<figure data-i="${i}"><img src="${f}" alt=""><button type="button" class="lgt-mini perigo" onclick="this.closest('figure').remove()" aria-label="Remover foto ${i + 1}">Remover</button></figure>`).join('')}</div>
           <input name="galeria" type="file" accept="image/*" multiple><small class="lgt-ajuda">Escolha uma ou várias fotos para aparecerem no fim da matéria.</small></div>
+        <div class="cheio lgt-docs-ed"><span class="lgt-rot">Documentos para baixar (PDF, Word, planilha)</span><ul id="lgt-docs">${(it.docs || []).map((d, i) => `<li data-i="${i}"><span>${esc(d.nome)}</span><small>${tamTxt(d.tamanho)}</small><button type="button" class="lgt-mini perigo" onclick="this.closest('li').remove()" aria-label="Remover ${esc(d.nome)}">Remover</button></li>`).join('')}</ul>
+          <input name="docs" type="file" multiple accept=".pdf,.doc,.docx,.odt,.xls,.xlsx,.ods,.csv,.txt,.ppt,.pptx,.zip"><small class="lgt-ajuda">O visitante do site consegue abrir e baixar. Até 10 MB por arquivo.</small></div>
         <label class="cheio checkbox"><input type="checkbox" name="destaque" ${it.destaque ? 'checked' : ''}> Destaque no carrossel da página inicial</label>
         <label class="cheio checkbox"><input type="checkbox" name="publicado" ${it.publicado !== false ? 'checked' : ''}> Publicar no site agora</label>
       </div>
       <p class="lgt-erro" id="lgt-erro" role="alert"></p>
       <div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="button" class="lgt-btn" id="lgt-prev-n">👁 Pré-visualizar</button><button type="submit" class="lgt-btn primario">${n ? 'Salvar' : 'Publicar notícia'}</button></div></form>`);
-    const f = $('#lgt-fn');
+    const f = $('#lgt-fn'); f.dataset.lgPublica = '1';
+    f.publicado.onchange = () => { f.querySelector('button[type=submit]').textContent = f.publicado.checked ? (n ? 'Salvar e publicar' : 'Publicar notícia') : 'Salvar rascunho'; };
     const montar = async () => {
       const d = Object.fromEntries(new FormData(f));
       if (!d.titulo.trim() || !d.data) { $('#lgt-erro').textContent = 'Preencha o título e a data.'; return null; }
       let capa = n && n.capa || ''; const file = f.foto.files[0]; if (file) { try { capa = await reduzirImagem(file, 1400); } catch (x) { $('#lgt-erro').textContent = 'Não foi possível ler a imagem.'; return null; } }
       const fotos = [...f.querySelectorAll('#lgt-gal img')].map(i => i.getAttribute('src'));
       for (const g of f.galeria.files) { try { fotos.push(await reduzirImagem(g, 1200)); } catch (x) { } }
-      return { ...(n || {}), id: n ? n.id : uid('p'), titulo: d.titulo.trim(), categoria: d.categoria, data: d.data, resumo: (d.resumo || '').trim(), corpo: (d.corpo || '').trim(), capa, fotos, destaque: !!f.destaque.checked, publicado: !!f.publicado.checked, autor: (usuario() || {}).nome || '', atualizadoEm: new Date().toISOString() };
+      const docs = [...f.querySelectorAll('#lgt-docs li')].map(li => (it.docs || [])[+li.dataset.i]).filter(Boolean);
+      for (const d of f.docs.files) { if (d.size > 10 * 1048576) { $('#lgt-erro').textContent = `${d.name}: o limite é 10 MB por arquivo.`; return null; } try { docs.push({ nome: d.name, tamanho: d.size, tipo: d.type || '', url: await lerArquivo(d) }); } catch (x) { $('#lgt-erro').textContent = 'Não foi possível ler ' + d.name + '.'; return null; } }
+      return { ...(n || {}), id: n ? n.id : uid('p'), titulo: d.titulo.trim(), categoria: d.categoria, data: d.data, resumo: (d.resumo || '').trim(), corpo: (d.corpo || '').trim(), capa, fotos, docs, destaque: !!f.destaque.checked, publicado: !!f.publicado.checked, autor: (usuario() || {}).nome || '', atualizadoEm: new Date().toISOString() };
     };
-    $('#lgt-prev-n').onclick = async () => { const x = await montar(); if (!x) return; previa('noticia', { ...x, id: '__previa__', publicado: true }, '../noticia.html?id=__previa__&previa=1', () => f.requestSubmit()); };
+    let jaConfirmou = false;
+    $('#lgt-prev-n').onclick = async () => { const x = await montar(); if (!x) return; previa('noticia', { ...x, id: '__previa__', publicado: true }, '../noticia.html?id=__previa__&previa=1', () => { jaConfirmou = true; f.requestSubmit(); }); };
     f.onsubmit = async e => {
       e.preventDefault(); const novo = await montar(); if (!novo) return;
+      const confirmado = jaConfirmou; jaConfirmou = false;
+      if (novo.publicado && !confirmado) {
+        const novosArq = novo.docs.filter(d => !(it.docs || []).some(x => x.url === d.url));
+        return confirmarPublicacao({ titulo: novo.titulo, resumo: novo.resumo, selo: novo.categoria + (novo.destaque ? ' · destaque na capa' : ''), img: novo.capa, arquivos: novosArq, ok: () => { jaConfirmou = true; f.requestSubmit(); } });
+      }
       const l = ler(NOT_KEY, []).filter(x => x.id !== novo.id); l.push(novo);
       if (!gravar(NOT_KEY, l)) return;
       log('Notícias do site', `${n ? 'Editou' : 'Publicou'}: ${novo.titulo}`); fecharModal(); desenharNoticias(); aviso(novo.publicado ? 'Notícia publicada no site.' : 'Rascunho salvo.');
@@ -348,6 +362,17 @@
   }
   window.lgtPrevia = previa;
 
+  /* ---------------- “Confirme a publicação”: nada vai ao site sem a pessoa confirmar ---------------- */
+  const tamTxt = n => !n ? '' : n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' KB' : (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+  function confirmarPublicacao(o) {
+    const arqs = (o.arquivos || []).filter(a => a && a.nome).map(a => ({ nome: a.nome, tam: tamTxt(a.tamanho) }));
+    const pergunta = { titulo: 'Confirme a publicação', item: o.titulo || '', img: o.img || '', selo: o.selo || '', resumo: o.resumo || '', arquivos: arqs,
+      texto: o.texto || 'Depois de confirmar, isto aparece no site da Câmara para todos os visitantes na hora.', ok: o.botao || 'Confirmar e publicar', cancelar: 'Voltar e revisar' };
+    if (window.lgConfirmar) return lgConfirmar(pergunta).then(sim => { if (sim) o.ok && o.ok(); });
+    if (confirm('Confirme a publicação: ' + (o.titulo || ''))) o.ok && o.ok();
+  }
+  window.lgtConfirmarPublicacao = confirmarPublicacao;
+
   /* ---------------- utilitários de arquivo e janela ---------------- */
   function lerArquivo(file) { return new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = erro; r.readAsDataURL(file); }); }
   function reduzirImagem(file, max) {
@@ -362,7 +387,7 @@
     $('#lgt-sim').onclick = () => { fecharModal(); sim(); };
   }
 
-  window.lgtUI = { abrirModal, fecharModal, aviso, confirmar, esc, ler, gravar, usuario, log, dataBR, hojeISO, uid, reduzirImagem, previa };
+  window.lgtUI = { abrirModal, fecharModal, aviso, confirmar, esc, ler, gravar, usuario, log, dataBR, hojeISO, uid, reduzirImagem, previa, confirmarPublicacao, lerArquivo };
 
   /* ---------------- estilos (seguem o layout escolhido: Moderno ou Simples) ---------------- */
   const css = document.createElement('style'); css.id = 'lgt-style'; css.textContent = `
@@ -449,6 +474,9 @@
   .lgt-areas-info div{background:var(--lg28-panel);border:1px solid var(--lg28-stroke);border-radius:12px;padding:14px 16px}
   .lgt-areas-info b{display:block;color:var(--lg28-ink)}.lgt-areas-info span{font-size:13px;color:var(--lg28-muted)}
   .lgt-acessos{min-width:980px}
+  .lgt-docs-ed ul{list-style:none;margin:6px 0 8px;padding:0;display:flex;flex-direction:column;gap:6px}
+  .lgt-docs-ed li{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid var(--lg28-stroke,#ddd);border-radius:8px;font-size:14px}
+  .lgt-docs-ed li span{flex:1;overflow-wrap:anywhere}.lgt-docs-ed li small{color:var(--lg28-muted,#555)}
   #lgt-previa{position:fixed;inset:0;z-index:2147482500;background:#0b0d11;display:flex;flex-direction:column}
   .lgt-previa-barra{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:#16181d;border-bottom:3px solid #e2aa1c;color:#f4f5f7}
   .lgt-previa-selo{background:#e2aa1c;color:#1a1300;font:800 11px/1 inherit;letter-spacing:.1em;padding:6px 9px;border-radius:6px}
