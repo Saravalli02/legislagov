@@ -16,7 +16,7 @@ def main():
         caminho = os.path.join(PASTA, nome)
         if not os.path.isfile(caminho):
             continue
-        tipo = "image/png" if nome.endswith(".png") else "application/octet-stream"
+        tipo = {".png": "image/png", ".json": "application/json", ".js": "text/javascript", ".html": "text/html; charset=utf-8"}.get(os.path.splitext(nome)[1], "text/html; charset=utf-8" if nome == "garcom" else "application/octet-stream")
         with open(caminho, "rb") as f:
             s3.put_object(Bucket=ce.BUCKET, Key="restaurante-site/" + nome, Body=f.read(), ContentType=tipo)
         enviados.append(nome)
