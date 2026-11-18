@@ -162,13 +162,13 @@
     try {
       const me = eu(); const lista = ler('lg_alertas_seg_v1', []).filter(x => Date.now() - new Date(x.quando).getTime() < 48 * 36e5).slice(0, 10);
       lista.forEach(x => { const minha = me && String(x.login || '').toLowerCase() === me.login;
-        add(['eu'], { chave: 'seg:' + x.id, urgente: true, area: '',
+        add(['eu'], { chave: 'seg:' + x.id, urgente: true, area: '', data: x.quando,
           titulo: minha ? 'Tentativas de entrar na sua conta' : `Alerta de segurança: conta “${x.login}”${x.existe ? '' : ' (não existe)'}`,
           texto: `${x.tentativas} senhas erradas em 15 minutos, às ${new Date(x.quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} de ${new Date(x.quando).toLocaleDateString('pt-BR')}, do endereço ${x.ip}.${x.tipo === 'bloqueio' ? ' A conta ficou bloqueada por 15 minutos para esse endereço.' : ''} ${minha ? 'Se não foi você, troque sua senha agora.' : 'Se o usuário não reconhecer, peça para trocar a senha.'}`,
           acao: minha ? 'window.lgTrocarSenha && lgTrocarSenha()' : '' }); });
     } catch (e) { }
     // expedientes, protocolos numerados e mensagens (avisos do painel administrativo)
-    try { if (window.lgv10Para) ler('lgv10_notifications_v1', []).filter(n => lgv10Para(n)).slice(0, 30).forEach(n => add(['eu'], { chave: 'l10:' + n.id, titulo: n.title, texto: n.detail, acao: `lgavL10('${n.id}')`, area: '', urgente: /^(expediente|protocolo)/.test(n.kind || '') })); } catch (e) { }
+    try { const lg = loginDe(usuario()); if (window.lgv10Para) ler('lgv10_notifications_v1', []).filter(n => n && lgv10Para({ ...n, readBy: [] })).slice(0, 40).forEach(n => add(['eu'], { chave: 'l10:' + n.id, titulo: n.title, texto: n.detail, acao: `lgavL10('${n.id}')`, area: '', data: n.date, kind: n.kind || '', lidoSrv: (n.readBy || []).map(x => String(x).toLowerCase()).includes(lg), urgente: /^(expediente|protocolo)/.test(n.kind || '') && !(n.readBy || []).map(x => String(x).toLowerCase()).includes(lg) })); } catch (e) { }
     return out;
   }
   function minhas() {
@@ -197,33 +197,97 @@
   }
   function contagem() {
     const me = eu(); if (!me) return 0; const d = estado(); const st = meuEstado(d, me);
-    return minhas().filter(x => !st.lidos[x.chave] && !x.info).length + st.hist.filter(h => !h.lido).length;
+    return minhas().filter(x => !st.lidos[x.chave] && !x.lidoSrv && !x.info).length + st.hist.filter(h => !h.lido).length;
   }
   window.lgavContagem = () => { try { return contagem(); } catch (e) { return 0; } };
 
   /* ================= sino ================= */
-  let abaSino = 'pend';
+  // novidades do sistema (o que mudou no LegislaGov), mostradas a quem pode usar cada uma
+  const NOVIDADES = [
+    { id: 'n20261118a', data: '2026-11-18', titulo: 'Minha conta', texto: 'Foto, CPF, celular e e-mails na sua conta, e o histórico das suas entradas no sistema. Clique no seu nome, no alto da tela.', acao: 'window.lgctAbrir && lgctAbrir()' },
+    { id: 'n20261118b', data: '2026-11-18', titulo: 'Linha do tempo', texto: 'Registro de tudo o que acontece no sistema, com filtros por período, usuário e atividade.', acao: 'window.lgltAbrir && lgltAbrir()', pode: () => window.lgltPode && lgltPode() },
+    { id: 'n20261118c', data: '2026-11-18', titulo: 'Relatórios da Ouvidoria e do e-SIC', texto: 'Modelos da Lei 13.460/2017 (relatório de gestão) e da LAI (relatório estatístico), prontos para imprimir e publicar.', acao: "window.lgrlAbrir && lgrlAbrir('ouvgestao')", pode: () => window.lgrlPode && lgrlPode() },
+    { id: 'n20261118d', data: '2026-11-18', titulo: 'Confirme a publicação', texto: 'Antes de qualquer coisa ir para o site, o sistema mostra a foto, o texto e os arquivos para você conferir.' },
+    { id: 'n20261118e', data: '2026-11-18', titulo: 'Documentos para baixar nas notícias', texto: 'Anexe PDF, Word ou planilha a uma notícia: o cidadão baixa direto no site.', pode: () => window.lgNivelArea && lgNivelArea('site') === 'edicao' },
+    { id: 'n20261117a', data: '2026-11-17', titulo: 'Relatórios', texto: 'Protocolos, projetos de lei, ofícios, votações, presença e outros, por período, para imprimir ou baixar.', acao: 'window.lgrlAbrir && lgrlAbrir()', pode: () => window.lgrlPode && lgrlPode() },
+    { id: 'n20261117b', data: '2026-11-17', titulo: 'Recibo de protocolo em duas vias', texto: 'Via da Câmara e via do interessado, com número, data, hora e quem protocolou.' },
+  ];
+  const novidades = () => NOVIDADES.filter(n => { try { return !n.pode || n.pode(); } catch (e) { return false; } });
+  const quando = x => { const t = Date.parse(x.data || (x.prazo && x.prazo.desde) || ''); return isNaN(t) ? 0 : t; };
+  function relativo(t) {
+    if (!t) return ''; const s = Math.round((Date.now() - t) / 1000);
+    if (s < 60) return 'agora'; const m = Math.round(s / 60); if (m < 60) return `há ${m} minuto${m > 1 ? 's' : ''}`;
+    const h = Math.round(m / 60); if (h < 24) return `há ${h} hora${h > 1 ? 's' : ''}`;
+    const d = Math.round(h / 24); if (d === 1) return 'ontem'; if (d < 30) return `há ${d} dias`;
+    return new Date(t).toLocaleDateString('pt-BR');
+  }
+  function iconeDe(x, tp) {
+    if (tp === 'h') return 'materias'; if (tp === 'n') return 'melhorias';
+    const k = String(x.chave || '');
+    if (k.startsWith('seg:')) return 'cadeado';
+    if (k.startsWith('l10:')) return /^protocolo/.test(x.kind) ? 'protocolo' : /^expediente/.test(x.kind) ? 'expedientes' : x.kind === 'mensagem' ? 'mensagens' : 'notificacoes';
+    if (/^(coaut|rasc):/.test(k)) return 'assinar';
+    return x.prazo ? 'prazo' : 'check';
+  }
+  const linkDe = (x, tp) => tp === 'n' ? (x.acao ? 'Conhecer' : '') : tp === 'h' ? 'Ver matéria' : String(x.chave).startsWith('l10:') ? 'Visualizar' : String(x.chave).startsWith('seg:') ? (x.acao ? 'Trocar a senha' : 'Ver detalhes') : x.info ? 'Acompanhar' : 'Fazer agora';
+  let abaSino = 'not', filtroSino = 'nao';
   window.lgavAbrir = function (forcar) {
     let el = $('#lgav-sino');
-    if (!el) { el = document.createElement('div'); el.id = 'lgav-sino'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Avisos e pendências'); document.body.appendChild(el); }
+    if (!el) { el = document.createElement('div'); el.id = 'lgav-sino'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Notificações'); document.body.appendChild(el); }
     if (el.classList.contains('open') && forcar !== true) { el.classList.remove('open'); return; }
-    atualizarNovidades(); desenharSino(); el.classList.add('open'); setTimeout(() => el.querySelector('button')?.focus(), 30);
+    atualizarNovidades(); desenharSino(); el.classList.add('open'); setTimeout(() => el.querySelector('[role=tab][aria-selected=true]')?.focus(), 30);
   };
-  function itemHTML(x, lido, tipo, i) {
-    return `<li class="${lido ? 'lido' : ''} ${x.urgente ? 'urg' : ''}"><button type="button" onclick="lgavIr('${tipo}',${i})"><b>${esc(x.titulo)}</b>${x.texto ? `<small>${esc(String(x.texto).slice(0, 120))}</small>` : ''}<span class="lgav-meta">${x.prazo ? chip(x.prazo) : ''}${x.data ? `<i>${esc(new Date(x.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}</i>` : ''}${x.info ? '<i>acompanhamento</i>' : ''}</span></button></li>`;
-  }
-  let cacheP = [], cacheH = [];
+  let cacheP = [], cacheH = [], cacheU = [];
   function desenharSino() {
     const el = $('#lgav-sino'); if (!el) return; const me = eu(); if (!me) return;
-    const d = estado(); const st = meuEstado(d, me); cacheP = minhas(); cacheH = st.hist;
-    const nP = cacheP.filter(x => !st.lidos[x.chave] && !x.info).length, nH = cacheH.filter(h => !h.lido).length;
-    el.innerHTML = `<div class="lgav-cab"><b>${ic('notificacoes')} Avisos</b><button type="button" class="lgav-x" onclick="lgavAbrir()" aria-label="Fechar">×</button></div>
-      <div class="lgav-abas" role="tablist"><button type="button" role="tab" aria-selected="${abaSino === 'pend'}" onclick="lgavAba('pend')">Para fazer <b>${cacheP.filter(x => !x.info).length}</b>${nP ? '<i></i>' : ''}</button><button type="button" role="tab" aria-selected="${abaSino === 'nov'}" onclick="lgavAba('nov')">Novidades <b>${nH}</b>${nH ? '<i></i>' : ''}</button></div>
-      <ul class="lgav-lista">${abaSino === 'pend' ? (cacheP.map((x, i) => itemHTML(x, st.lidos[x.chave], 'p', i)).join('') || '<li class="lgav-vazio">Nada pendente com você. 👍</li>') : (cacheH.map((x, i) => itemHTML(x, x.lido, 'h', i)).join('') || `<li class="lgav-vazio">${me.v ? 'As movimentações das suas proposituras aparecem aqui.' : 'Sem novidades.'}</li>`)}</ul>
-      <div class="lgav-rod"><button type="button" onclick="lgavLidas()">Marcar tudo como lido</button><button type="button" onclick="lgavAbrir();lgavTela()">Ver tela de pendências</button><button type="button" onclick="lgavAbrir();window.lgv10Open&&lgv10Open('inbox')">${ic('mensagens')} Mensagens</button></div>`;
+    const d = estado(); const st = meuEstado(d, me); st.nov = st.nov || {}; cacheP = minhas(); cacheH = st.hist;
+    const todosU = cacheP.map((x, i) => ({ x, i, tp: 'p', lido: !!(st.lidos[x.chave] || x.lidoSrv) })).concat(cacheH.map((x, i) => ({ x, i, tp: 'h', lido: !!x.lido }))).sort((a, b) => quando(b.x) - quando(a.x));
+    const naoLidas = todosU.filter(o => !o.lido && !o.x.info), andamento = todosU.filter(o => o.tp === 'p' && !/^(l10|seg):/.test(o.x.chave));
+    const novs = novidades(), novN = novs.filter(n => !st.nov[n.id]).length;
+    const lista = abaSino === 'nov' ? novs.map(n => ({ x: n, tp: 'n', lido: !!st.nov[n.id] })) : (filtroSino === 'nao' ? naoLidas : filtroSino === 'lidas' ? todosU.filter(o => o.lido) : andamento);
+    cacheU = lista;
+    const vazio = abaSino === 'nov' ? 'Sem novidades.' : filtroSino === 'nao' ? 'Nenhuma notificação nova. Tudo em dia.' : filtroSino === 'lidas' ? 'Nenhuma notificação lida ainda.' : 'Nada em andamento com você.';
+    const item = (o, k) => { const x = o.x, t = o.tp === 'n' ? Date.parse(x.data + 'T12:00') : quando(x), lk = linkDe(x, o.tp);
+      return `<li class="lgav-nt ${o.lido ? 'lido' : ''} ${x.urgente && !o.lido ? 'urg' : ''}"><span class="lgav-nt-ic" aria-hidden="true">${ic(iconeDe(x, o.tp))}</span>
+        <div class="lgav-nt-txt"><p>${!o.lido ? '<i class="lgav-ponto" aria-label="não lida"></i>' : ''}${esc(x.titulo)}</p>${x.texto ? `<small>${esc(String(x.texto).slice(0, 160))}</small>` : ''}
+          <div class="lgav-nt-pe">${lk ? `<button type="button" class="lgav-link" onclick="lgavItem(${k})">${lk}</button>` : '<span></span>'}${x.prazo ? chip(x.prazo) : ''}<time${t ? ` datetime="${new Date(t).toISOString()}" title="${esc(new Date(t).toLocaleString('pt-BR'))}"` : ''}>${o.tp === 'n' ? new Date(t).toLocaleDateString('pt-BR') : relativo(t)}</time></div></div>
+        <button type="button" class="lgav-env" onclick="lgavAlternar(${k})" aria-label="${o.lido ? 'Marcar como não lida' : 'Marcar como lida'}" title="${o.lido ? 'Marcar como não lida' : 'Marcar como lida'}">${ic(o.lido ? 'mensagens' : 'check')}</button></li>`; };
+    el.innerHTML = `<div class="lgav-cab2"><div class="lgav-abas2" role="tablist" aria-label="Notificações">
+        <button type="button" role="tab" aria-selected="${abaSino === 'not'}" onclick="lgavAba('not')">Notificações${naoLidas.length ? ` <b>${naoLidas.length}</b>` : ''}</button>
+        <button type="button" role="tab" aria-selected="${abaSino === 'nov'}" onclick="lgavAba('nov')">Novidades${novN ? ` <b>${novN}</b>` : ''}</button></div>
+        <button type="button" class="lgav-x" onclick="lgavAbrir()" aria-label="Fechar">×</button></div>
+      ${abaSino === 'not' ? `<div class="lgav-filtro" role="group" aria-label="Filtrar por"><span>Filtrar por</span>
+        <button type="button" aria-pressed="${filtroSino === 'nao'}" onclick="lgavFiltro('nao')">Não lidas (${naoLidas.length})</button>
+        <button type="button" aria-pressed="${filtroSino === 'lidas'}" onclick="lgavFiltro('lidas')">Lidas</button>
+        <button type="button" aria-pressed="${filtroSino === 'and'}" onclick="lgavFiltro('and')">Em andamento (${andamento.length})</button></div>` : ''}
+      <div class="lgav-marcar"><button type="button" onclick="lgavLidas()">Marcar todas como lidas</button></div>
+      <ul class="lgav-lista2">${lista.map(item).join('') || `<li class="lgav-vazio">${vazio}</li>`}</ul>
+      <div class="lgav-rod"><button type="button" onclick="lgavAbrir();lgavTela()">Ver todas as pendências</button><button type="button" onclick="lgavAbrir();window.lgv10Open&&lgv10Open('inbox')">${ic('mensagens')} Mensagens</button></div>`;
   }
-  window.lgavAba = k => { abaSino = k; desenharSino(); };
-  window.lgavLidas = function () { const me = eu(); const d = estado(); const st = meuEstado(d, me); minhas().forEach(x => st.lidos[x.chave] = 1); st.hist.forEach(h => h.lido = true); gravar(KEY, d); desenharSino(); sincronizarBadge(); };
+  window.lgavAba = k => { abaSino = k; desenharSino(); $('#lgav-sino [role=tab][aria-selected=true]')?.focus(); };
+  window.lgavFiltro = k => { filtroSino = k; desenharSino(); $(`#lgav-sino .lgav-filtro [aria-pressed=true]`)?.focus(); };
+  function marcar(o, lido) {
+    const me = eu(); const d = estado(); const st = meuEstado(d, me); st.nov = st.nov || {};
+    if (o.tp === 'n') { if (lido) st.nov[o.x.id] = 1; else delete st.nov[o.x.id]; }
+    else if (o.tp === 'h') { const h = st.hist.find(y => y.id === o.x.id); if (h) h.lido = lido; }
+    else { if (lido) st.lidos[o.x.chave] = 1; else delete st.lidos[o.x.chave];
+      if (String(o.x.chave).startsWith('l10:')) { const id = o.x.chave.slice(4);
+        if (lido) { try { window.lgv10Read && lgv10Read(id); } catch (e) { } }
+        else { const a = ler('lgv10_notifications_v1', []); const n = a.find(y => y.id === id); if (n) { n.readBy = (n.readBy || []).filter(y => String(y).toLowerCase() !== me.login); gravar('lgv10_notifications_v1', a); } } } }
+    gravar(KEY, d);
+  }
+  window.lgavAlternar = function (k) { const o = cacheU[k]; if (!o) return; marcar(o, !o.lido); desenharSino(); sincronizarBadge(); $('#lgav-sino .lgav-marcar button')?.focus(); };
+  window.lgavItem = function (k) {
+    const o = cacheU[k]; if (!o) return; marcar(o, true); $('#lgav-sino')?.classList.remove('open'); sincronizarBadge();
+    if (o.tp === 'n') { if (o.x.acao) try { (new Function(o.x.acao))(); } catch (e) { } return; }
+    executar(o.x);
+  };
+  window.lgavLidas = function () {
+    const me = eu(); const d = estado(); const st = meuEstado(d, me); st.nov = st.nov || {};
+    if (abaSino === 'nov') novidades().forEach(n => st.nov[n.id] = 1);
+    else { minhas().forEach(x => { st.lidos[x.chave] = 1; if (String(x.chave).startsWith('l10:') && !x.lidoSrv) try { window.lgv10Read && lgv10Read(x.chave.slice(4)); } catch (e) { } }); st.hist.forEach(h => h.lido = true); }
+    gravar(KEY, d); desenharSino(); sincronizarBadge();
+  };
   window.lgavIr = function (tipo, i) {
     const x = tipo === 'p' ? cacheP[i] : cacheH[i]; if (!x) return; const me = eu(); const d = estado(); const st = meuEstado(d, me);
     if (tipo === 'p') st.lidos[x.chave] = 1; else x.lido = true, st.hist[i] && (st.hist[i].lido = true); gravar(KEY, d);
@@ -441,6 +505,29 @@
   .lgav-lista li.urg:not(.lido) button b::before{background:#e5484d}.lgav-lista b{font-size:13.5px}.lgav-lista small{color:var(--lg28-muted);font-size:12.5px}.lgav-lista li.lido{opacity:.7}
   .lgav-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.lgav-meta i{font-style:normal;font-size:11.5px;color:var(--lg28-muted)}
   .lgav-vazio{padding:22px 12px;text-align:center;color:var(--lg28-muted);font-size:13.5px;list-style:none}
+  .lgav-cab2{display:flex;align-items:flex-end;justify-content:space-between;padding:10px 12px 0 12px;border-bottom:1px solid var(--lg28-stroke)}
+  .lgav-abas2{display:flex;flex:1}.lgav-abas2 button{flex:1;height:42px;border:0;border-bottom:3px solid transparent;background:none;color:var(--lg28-muted);font:inherit;font-weight:700;font-size:13.5px;letter-spacing:.02em;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .lgav-abas2 button[aria-selected="true"]{color:#1f6fd1;border-bottom-color:#1f6fd1}.lgav-abas2 b{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#d92d20;color:#fff;font-size:11.5px;display:inline-grid;place-items:center}
+  .lgav-abas2 button:focus-visible{outline:2px solid #1f6fd1;outline-offset:-2px}
+  .lgav-cab2 .lgav-x{margin-bottom:8px}
+  .lgav-filtro{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:10px 12px 0;padding:5px 8px;border-radius:9px;background:var(--lg28-inset,rgba(127,127,127,.12));font-size:12.5px}
+  .lgav-filtro span{font-weight:700;margin-right:4px;font-size:11.5px;letter-spacing:.03em}
+  .lgav-filtro button{border:0;background:none;color:var(--lg28-muted);font:inherit;padding:5px 8px;border-radius:7px;cursor:pointer}
+  .lgav-filtro button[aria-pressed="true"]{background:var(--lg28-panel,#fff);color:var(--lg28-ink);font-weight:650;box-shadow:0 0 0 1px var(--lg28-stroke)}
+  .lgav-marcar{display:flex;justify-content:flex-end;padding:6px 12px 0}.lgav-marcar button{border:0;background:none;color:#1f6fd1;font:inherit;font-size:12.5px;cursor:pointer;padding:4px}
+  .lgav-marcar button:hover{text-decoration:underline}
+  .lgav-lista2{list-style:none;margin:0;padding:4px 6px 6px;overflow:auto;flex:1}
+  .lgav-nt{display:grid;grid-template-columns:32px minmax(0,1fr) 32px;gap:10px;padding:10px 8px;border-radius:10px}
+  .lgav-nt+.lgav-nt{border-top:1px solid var(--lg28-stroke)}
+  .lgav-nt-ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:#1f6fd1;background:color-mix(in srgb,#1f6fd1 12%,transparent)}
+  .lgav-nt-ic svg{width:18px;height:18px}.lgav-nt.urg .lgav-nt-ic{color:#d92d20;background:color-mix(in srgb,#d92d20 12%,transparent)}
+  .lgav-nt-txt p{margin:0;font-size:13.5px;line-height:1.35}.lgav-nt.lido .lgav-nt-txt p{font-weight:400;color:var(--lg28-muted)}.lgav-nt:not(.lido) .lgav-nt-txt p{font-weight:600}
+  .lgav-ponto{display:inline-block;width:8px;height:8px;border-radius:50%;background:#1f6fd1;margin-right:6px;vertical-align:1px}.lgav-nt.urg .lgav-ponto{background:#d92d20}
+  .lgav-nt-txt small{display:block;color:var(--lg28-muted);font-size:12.5px;margin-top:2px}
+  .lgav-nt-pe{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}.lgav-nt-pe time{margin-left:auto;color:var(--lg28-muted);font-size:12px;white-space:nowrap}
+  .lgav-link{border:0;background:none;color:#1f6fd1;font:inherit;font-size:13px;font-weight:600;padding:2px 0;cursor:pointer}.lgav-link:hover{text-decoration:underline}
+  .lgav-env{width:32px;height:32px;border:0;border-radius:8px;background:none;color:var(--lg28-muted);cursor:pointer;display:grid;place-items:center}.lgav-env:hover{background:var(--lg28-inset,rgba(127,127,127,.12));color:var(--lg28-ink)}.lgav-env svg{width:16px;height:16px}
+  .lgav-nt button:focus-visible{outline:2px solid #1f6fd1;outline-offset:2px}
   .lgav-rod{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--lg28-stroke);flex-wrap:wrap}.lgav-rod button{flex:1;min-height:34px;border-radius:8px;border:1px solid var(--lg28-stroke);background:transparent;color:var(--lg28-ink);font:600 12.5px var(--v32-font,inherit);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 8px}
   .lgav-rod .lgv31-ic{width:14px;height:14px}
   .lgav-chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}.lgav-chip .lgv31-ic{width:13px;height:13px;flex-basis:13px}

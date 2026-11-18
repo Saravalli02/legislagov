@@ -340,7 +340,7 @@
       const poe = () => { if (document.querySelector('.lgsync-trocar')) return;
         const sair_ = [...document.querySelectorAll('button, a')].find(b => /^\s*Sair\s*$/.test(b.textContent || '') && b.offsetParent);
         if (!sair_) return; const b = sair_.cloneNode(true); b.removeAttribute('onclick'); b.removeAttribute('href'); b.classList.add('lgsync-trocar');
-        b.querySelectorAll('svg').forEach(s => s.remove()); b.textContent = 'Minha senha e e-mail'; b.onclick = e => { e.preventDefault(); trocarSenha(); };
+        b.querySelectorAll('svg').forEach(s => s.remove()); b.textContent = 'Minha conta'; b.onclick = e => { e.preventDefault(); if (window.lgctAbrir) lgctAbrir(); else trocarSenha(); };
         sair_.parentNode.insertBefore(b, sair_); };
       setInterval(poe, 2000);
       status();

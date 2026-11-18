@@ -556,6 +556,12 @@ class Handler(SimpleHTTPRequestHandler):
                 lgapi._marcar_usuarios(camara)
                 lgapi.registrar(camara, u["usuario"], "E-mail de recuperação atualizado", em.split("@")[-1] if em else "removido", ip)
                 return self._json(200, {"ok": True})
+            if caminho == "/api/minha-conta" and metodo == "POST":
+                erro, mudou = lgapi.minha_conta(camara, u, self._corpo(400_000), ip)
+                eu = lgapi._usuario(u["id"]) or {}
+                return self._json(400 if erro else 200, {"ok": not erro, "erro": erro, "mudou": mudou, "eu": {k: v for k, v in eu.items() if k != "senha"}})
+            if caminho == "/api/meu-historico" and metodo == "POST":
+                return self._json(200, {"ok": True, "itens": lgapi.meu_historico(camara, u["usuario"])})
             if caminho == "/api/usuario/senha" and metodo == "POST":
                 d = self._corpo(5_000)
                 erro = lgapi.nova_senha_pelo_admin(camara, u, str(d.get("id", "")), d.get("senha"))

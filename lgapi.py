@@ -354,6 +354,74 @@ def definir_senha(login_, senha, camara=None):
     return n
 
 
+CONTA_CAMPOS = ("foto", "cpf", "celular", "nascimento", "email2")   # dados que só a própria pessoa muda (Minha conta)
+
+
+def _cpf_valido(c):
+    c = re.sub(r"\D", "", str(c or ""))
+    if len(c) != 11 or c == c[0] * 11:
+        return False
+    for n in (9, 10):
+        soma = sum(int(c[i]) * (n + 1 - i) for i in range(n))
+        if (soma * 10 % 11) % 10 != int(c[n]):
+            return False
+    return True
+
+
+def minha_conta(camara, u, d, ip=""):
+    """A própria pessoa atualiza os dados da conta. Devolve (erro, campos que mudaram)."""
+    d = d if isinstance(d, dict) else {}
+    novo = {}
+    if "foto" in d:
+        f = str(d.get("foto") or "")
+        if f and (not re.fullmatch(r"data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+", f) or len(f) > 260_000):
+            return "A foto precisa ser uma imagem JPG ou PNG pequena.", []
+        novo["foto"] = f
+    if "cpf" in d:
+        c = re.sub(r"\D", "", str(d.get("cpf") or ""))
+        if c and not _cpf_valido(c):
+            return "Confira o CPF: os números não conferem.", []
+        novo["cpf"] = c
+    if "celular" in d:
+        t = re.sub(r"\D", "", str(d.get("celular") or ""))
+        if t and len(t) not in (10, 11):
+            return "Confira o celular: use DDD + número (10 ou 11 dígitos).", []
+        novo["celular"] = t
+    if "nascimento" in d:
+        n = str(d.get("nascimento") or "")
+        if n and (not re.fullmatch(r"\d{4}-\d{2}-\d{2}", n) or not ("1900" <= n[:4] <= time.strftime("%Y"))):
+            return "Confira a data de nascimento.", []
+        novo["nascimento"] = n
+    for k in ("email", "email2"):
+        if k in d:
+            em = str(d.get(k) or "").strip().lower()[:120]
+            if em and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", em):
+                return ("Confira o e-mail principal." if k == "email" else "Confira o e-mail secundário."), []
+            novo[k] = em
+    atual = _usuario(u["id"]) or {}
+    mudou = [k for k, v in novo.items() if (atual.get(k) or "") != v]
+    if not mudou:
+        return "", []
+    def aplicar(x):
+        for k in mudou:
+            if novo[k]:
+                x[k] = novo[k]
+            else:
+                x.pop(k, None)
+    _gravar_dados_usuario(u["id"], aplicar)
+    _marcar_usuarios(camara)
+    NOMES = {"foto": "foto", "cpf": "CPF", "celular": "celular", "nascimento": "data de nascimento", "email": "e-mail", "email2": "e-mail secundário"}
+    registrar(camara, u["usuario"], "Dados da conta atualizados", ", ".join(NOMES[k] for k in mudou), ip)
+    return "", mudou
+
+
+def meu_historico(camara, login_, n=150):
+    """Entradas, senhas erradas e mudanças da própria conta (o que o servidor registrou)."""
+    lin = _db().execute("SELECT id, quando, acao, detalhe, ip FROM registro WHERE camara=? AND lower(usuario)=lower(?) ORDER BY id DESC LIMIT ?",
+                        (camara, str(login_), n)).fetchall()
+    return [dict(x) for x in lin]
+
+
 def gravar_usuarios(camara, lista, autor):
     """O painel grava a lista inteira de usuários; aqui só entra o que o autor pode mudar."""
     gestor = eh_gestor(autor)
@@ -386,7 +454,7 @@ def gravar_usuarios(camara, lista, autor):
                     d.pop(k, None)
         if antigo.get("perfil") == "admin" and autor.get("perfil") != "admin":
             continue
-        for k in ("falhasSenha", "bloqueada", "trocarSenha"):   # só o servidor muda
+        for k in ("falhasSenha", "bloqueada", "trocarSenha") + CONTA_CAMPOS:   # só o servidor (ou a própria pessoa, em Minha conta) muda
             if k in antigo:
                 d[k] = antigo[k]
             else:
