@@ -895,7 +895,7 @@
       }; w.__lgvr = true; window.gotoShared = w; }
     // vereador nunca abre telas do Painel Administrativo (matérias da Secretaria, protocolo, usuários, expedientes…)
     const ehVer = () => window.lgPerfil && lgPerfil() === 'vereador';
-    const BLOQ = ['usuarios', 'admin', 'expedientes', 'config', 'lgpr', 'documentos', 'lgt-transp', 'lgt-noticias', 'lgt-acessos', 'lgt-uproto'];
+    const BLOQ = ['usuarios', 'admin', 'expedientes', 'config', 'lgpr', 'lgrl', 'documentos', 'lgt-transp', 'lgt-noticias', 'lgt-acessos', 'lgt-uproto'];
     const gs2 = window.gotoShared;
     if (typeof gs2 === 'function' && !gs2.__ver) { const w = function (v, ...r) { if (ehVer() && BLOQ.includes(v)) { lgvrAbrir('inicio'); return; } return gs2.call(this, v, ...r); }; w.__ver = true; w.__lgvr = true; window.gotoShared = w; }
     const gv = window.gotoV;

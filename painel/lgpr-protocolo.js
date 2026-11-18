@@ -2,7 +2,7 @@
    LegislaGov — PROTOCOLO
    Tudo o que entra e sai da Câmara recebe um número oficial (por tipo e ano), dado pelo servidor.
    · Protocolar: tipo, de onde veio, para quem vai, assunto, anexos (arquivo ou foto do celular).
-   · Comprovante para imprimir ou entregar a quem trouxe o documento.
+   · Recibo de protocolo em 2 vias (Câmara e interessado): número, data, hora, assunto e quem protocolou.
    · Andamento: encaminhar para outro setor, concluir, reabrir, anexar mais arquivos.
    · Reservar número (ofício que ainda vai ser escrito) e registrar documento antigo com número manual.
    Dados: lgv9_numeracao_v1 (lista, igual ao formato anterior) e lgv9_setores_v1 (setores).
@@ -114,6 +114,7 @@
         <button type="button" class="lgt-btn" onclick="lgprRelacao()">Imprimir relação</button>
         <button type="button" class="lgt-btn" onclick="lgprPlanilha()">Baixar planilha</button>
         <button type="button" class="lgt-btn" onclick="lgprSetores()">Setores</button>
+        ${window.lgrlPode && lgrlPode() ? `<button type="button" class="lgt-btn" onclick="window.lgrlAbrir&&lgrlAbrir('protocolos')">Relatórios</button>` : ''}
       </div>`;
     const qi = $('#lgpr-q'); qi.oninput = () => { filtro.q = qi.value; const pos = qi.selectionStart; desenhar(); const n2 = $('#lgpr-q'); n2.focus(); try { n2.setSelectionRange(pos, pos); } catch (e) { } };
     el.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { filtro.st = b.dataset.st; desenhar(); $(`[data-st="${filtro.st}"]`)?.focus(); });
@@ -209,6 +210,7 @@
           from: fora ? 'Externo' : f.from.value, pessoa: fora ? pessoa : '', contato: fora ? (f.contato.value || '').trim() : '',
           to: f.to.value, description: f.description.value.trim(), status: 'registrado',
           anexos: novos.slice(), fileName: novos[0] ? novos[0].nome : '', user: meuNome(), antigo: !!manual,
+          login: (eu() && eu().usuario) || '', cargo: (eu() && (eu().cargo || eu().setor)) || '',
         };
         let r;
         if (res) {
@@ -245,7 +247,7 @@
     UI().abrirModal(`<div class="lgt-form lgpr-feito"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Protocolado</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
       <div class="lgpr-selo" role="status"><span>${esc(r.type)}</span><b>${esc(r.number)}</b><small>${esc(quando(r.createdAt))}</small></div>
       <p class="lgt-p" style="text-align:center;padding:0 22px">${esc(r.subject)}<br>Enviado para <b>${esc(r.to)}</b>. ${/^projeto de lei$/i.test(r.type) ? 'Também entrou na caixa de matérias da Câmara.' : ''}</p>
-      <div class="lgt-modal-rod lgpr-rod3"><button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Imprimir comprovante</button><button type="button" class="lgt-btn" onclick="lgprNovo()">Protocolar outro</button><button type="button" class="lgt-btn primario" onclick="lgtFechar();lgprVer('${esc(r.id)}')">Ver protocolo</button></div></div>`);
+      <div class="lgt-modal-rod lgpr-rod3"><button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Imprimir recibo</button><button type="button" class="lgt-btn" onclick="lgprNovo()">Protocolar outro</button><button type="button" class="lgt-btn primario" onclick="lgtFechar();lgprVer('${esc(r.id)}')">Ver protocolo</button></div></div>`);
   }
 
   /* ================= detalhe e andamento ================= */
@@ -280,8 +282,8 @@
       </div>
       <div class="lgt-modal-rod lgpr-rod3">
         ${ro ? '<button type="button" class="lgt-btn primario" onclick="lgtFechar()">Fechar</button>' : reservado ? `<button type="button" class="lgt-btn perigo" onclick="lgprCancelarReserva('${esc(r.id)}')">Cancelar reserva</button><button type="button" class="lgt-btn primario" onclick="lgprNovo('${esc(r.id)}')">Usar este número</button>`
-        : r.status === 'concluido' ? `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Imprimir comprovante</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','reabrir')">Reabrir</button>`
-        : `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Comprovante</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','concluir')">Concluir</button><button type="button" class="lgt-btn primario" onclick="lgprMover('${esc(r.id)}','encaminhar')">Encaminhar</button>`}
+        : r.status === 'concluido' ? `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Imprimir recibo</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','reabrir')">Reabrir</button>`
+        : `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Recibo</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','concluir')">Concluir</button><button type="button" class="lgt-btn primario" onclick="lgprMover('${esc(r.id)}','encaminhar')">Encaminhar</button>`}
       </div></div>`);
     const add = $('#lgpr-add');
     if (add) add.onchange = async e => {
@@ -342,14 +344,28 @@
       @media print{button{display:none}}</style></head><body>${corpo}<p><button onclick="print()">Imprimir</button></p></body></html>`);
     w.document.close(); setTimeout(() => { try { w.print(); } catch (e) { } }, 400);
   }
+  const codigo = r => { let h = 2166136261; for (const c of String(r.id) + r.createdAt + r.number) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } const t = (h >>> 0).toString(36).toUpperCase().padStart(7, '0'); return t.slice(0, 4) + '-' + t.slice(4, 8); };
   window.lgprComprovante = function (id) {
     const r = registros().find(x => x.id === id); if (!r) return;
-    janela('Comprovante ' + numero(r), `<div class="cab"><div><h1>Câmara Municipal de ${esc(municipio())}</h1><div class="p">Comprovante de protocolo</div></div><div class="num">${esc(r.type)}<br>${esc(r.number)}</div></div>
-      <table><tr><th style="width:30%">Data e hora</th><td>${esc(quando(r.createdAt))}</td></tr><tr><th>Assunto</th><td>${esc(r.subject)}</td></tr>
-      <tr><th>Apresentado por</th><td>${esc(r.pessoa || r.from || '—')}${r.contato ? ' — ' + esc(r.contato) : ''}</td></tr><tr><th>Encaminhado para</th><td>${esc(r.to || '—')}</td></tr>
-      <tr><th>Anexos</th><td>${(r.anexos || []).map(a => esc(a.nome)).join('<br>') || esc(r.fileName || 'Nenhum')}</td></tr><tr><th>Recebido por</th><td>${esc(r.user || '—')}</td></tr></table>
-      <p class="p">Guarde este comprovante. Para acompanhar, informe o número ${esc(numero(r))} na Câmara.</p>
-      <div class="ass"><div>Quem recebeu (Câmara)</div><div>Quem entregou</div></div>`);
+    const d = new Date(r.createdAt), data = isNaN(d) ? '—' : d.toLocaleDateString('pt-BR'), hr = isNaN(d) ? '—' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const anexos = (r.anexos || []).map(a => a.nome).filter(Boolean); if (!anexos.length && r.fileName) anexos.push(r.fileName);
+    const por = (r.user || '—') + (r.login ? ` (usuário: ${r.login})` : '') + (r.cargo ? ` — ${r.cargo}` : '');
+    const via = nome => `<section class="via"><div class="cab"><div><h1>Câmara Municipal de ${esc(municipio())}</h1><div class="p">Estado de São Paulo</div><div class="tit">Recibo de protocolo</div></div><div class="num"><small>${esc(r.type)}</small>${esc(r.number)}</div></div>
+      <table><tr><th>Número do protocolo</th><td><b>${esc(numero(r))}</b></td><th>Data</th><td>${esc(data)}</td><th>Hora</th><td>${esc(hr)}</td></tr>
+      <tr><th>Assunto</th><td colspan="5">${esc(r.subject)}</td></tr>
+      ${r.description ? `<tr><th>Detalhes</th><td colspan="5">${esc(r.description.length > 400 ? r.description.slice(0, 400) + '…' : r.description)}</td></tr>` : ''}
+      <tr><th>Apresentado por</th><td colspan="5">${esc(r.pessoa || r.from || '—')}${r.contato ? ' — ' + esc(r.contato) : ''}</td></tr>
+      <tr><th>Encaminhado para</th><td colspan="5">${esc(r.to || '—')}</td></tr>
+      <tr><th>Anexos</th><td colspan="5">${anexos.length ? anexos.length + ' — ' + anexos.map(esc).join('; ') : 'Nenhum'}</td></tr>
+      <tr><th>Protocolado por</th><td colspan="5">${esc(por)}</td></tr></table>
+      <div class="ass"><div>Quem recebeu (Câmara)</div><div>Quem entregou</div></div>
+      <div class="pe"><span>${nome}</span><span>Código de conferência: <b>${codigo(r)}</b></span><span>Emitido em ${esc(quando(new Date().toISOString()))}</span></div></section>`;
+    janela('Recibo ' + numero(r), `<style>body{max-width:800px}.via{padding:6px 0}.via .cab{margin-bottom:10px}.tit{font-weight:700;margin-top:6px;font-size:14px}.num small{display:block;font-size:12px;font-weight:600;color:#444}
+      .via th{width:18%;white-space:nowrap}.via td,.via th{font-size:12px;padding:5px 7px}.ass{margin-top:44px}.pe{display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-size:11px;color:#444}
+      .corte{border:0;border-top:1px dashed #555;margin:22px 0 16px;position:relative;overflow:visible}.corte::after{content:'recorte aqui';position:absolute;left:50%;top:-8px;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:10px;color:#555}
+      @media print{body{margin:0;max-width:none}.via{break-inside:avoid}}</style>
+      ${via('1ª via — Câmara')}<hr class="corte">${via('2ª via — Interessado')}`);
+    try { window.registrarLog && registrarLog('Recibo de protocolo impresso', numero(r)); } catch (e) { }
   };
   window.lgprRelacao = function () {
     const l = registros().filter(r => (!filtro.tipo || r.type === filtro.tipo) && (!filtro.ano || String(r.year) === filtro.ano)).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
