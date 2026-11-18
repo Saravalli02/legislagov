@@ -62,6 +62,11 @@
   const sessoesTodas = () => { try { return window.lgplDados ? (lgplDados().sessoes || []) : []; } catch (e) { return []; } };
   const vereadores = () => { try { return A() ? A().comp().vereadores : []; } catch (e) { return []; } };
   const leisTodas = () => { try { return (window.lgLeisTodas ? lgLeisTodas() : []).filter(x => !x.exemplo); } catch (e) { return []; } };
+  const faleConosco = () => ler('site_mensagens', []).filter(m => m && m.data);
+  const msgInternas = () => ler('lgv10_messages_v1', []).filter(m => m && m.date);
+  const semAc = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const PRAZO = i => i.canal === 'esic' ? (i.prorrogado ? 30 : 20) : (i.prorrogado ? 60 : 30);   // LAI art. 11 · Lei 13.460 art. 16
+  const tipoOuv = i => String(i.categoria || 'Solicitação').replace(/^Recurso — /, '');
   const ouvidoria = () => { const d = ler('lgo_v1', {}) || {}; return Array.isArray(d.itens) ? d.itens : []; };
   const expedientes = () => { const m = (() => { try { return municipioAtual; } catch (e) { return ''; } })(); return ler('legislagov_expedientes_v1', []).filter(e => e && (!m || !e.municipio || e.municipio === m)); };
   const dataExp = e => { const t = +String(e.id || '').replace(/^exp-/, ''); return t > 1e12 ? isoLocal(new Date(t)) : dia(((e.timeline || [])[0] || {}).date); };
@@ -70,6 +75,12 @@
   const CONCL = { favoravel: 'Favorável', contrario: 'Contrário', emenda: 'Favorável com emenda', diligencia: 'Diligência', substitutivo: 'Substitutivo' };
   const ehDoVereador = (p, v) => p.autorId === v.id || (!p.autorId && new RegExp('\\b' + String(v.nome).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(p.autor || ''));
   const ST_SESSAO = s => ({ encerrada: 'Realizada', agendada: 'Agendada', aberta: 'Em andamento', andamento: 'Em andamento', cancelada: 'Cancelada' })[s.status] || 'Agendada';
+
+  /* ================= textos escritos pela Ouvidoria (análise, providências…) ================= */
+  const TXT_KEY = 'lgrl_textos_v1';
+  const chaveTxt = (campo, per) => `${est.rel}|${per[0]}|${per[1]}|${campo}`;
+  const lerTxt = (campo, per) => (ler(TXT_KEY, {}) || {})[chaveTxt(campo, per)] || '';
+  const gravarTxt = (campo, per, v) => { try { const o = ler(TXT_KEY, {}) || {}; o[chaveTxt(campo, per)] = v; localStorage.setItem(TXT_KEY, JSON.stringify(o)); } catch (e) { } };
 
   /* ================= período ================= */
   const est = { rel: 'resumo', per: 'ano', de: '', ate: '', tipo: '', q: '' };
@@ -92,6 +103,7 @@
     }
   }
   const noPeriodo = (iso, [de, ate]) => !!iso && iso >= de && iso <= ate;
+  function fraseP(per) { const t = textoPeriodo(per); return /^Ano de/.test(t) ? 'no a' + t.slice(1) : /^De /.test(t) ? 'no período de ' + t.slice(3) : /^Desde/.test(t) ? t.toLowerCase() : 'em ' + t.toLowerCase(); }
   function textoPeriodo([de, ate]) {
     if (est.per === 'inicio') return `Desde o início do sistema (${dBR(de)}) até ${dBR(ate)}`;
     if (/^\d{4}-01-01$/.test(de) && ate === de.slice(0, 4) + '-12-31') return `Ano de ${de.slice(0, 4)}`;
@@ -131,9 +143,14 @@
     ['Plenário', {
       sessoes: { nome: 'Sessões plenárias', desc: 'Realizadas por tipo e mês, com a pauta' },
       presenca: { nome: 'Presença dos vereadores', desc: 'Presenças, faltas e percentual' } }],
-    ['Normas e transparência', {
-      leis: { nome: 'Leis e normas', desc: 'Leis, resoluções e decretos publicados' },
-      ouvidoria: { nome: 'Ouvidoria e e-SIC', desc: 'Pedidos, respostas e prazos (LAI)' } }],
+    ['Comunicação e atendimento', {
+      ouvgestao: { nome: 'Relatório de gestão da Ouvidoria', desc: 'Modelo da Lei 13.460/2017, art. 15 — anual, para o Presidente e o site', modelo: true },
+      lai: { nome: 'Relatório estatístico do e-SIC', desc: 'Modelo da LAI, art. 30, III — recebidos, atendidos e indeferidos', modelo: true },
+      ouvidoria: { nome: 'Ouvidoria e e-SIC — lista', desc: 'Todos os pedidos e manifestações, com prazos' },
+      faleconosco: { nome: 'Mensagens do Fale Conosco', desc: 'Mensagens enviadas pelo site' },
+      mensagens: { nome: 'Mensagens internas', desc: 'Comunicação entre setores e usuários (sem o conteúdo)' } }],
+    ['Normas', {
+      leis: { nome: 'Leis e normas', desc: 'Leis, resoluções e decretos publicados' } }],
   ];
   const REL = Object.assign({}, ...GRUPOS.map(g => g[1]));
 
@@ -311,7 +328,82 @@
       R.lista = { cab: ['Protocolo', 'Data', 'Canal', 'Categoria', 'Assunto', 'Situação', 'Respondido em', 'Dias'], linhas: l.map(i => [i.protocolo || '', dBR(dia(i.data)), i.canal === 'esic' ? 'e-SIC' : 'Ouvidoria', i.categoria || '', i.assunto || '', i.status === 'respondido' ? 'Respondido' : 'Em aberto', i.resposta ? dBR(dia(i.resposta.data)) : '—', tempo(i)]) };
       R.nota = 'Nome, e-mail e telefone de quem fez o pedido não aparecem no relatório (LGPD).';
     }
-    const SING = { 'protocolos': 'protocolo', 'proposições': 'proposição', 'projetos de lei': 'projeto de lei', 'ofícios': 'ofício', 'sessões realizadas': 'sessão realizada', 'leis e normas': 'lei ou norma', 'concluídos': 'concluído', 'vindos de fora': 'vindo de fora', 'aprovadas': 'aprovada', 'rejeitadas': 'rejeitada', 'ofícios no período': 'ofício no período', 'protocolados': 'protocolado', 'enviados ao Prefeito': 'enviado ao Prefeito', 'ordinárias': 'ordinária', 'extraordinárias': 'extraordinária', 'leis': 'lei', 'resoluções': 'resolução', 'decretos legislativos': 'decreto legislativo', 'itens na pauta': 'item na pauta', 'viraram lei': 'virou lei', 'ofícios enviados': 'ofício enviado', 'respondidas pela Prefeitura': 'respondida pela Prefeitura', 'matérias em tramitação': 'matéria em tramitação', 'matérias votadas': 'matéria votada', 'vetos apreciados': 'veto apreciado', 'pareceres': 'parecer', 'favoráveis': 'favorável', 'contrários': 'contrário', 'atendimentos': 'atendimento', 'pessoas ou órgãos': 'pessoa ou órgão', 'protocolos em aberto': 'protocolo em aberto', 'expedientes': 'expediente', 'concluídos ou respondidos': 'concluído ou respondido', 'pedidos e manifestações': 'pedido ou manifestação', 'respondidos': 'respondido', 'vereadores': 'vereador', 'dias em média': 'dia em média', 'dias em média para responder': 'dia em média para responder', 'projetos de lei': 'projeto de lei', 'indicações': 'indicação', 'requerimentos': 'requerimento', 'moções': 'moção' };
+
+    if (est.rel === 'ouvgestao') {
+      const l = ouvidoria().filter(i => i.canal !== 'esic' && noPeriodo(dia(i.data), per));
+      const [de, ate] = per, dur = Date.parse(ate) - Date.parse(de) + 864e5;
+      const antDe = isoLocal(new Date(Date.parse(de + 'T12:00') - dur)), antAte = isoLocal(new Date(Date.parse(de + 'T12:00') - 864e5));
+      const ant = ouvidoria().filter(i => i.canal !== 'esic' && noPeriodo(dia(i.data), [antDe, antAte])).length;
+      const resp = l.filter(i => i.resposta), noPrazo = resp.filter(i => dias(i.data, i.resposta.data) <= PRAZO(i));
+      const abertos = l.filter(i => !i.resposta), vencidos = abertos.filter(i => dias(i.data) > PRAZO(i));
+      const assuntos = {}; l.forEach(i => { const k = semAc(i.assunto); if (!k) return; (assuntos[k] = assuntos[k] || { t: i.assunto, n: 0, tipos: new Set() }).n++; assuntos[k].tipos.add(tipoOuv(i)); });
+      const recorr = Object.values(assuntos).filter(a => a.n > 1).sort((a, b) => b.n - a.n);
+      R.kpis = [[l.length, 'manifestações recebidas'], [resp.length, 'respondidas'], [resp.length ? Math.round(noPrazo.length * 100 / resp.length) + '%' : '—', 'respondidas no prazo'], [media(resp.map(i => dias(i.data, i.resposta.data))), 'dias em média para responder'], [abertos.length, 'em aberto']];
+      R.secoes = [
+        { t: 'Apresentação', base: 'Constituição Federal, art. 37, § 3º, I · Lei nº 13.460/2017, arts. 13 a 17', auto: `A Ouvidoria da Câmara Municipal de ${municipio()} recebe, analisa e responde às manifestações dos usuários dos serviços da Câmara: solicitações, sugestões, elogios, reclamações e denúncias. Este relatório consolida as manifestações recebidas ${fraseP(per)}, aponta os pontos que se repetiram e as providências adotadas, como pede o art. 15 da Lei nº 13.460/2017. Canais: formulário eletrônico no site da Câmara (Ouvidoria), atendimento presencial e telefone.`, campo: { id: 'apresentacao', dica: 'Se quiser, complete: quem é o ouvidor, horário de atendimento, ato que criou a Ouvidoria…' } },
+        { t: 'I. Número de manifestações recebidas', base: 'Lei nº 13.460/2017, art. 15, I', auto: `Foram recebidas ${l.length} manifestação(ões) no período${ant || l.length ? `, contra ${ant} no período anterior de mesma duração (${dBR(antDe)} a ${dBR(antAte)})` : ''}.`,
+          blocos: [{ t: 'Por mês', cab: ['Mês', 'Manifestações'], linhas: porMes(l, i => dia(i.data), per), total: true }] },
+        { t: 'II. Motivos das manifestações', base: 'Lei nº 13.460/2017, art. 15, II',
+          blocos: [{ t: 'Por tipo', cab: ['Tipo de manifestação', 'Quantidade'], linhas: ['Solicitação', 'Sugestão', 'Elogio', 'Reclamação', 'Denúncia'].map(t => [t, l.filter(i => tipoOuv(i) === t).length]).concat(contar(l.filter(i => !['Solicitação', 'Sugestão', 'Elogio', 'Reclamação', 'Denúncia'].includes(tipoOuv(i))), tipoOuv)), total: true },
+            { t: 'Assuntos', cab: ['Assunto', 'Quantidade'], linhas: Object.values(assuntos).sort((a, b) => b.n - a.n || a.t.localeCompare(b.t)).slice(0, 20).map(a => [a.t, a.n]), total: true }] },
+        { t: 'III. Análise dos pontos recorrentes', base: 'Lei nº 13.460/2017, art. 15, III',
+          auto: recorr.length ? `${recorr.length} assunto(s) apareceram mais de uma vez no período. O mais frequente foi “${recorr[0].t}” (${recorr[0].n} vezes).` : 'Nenhum assunto se repetiu no período.',
+          blocos: recorr.length ? [{ t: 'Assuntos que se repetiram', cab: ['Assunto', 'Tipos', 'Vezes'], linhas: recorr.map(a => [a.t, [...a.tipos].join(', '), a.n]) }] : [],
+          campo: { id: 'recorrentes', dica: 'Escreva a análise: por que esses assuntos se repetem, que serviço ou setor envolvem, se há falha a corrigir.' } },
+        { t: 'IV. Providências adotadas', base: 'Lei nº 13.460/2017, art. 15, IV · prazo de resposta: art. 16 (30 dias, prorrogáveis por mais 30)',
+          auto: `${resp.length} manifestação(ões) respondida(s); ${noPrazo.length} dentro do prazo legal. Tempo médio de resposta: ${media(resp.map(i => dias(i.data, i.resposta.data)))} dia(s). ${l.filter(i => i.prorrogado).length} prorrogação(ões) com justificativa. ${abertos.length} em aberto ao fim do período${vencidos.length ? `, das quais ${vencidos.length} com prazo vencido` : ''}.`,
+          blocos: [{ t: 'Situação das manifestações', cab: ['Situação', 'Quantidade'], linhas: [['Respondidas no prazo', noPrazo.length], ['Respondidas fora do prazo', resp.length - noPrazo.length], ['Em aberto, no prazo', abertos.length - vencidos.length], ['Em aberto, prazo vencido', vencidos.length]], total: true }],
+          campo: { id: 'providencias', dica: 'Descreva o que a Câmara fez a partir das manifestações: correções, encaminhamentos, mudanças de procedimento, melhorias no atendimento.' } },
+        { t: 'V. Recomendações da Ouvidoria', base: 'Lei nº 13.460/2017, art. 14, II', campo: { id: 'recomendacoes', dica: 'Liste as recomendações para melhorar o serviço (uma por linha).' } },
+        { t: 'Encaminhamento e publicação', base: 'Lei nº 13.460/2017, art. 15, parágrafo único', auto: `Este relatório é encaminhado à autoridade máxima da Câmara (Presidente) e disponibilizado integralmente na internet, no Portal da Transparência.` }
+      ];
+      R.lista = { cab: ['Protocolo', 'Data', 'Tipo', 'Assunto', 'Situação', 'Respondido em', 'Dias', 'No prazo'], linhas: l.map(i => [i.protocolo || '', dBR(dia(i.data)), tipoOuv(i), i.assunto || '', i.resposta ? 'Respondida' : 'Em aberto', i.resposta ? dBR(dia(i.resposta.data)) : '—', i.resposta ? dias(i.data, i.resposta.data) : dias(i.data), i.resposta ? (dias(i.data, i.resposta.data) <= PRAZO(i) ? 'Sim' : 'Não') : (dias(i.data) > PRAZO(i) ? 'Vencido' : '—')]) };
+      R.publicar = { cat: 'ouvidoria', sub: 'Relatório anual da Ouvidoria', titulo: 'Relatório de gestão da Ouvidoria' };
+      R.nota = 'Nomes, e-mails e telefones de quem se manifestou não aparecem no relatório (LGPD).';
+    }
+    if (est.rel === 'lai') {
+      const l = ouvidoria().filter(i => i.canal === 'esic' && noPeriodo(dia(i.data), per));
+      const resp = l.filter(i => i.resposta), rt = i => (i.resposta && i.resposta.tipo) || '';
+      const at = resp.filter(i => /^Atendido$/.test(rt(i))).length, parc = resp.filter(i => /parcial/i.test(rt(i))).length, neg = resp.filter(i => /^Negado/i.test(rt(i))).length,
+        inex = resp.filter(i => /inexistente/i.test(rt(i))).length, enc = resp.filter(i => /compet/i.test(rt(i))).length;
+      const noPrazo = resp.filter(i => dias(i.data, i.resposta.data) <= PRAZO(i));
+      R.kpis = [[l.length, 'pedidos recebidos'], [at + parc, 'atendidos'], [neg, 'indeferidos'], [l.length - resp.length, 'em aberto'], [media(resp.map(i => dias(i.data, i.resposta.data))), 'dias em média para responder']];
+      const perfis = contar(l, i => i.perfil || 'Não informado');
+      R.secoes = [
+        { t: 'Pedidos de informação recebidos, atendidos e indeferidos', base: 'Lei nº 12.527/2011 (LAI), art. 30, III',
+          blocos: [{ t: 'Resultado dos pedidos', cab: ['Situação', 'Quantidade'], linhas: [['Recebidos', l.length], ['Atendidos integralmente', at], ['Atendidos parcialmente', parc], ['Indeferidos (negados: sigilo ou informação pessoal)', neg], ['Informação inexistente', inex], ['Não é competência da Câmara (encaminhados)', enc], ['Em aberto', l.length - resp.length]] },
+            { t: 'Por mês', cab: ['Mês', 'Pedidos'], linhas: porMes(l, i => dia(i.data), per), total: true }] },
+        { t: 'Prazos e recursos', base: 'LAI, art. 11 (20 dias, prorrogáveis por mais 10) e art. 15 (recurso)',
+          auto: `Tempo médio de resposta: ${media(resp.map(i => dias(i.data, i.resposta.data)))} dia(s). ${noPrazo.length} de ${resp.length} resposta(s) dentro do prazo legal.`,
+          blocos: [{ t: 'Prazos', cab: ['Indicador', 'Quantidade'], linhas: [['Respondidos no prazo', noPrazo.length], ['Respondidos fora do prazo', resp.length - noPrazo.length], ['Prazos prorrogados', l.filter(i => i.prorrogado).length], ['Recursos apresentados', l.filter(i => i.recurso).length]] }] },
+        { t: 'Informações genéricas sobre os solicitantes', base: 'LAI, art. 30, III',
+          auto: `${new Set(l.map(i => semAc(i.email)).filter(Boolean)).size} solicitante(s) diferente(s) no período.`,
+          blocos: [{ t: 'Perfil do solicitante', cab: ['Perfil', 'Pedidos'], linhas: perfis, total: true }, { t: 'Como quis receber a resposta', cab: ['Forma', 'Pedidos'], linhas: contar(l, i => i.forma || 'Pelo site (consulta do protocolo)'), total: true }] },
+        { t: 'Informações classificadas e desclassificadas', base: 'LAI, art. 30, I e II', campo: { id: 'classificadas', dica: 'Informe o rol de informações classificadas em grau de sigilo e as desclassificadas nos últimos 12 meses. Se não houver, escreva: “Não houve informações classificadas ou desclassificadas no período.”' } },
+        { t: 'Observações', base: '', campo: { id: 'obs', dica: 'Observações da autoridade de monitoramento da LAI (opcional).' } }
+      ];
+      R.lista = { cab: ['Protocolo', 'Data', 'Assunto', 'Perfil', 'Resultado', 'Respondido em', 'Dias', 'Recurso'], linhas: l.map(i => [i.protocolo || '', dBR(dia(i.data)), i.assunto || '', i.perfil || '—', i.resposta ? rt(i) : 'Em aberto', i.resposta ? dBR(dia(i.resposta.data)) : '—', i.resposta ? dias(i.data, i.resposta.data) : dias(i.data), i.recurso ? 'Sim' : '—']) };
+      R.publicar = { cat: 'sic', sub: 'Relatório estatístico do SIC', titulo: 'Relatório estatístico do SIC' };
+      R.nota = 'Nomes, e-mails e telefones dos solicitantes não aparecem no relatório (LGPD).';
+    }
+    if (est.rel === 'faleconosco') {
+      const l = faleConosco().filter(m => noPeriodo(dia(m.data), per) && busca(m.assunto, m.nome, m.protocolo)).sort((a, b) => String(a.data).localeCompare(String(b.data)));
+      R.kpis = [[l.length, 'mensagens recebidas'], [new Set(l.map(m => semAc(m.email)).filter(Boolean)).size, 'pessoas diferentes']];
+      R.blocos.push({ t: 'Por assunto', cab: ['Assunto', 'Quantidade'], linhas: contar(l, m => m.assunto || 'Sem assunto'), total: true });
+      R.blocos.push({ t: 'Por mês', cab: ['Mês', 'Quantidade'], linhas: porMes(l, m => dia(m.data), per), total: true });
+      R.lista = { cab: ['Protocolo', 'Data', 'Hora', 'Nome', 'Assunto'], linhas: l.map(m => [m.protocolo || '', dBR(dia(m.data)), hora(m.data), m.nome || '', m.assunto || '']) };
+      R.nota = 'E-mail, telefone e o texto das mensagens não aparecem no relatório (LGPD). As mensagens chegam pelo formulário “Fale conosco” do site.';
+    }
+    if (est.rel === 'mensagens') {
+      const dest = m => { const t = String(m.to || ''); return t === '*' ? 'Todos os usuários' : /^setor:/i.test(t) ? 'Setor: ' + t.slice(6) : 'Pessoa'; };
+      const l = msgInternas().filter(m => noPeriodo(dia(m.date), per) && busca(m.from, m.to));
+      R.kpis = [[l.length, 'mensagens enviadas'], [new Set(l.map(m => m.from)).size, 'pessoas enviaram'], [l.filter(m => (m.files || []).length).length, 'com anexo']];
+      R.blocos.push({ t: 'Quem enviou', cab: ['Usuário', 'Mensagens'], linhas: contar(l, m => m.from), total: true });
+      R.blocos.push({ t: 'Para quem', cab: ['Destino', 'Mensagens'], linhas: contar(l, dest), total: true });
+      R.blocos.push({ t: 'Por mês', cab: ['Mês', 'Mensagens'], linhas: porMes(l, m => dia(m.date), per), total: true });
+      R.nota = 'Por privacidade, o relatório mostra só quantidades: o assunto e o texto das mensagens não aparecem.';
+    }
+    const SING = { 'protocolos': 'protocolo', 'proposições': 'proposição', 'projetos de lei': 'projeto de lei', 'ofícios': 'ofício', 'sessões realizadas': 'sessão realizada', 'leis e normas': 'lei ou norma', 'concluídos': 'concluído', 'vindos de fora': 'vindo de fora', 'aprovadas': 'aprovada', 'rejeitadas': 'rejeitada', 'ofícios no período': 'ofício no período', 'protocolados': 'protocolado', 'enviados ao Prefeito': 'enviado ao Prefeito', 'ordinárias': 'ordinária', 'extraordinárias': 'extraordinária', 'leis': 'lei', 'resoluções': 'resolução', 'decretos legislativos': 'decreto legislativo', 'itens na pauta': 'item na pauta', 'viraram lei': 'virou lei', 'ofícios enviados': 'ofício enviado', 'respondidas pela Prefeitura': 'respondida pela Prefeitura', 'matérias em tramitação': 'matéria em tramitação', 'matérias votadas': 'matéria votada', 'vetos apreciados': 'veto apreciado', 'pareceres': 'parecer', 'favoráveis': 'favorável', 'contrários': 'contrário', 'atendimentos': 'atendimento', 'pessoas ou órgãos': 'pessoa ou órgão', 'protocolos em aberto': 'protocolo em aberto', 'expedientes': 'expediente', 'concluídos ou respondidos': 'concluído ou respondido', 'pedidos e manifestações': 'pedido ou manifestação', 'respondidos': 'respondido', 'vereadores': 'vereador', 'dias em média': 'dia em média', 'dias em média para responder': 'dia em média para responder', 'projetos de lei': 'projeto de lei', 'indicações': 'indicação', 'requerimentos': 'requerimento', 'moções': 'moção', 'manifestações recebidas': 'manifestação recebida', 'respondidas': 'respondida', 'pedidos recebidos': 'pedido recebido', 'atendidos': 'atendido', 'indeferidos': 'indeferido', 'mensagens recebidas': 'mensagem recebida', 'pessoas diferentes': 'pessoa', 'mensagens enviadas': 'mensagem enviada', 'pessoas enviaram': 'pessoa enviou' };
     R.kpis = R.kpis.map(([n, t]) => [n, n === 1 && SING[t] ? SING[t] : t]);
     return R;
   }
@@ -366,11 +458,14 @@
         </div>
       </div>
       <div class="lgrl-cabrel"><div><h2>${esc(R.titulo)}${est.tipo ? ' — ' + esc(est.tipo) : ''}</h2><p>${esc(textoPeriodo(R.per))}</p></div>
-        <div class="lgrl-acoes"><button type="button" class="lgt-btn primario" onclick="lgrlImprimir()">${ic('externo')}Imprimir / PDF</button><button type="button" class="lgt-btn" onclick="lgrlPlanilha()">Baixar planilha</button></div></div>
+        <div class="lgrl-acoes"><button type="button" class="lgt-btn primario" onclick="lgrlImprimir()">${ic('externo')}Imprimir / PDF</button><button type="button" class="lgt-btn" onclick="lgrlPlanilha()">Baixar planilha</button>${R.publicar && typeof transpLer === 'function' ? '<button type="button" class="lgt-btn lgok-livre" onclick="lgrlPublicar()">Publicar no Portal da Transparência</button>' : ''}</div></div>
       <div class="lgrl-kpis">${R.kpis.map(([n, t]) => `<div><b>${n}</b><span>${esc(t)}</span></div>`).join('')}</div>
+      ${REL[est.rel].modelo ? `<p class="lgrl-modelo">Modelo conforme ${esc(est.rel === 'lai' ? 'a Lei de Acesso à Informação (Lei nº 12.527/2011, art. 30)' : 'o Código de Defesa do Usuário do Serviço Público (Lei nº 13.460/2017, arts. 14 e 15)')}. Os números saem sozinhos do sistema; os campos de texto são para a Ouvidoria completar antes de imprimir ou publicar. ${est.per !== 'anoant' ? 'O relatório anual costuma usar o <b>ano passado</b>.' : ''}</p>` : ''}
+      ${(R.secoes || []).map((sc, si) => `<section class="lgt-card lgrl-secao"><h3>${esc(sc.t)}</h3>${sc.base ? `<p class="lgrl-base">${esc(sc.base)}</p>` : ''}${sc.auto ? `<p>${esc(sc.auto)}</p>` : ''}${(sc.blocos || []).length ? `<div class="lgrl-grade">${sc.blocos.map(b => `<div class="${b.t === 'Por mês' || sc.blocos.length === 1 ? 'lgrl-largo' : ''}"><h4>${esc(b.t)}</h4>${tabela(b)}</div>`).join('')}</div>` : ''}${sc.campo ? `<label class="lgrl-campo"><span>${esc(sc.campo.dica)}</span><textarea data-campo="${sc.campo.id}" rows="4">${esc(lerTxt(sc.campo.id, R.per))}</textarea></label>` : ''}</section>`).join('')}
       <div class="lgrl-grade">${R.blocos.map(b => `<div class="lgt-card ${b.largo || b.t === 'Por mês' ? 'lgrl-largo' : ''}"><h3>${esc(b.t)}</h3>${tabela(b)}</div>`).join('')}</div>
-      ${temLista ? `<div class="lgt-card lgrl-lista"><h3>Lista completa (${R.lista.linhas.length})</h3>${tabela(R.lista, 'lgrl-det')}</div>` : ''}
+      ${temLista ? `<div class="lgt-card lgrl-lista"><h3>${R.secoes ? 'Anexo — lista' : 'Lista completa'} (${R.lista.linhas.length})</h3>${tabela(R.lista, 'lgrl-det')}</div>` : ''}
       ${R.nota ? `<p class="lgrl-nota">${esc(R.nota)}</p>` : ''}`;
+    el.querySelectorAll('textarea[data-campo]').forEach(t => t.oninput = () => gravarTxt(t.dataset.campo, R.per, t.value));
     const sc = $('#lgrl-sel'); if (sc) sc.onchange = () => { est.rel = sc.value; est.tipo = ''; est.q = ''; desenhar(); $('#lgrl-sel').focus(); };
     el.querySelectorAll('[data-rel]').forEach(b => b.onclick = () => { if (est.rel !== b.dataset.rel) { est.tipo = ''; est.q = ''; } est.rel = b.dataset.rel; desenhar(); $(`[data-rel="${est.rel}"]`)?.focus(); });
     el.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { if (b.dataset.per === 'datas' && est.per !== 'datas') { const [d0, d1] = intervalo(); est.de = d0; est.ate = d1; } est.per = b.dataset.per; desenhar(); $(`[data-per="${est.per}"]`)?.focus(); });
@@ -402,16 +497,18 @@
       table{width:100%;border-collapse:collapse;margin-bottom:4px}thead{display:table-header-group}tr{break-inside:avoid}
       td,th{border:1px solid #999;padding:4px 7px;text-align:left;vertical-align:top;font-size:11.5px}th{background:#eee}.n{text-align:right;font-variant-numeric:tabular-nums}
       .grade{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.grade>div{break-inside:avoid}
+      h3.sec{font-size:14px;border-bottom:1px solid #999;padding-bottom:3px;margin-top:22px}h4{font-size:12.5px;margin:10px 0 4px}.base{margin:0 0 6px;font-style:italic}.txt{border-left:3px solid #999;padding:4px 10px;margin:8px 0}
       .p{color:#444;font-size:11.5px}.rod{margin-top:22px;border-top:1px solid #999;padding-top:6px;display:flex;justify-content:space-between;gap:12px}
       .ass{margin-top:48px;display:flex;justify-content:center}.ass div{width:300px;border-top:1px solid #111;text-align:center;padding-top:4px;font-size:11.5px}
       @media print{button{display:none}body{margin:0;max-width:none}}</style></head><body>
       <div class="cab"><div><h1>Câmara Municipal de ${esc(municipio())}</h1><div class="p">Estado de São Paulo</div></div><div class="r"><h2>${esc(titulo)}</h2><div class="p">${esc(textoPeriodo(R.per))}</div></div></div>
       <div class="kpis">${R.kpis.map(([n, t]) => `<div><b>${n}</b><span>${esc(t)}</span></div>`).join('')}</div>
+      ${(R.secoes || []).map(sc => `<h3 class="sec">${esc(sc.t)}</h3>${sc.base ? `<p class="p base">${esc(sc.base)}</p>` : ''}${sc.auto ? `<p>${esc(sc.auto)}</p>` : ''}${(sc.blocos || []).map(b => `<h4>${esc(b.t)}</h4>${tab(b)}`).join('')}${sc.campo ? (lerTxt(sc.campo.id, R.per).trim() ? `<div class="txt">${esc(lerTxt(sc.campo.id, R.per)).replace(/\n/g, '<br>')}</div>` : (sc.auto || (sc.blocos || []).length ? '' : '<p class="p">Nada registrado.</p>')) : ''}`).join('')}
       <div class="grade">${R.blocos.filter(b => !(b.largo || b.t === 'Por mês')).map(b => `<div><h3>${esc(b.t)}</h3>${tab(b)}</div>`).join('')}</div>
       ${R.blocos.filter(b => b.largo || b.t === 'Por mês').map(b => `<h3>${esc(b.t)}</h3>${tab(b)}`).join('')}
-      ${R.lista ? `<h3>Lista completa (${R.lista.linhas.length})</h3>${tab(R.lista)}` : ''}
+      ${R.lista ? `<h3${R.secoes ? ' class="sec"' : ''}>${R.secoes ? 'Anexo — lista' : 'Lista completa'} (${R.lista.linhas.length})</h3>${tab(R.lista)}` : ''}
       ${R.nota ? `<p class="p">${esc(R.nota)}</p>` : ''}
-      <div class="ass"><div>Responsável</div></div>
+      <div class="ass"><div>${est.rel === 'ouvgestao' ? 'Ouvidor(a) da Câmara' : est.rel === 'lai' ? 'Autoridade de monitoramento da LAI' : 'Responsável'}</div></div>
       <div class="rod p"><span>Emitido em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}${emitidoPor() ? ' por ' + esc(emitidoPor()) : ''}</span><span>Gerado pelo sistema LegislaGov</span></div>
       <p><button onclick="print()">Imprimir</button></p></body></html>`);
     w.document.close(); setTimeout(() => { try { w.print(); } catch (e) { } }, 400);
@@ -426,6 +523,25 @@
     const csv = '﻿' + linhas.map(l => l.map(cel).join(';')).join('\r\n');
     const nome = `relatorio-${est.rel}${est.tipo ? '-' + est.tipo.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-') : ''}-${R.per[0]}-a-${R.per[1]}.csv`;
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = nome; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  function textoRelatorio(R) {
+    const L = [`CÂMARA MUNICIPAL DE ${municipio().toUpperCase()}`, R.titulo.toUpperCase(), textoPeriodo(R.per), ''];
+    L.push(R.kpis.map(([n, t]) => `${t}: ${n}`).join(' · '), '');
+    (R.secoes || []).forEach(sc => { L.push(sc.t.toUpperCase() + (sc.base ? ` (${sc.base})` : '')); if (sc.auto) L.push(sc.auto); (sc.blocos || []).forEach(b => { L.push(b.t + ':'); b.linhas.filter(l => !l.slice(1).every(c => c === 0) || b.t !== 'Por mês').forEach(l => L.push('  · ' + l[0] + ': ' + l.slice(1).join(' · '))); }); const t = sc.campo && lerTxt(sc.campo.id, R.per).trim(); if (t) L.push(t); L.push(''); });
+    if (R.nota) L.push(R.nota);
+    return L.join('\n');
+  }
+  window.lgrlPublicar = function () {
+    const R = montar(); if (!R.publicar || typeof transpLer !== 'function') return;
+    const ano = R.per[0].slice(0, 4) === R.per[1].slice(0, 4) ? R.per[0].slice(0, 4) : R.per[0].slice(0, 4) + '–' + R.per[1].slice(0, 4);
+    const titulo = `${R.publicar.titulo} — ${/^Ano de /.test(textoPeriodo(R.per)) ? ano : textoPeriodo(R.per)}`;
+    const texto = textoRelatorio(R), id = `lgrl-${est.rel}-${R.per[0]}-${R.per[1]}`;
+    const go = () => { const agora = new Date().toISOString(); const l = transpLer().filter(x => x.id !== id);
+      l.push({ id, origem: 'sistema', publicado: true, criadoEm: agora, atualizadoEm: agora, competencia: R.per[1].slice(0, 7), cat: R.publicar.cat, sub: R.publicar.sub, titulo, descricao: R.kpis.map(([n, t]) => `${t}: ${n}`).join(' · '), texto, data: hoje() });
+      try { transpSalvar(l); aviso('Relatório publicado no Portal da Transparência.'); try { window.registrarLog && registrarLog('Relatório publicado', titulo); } catch (e) { } } catch (e) { aviso('Não foi possível publicar agora.', 'erro'); } };
+    const U = window.lgtUI;
+    if (U && U.confirmarPublicacao) U.confirmarPublicacao({ titulo, resumo: R.kpis.map(([n, t]) => `${t}: ${n}`).join(' · '), selo: 'Portal da Transparência · ' + R.publicar.sub, texto: 'Depois de confirmar, o relatório completo aparece no Portal da Transparência, para todos os visitantes, na hora. Se já existir um relatório deste mesmo período, ele é substituído.', ok: go });
+    else if (confirm('Publicar no Portal da Transparência?')) go();
   };
   window.lgrlDados = montar;   // usado nos testes
 
@@ -462,7 +578,13 @@
   .lgrl-vazio{color:var(--lg28-muted);margin:4px 0}
   .lgrl-nota{color:var(--lg28-muted);font-size:13px;margin-top:10px}
   .lgrl-det td{font-size:13px}
-    .lgrl-dica-zero{display:none}
+    .lgrl-modelo{padding:12px 14px;border-radius:10px;border:1px solid #1f4e7955;background:color-mix(in srgb,#1f4e79 6%,var(--lg28-panel));font-size:14px;line-height:1.45;margin:0 0 14px}
+  .lgrl-secao{margin-bottom:14px}.lgrl-secao h3{margin:0 0 2px}.lgrl-secao h4{margin:6px 0 6px;font-size:14px}
+  .lgrl-base{margin:0 0 8px;color:var(--lg28-muted);font-size:13px;font-style:italic}
+  .lgrl-secao>p{line-height:1.5}
+  .lgrl-campo{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:13.5px;color:var(--lg28-muted)}
+  .lgrl-campo textarea{width:100%;box-sizing:border-box;border-radius:10px;border:1px solid var(--lg28-stroke);background:var(--lg28-panel);color:var(--lg28-ink);padding:10px 12px;font:inherit;font-size:15px;resize:vertical}
+  .lgrl-dica-zero{display:none}
   @media(max-width:640px){.lgrl-catalogo{display:none}.lgrl-sel-cel{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--lg28-muted);margin:4px 0 12px}.lgrl-sel-cel select{height:48px;border-radius:10px;border:1px solid var(--lg28-stroke);background:var(--lg28-panel);color:var(--lg28-ink);padding:0 10px;font-size:16px}.lgrl-zero{display:none!important}.lgrl-dica-zero{display:block;color:var(--lg28-muted);font-size:12.5px;margin:6px 0 0}.lgrl-grade{grid-template-columns:1fr}.lgrl-campos label{flex:1 1 45%}.lgrl-campos input,.lgrl-campos select{min-width:0;width:100%}.lgrl-acoes,.lgrl-acoes .lgt-btn{width:100%;justify-content:center}}`;
   document.head.appendChild(css);
 })();
