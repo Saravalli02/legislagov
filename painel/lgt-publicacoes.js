@@ -19,7 +19,21 @@
   const usuario = () => { try { return typeof usuarioAtual !== 'undefined' ? usuarioAtual : null; } catch (e) { return null; } };
   const log = (a, d) => { try { if (typeof registrarLog === 'function') registrarLog(a, d); } catch (e) { } };
   const dataBR = s => s ? new Date(s + (s.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR') : '—';
-  function aviso(msg, tipo) { document.querySelectorAll('.lgt-toast').forEach(x => x.remove()); const t = document.createElement('div'); t.className = 'lgt-toast ' + (tipo || ''); t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.classList.add('saindo'), 2600); setTimeout(() => t.remove(), 3100); }
+  function aviso(msg, tipo, titulo) {
+    // mini mensagem no canto: verde = deu certo (some em 3 s); vermelha = não aconteceu, com o motivo (fica 7 s ou até fechar)
+    const erro = tipo === 'erro';
+    let pilha = document.getElementById('lgt-toasts');
+    if (!pilha) { pilha = document.createElement('div'); pilha.id = 'lgt-toasts'; pilha.setAttribute('aria-live', 'polite'); document.body.appendChild(pilha); }
+    while (pilha.children.length >= 3) pilha.firstChild.remove();
+    const t = document.createElement('div'); t.className = 'lgt-toast ' + (erro ? 'erro' : 'ok'); t.setAttribute('role', erro ? 'alert' : 'status');
+    const tit = titulo || (erro ? 'Não foi concluído' : 'Concluído');
+    t.innerHTML = '<span class="lgt-toast-ic" aria-hidden="true">' + (erro ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 7v6M12 17v.01"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>') + '</span><div class="lgt-toast-tx"><b></b><span></span></div><button type="button" class="lgt-toast-x" aria-label="Fechar">×</button><i class="lgt-toast-barra"></i>';
+    t.querySelector('b').textContent = tit; t.querySelector('.lgt-toast-tx span').textContent = msg;
+    const dur = erro ? 7000 : 3000; t.style.setProperty('--dur', dur + 'ms');
+    const tirar = () => { t.classList.add('saindo'); setTimeout(() => t.remove(), 300); };
+    t.querySelector('.lgt-toast-x').onclick = tirar;
+    pilha.appendChild(t); setTimeout(tirar, dur);
+  }
   function alertaArmazenamento() { aviso('Espaço do navegador esgotado. Remova arquivos grandes ou use links. Na versão com servidor não há esse limite.', 'erro'); }
   function usoArmazenamento() { let t = 0; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); t += (k.length + (localStorage.getItem(k) || '').length) * 2; } } catch (e) { } return t; }
 
@@ -466,9 +480,9 @@
   .lgt-ajuda{display:block;font-weight:400;color:var(--lg28-muted);font-size:12px;margin-top:6px}
   .lgt-erro{color:#e5484d;font-size:13px;margin:0;padding:0 22px;min-height:1px}
   .lgt-modal-rod{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px 18px;border-top:1px solid var(--lg28-stroke);margin-top:10px}
-  .lgt-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10090;background:#16181c;color:#fff;border:1px solid #2c2f34;padding:12px 18px;border-radius:10px;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);transition:opacity .4s}
-  .lgt-toast.erro{background:#3a1215;border-color:#7a2228}
-  .lgt-toast.saindo{opacity:0}
+  #lgt-toasts{position:fixed;top:18px;right:18px;z-index:10090;display:flex;flex-direction:column;gap:10px;width:min(380px,calc(100vw - 24px));pointer-events:none}#lgt-toasts .lgt-toast{pointer-events:auto;position:relative;overflow:hidden;display:flex;align-items:flex-start;gap:12px;background:#fff;color:#1f2933;border:1px solid #e3e8ef;border-left:4px solid #1f9d55;border-radius:12px;padding:12px 12px 14px 14px;box-shadow:0 12px 32px rgba(16,24,40,.18);font-size:14px;line-height:1.4;animation:lgtToastIn .22s ease-out;transition:opacity .25s,transform .25s}@keyframes lgtToastIn{from{opacity:0;transform:translateY(-8px)}}
+  #lgt-toasts .lgt-toast.erro{border-left-color:#d92d20}.lgt-toast-ic{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#e3f6ea;color:#1f9d55}.lgt-toast.erro .lgt-toast-ic{background:#fdecea;color:#d92d20}.lgt-toast-ic svg{width:17px;height:17px}.lgt-toast-tx{flex:1;min-width:0}.lgt-toast-tx b{display:block;font-size:14.5px;margin-bottom:1px}.lgt-toast-tx span{color:#4b5563;word-wrap:break-word}.lgt-toast-x{flex:none;border:0;background:none;font-size:20px;line-height:1;color:#8a94a3;cursor:pointer;padding:0 2px}.lgt-toast-barra{position:absolute;left:0;bottom:0;height:3px;background:currentColor;opacity:.25;width:100%;animation:lgtBarra var(--dur) linear forwards}.lgt-toast.ok .lgt-toast-barra{color:#1f9d55}.lgt-toast.erro .lgt-toast-barra{color:#d92d20}@keyframes lgtBarra{to{width:0}}body.dark #lgt-toasts .lgt-toast,[data-theme=dark] #lgt-toasts .lgt-toast{background:#161b22;color:#e6edf3;border-color:#2d333b}body.dark .lgt-toast-tx span,[data-theme=dark] .lgt-toast-tx span{color:#adbac7}@media(max-width:640px){#lgt-toasts{top:auto;bottom:calc(84px + env(safe-area-inset-bottom));right:12px;left:12px;width:auto}}
+  #lgt-toasts .lgt-toast.saindo{opacity:0;transform:translateX(12px)}
   html.lgt-somente-leitura #view-lgt-transp .lgt-acoes .primario,html.lgt-somente-leitura #view-lgt-noticias .lgt-acoes .primario,html.lgt-somente-leitura #view-lgt-transp .acoes-col button,html.lgt-somente-leitura #view-lgt-noticias .acoes-col button,html.lgt-somente-leitura #lgt-cfg button{display:none}
   .lgt-areas-info{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
   .lgt-areas-info div{background:var(--lg28-panel);border:1px solid var(--lg28-stroke);border-radius:12px;padding:14px 16px}

@@ -18,7 +18,7 @@
   const ler = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
   const ic = n => (window.lgv31Icon ? lgv31Icon(n) : '');
   const UI = () => window.lgtUI;
-  const aviso = (m, t) => UI() ? UI().aviso(m, t) : alert(m);
+  const aviso = (m, t, ti) => UI() ? UI().aviso(m, t, ti) : alert(m);
   const A = () => window.lgvrAPI;
   const eu = () => { try { return typeof usuarioAtual !== 'undefined' ? usuarioAtual : null; } catch (e) { return null; } };
   const municipio = () => { try { return (typeof municipioAtual !== 'undefined' && municipioAtual) ? municipioAtual.replace(/\s[—-]\s[A-Z]{2}$/, '') : 'Neves Paulista'; } catch (e) { return 'Neves Paulista'; } };

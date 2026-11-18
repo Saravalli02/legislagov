@@ -59,6 +59,16 @@
     // só avisa quando foi a pessoa que mandou gravar (gravações automáticas de fundo são recusadas em silêncio)
     if (r.length === 1 && agora - ultimaAcao < 5000) { try { const U = window.lgtUI; if (U && U.aviso) U.aviso('Você não tem permissão para alterar esta informação. Nada foi gravado.', 'erro'); } catch (e) { } }
   }
+  // quando a pessoa acabou de mandar gravar e o servidor não recebeu, avisa no canto da tela com o motivo
+  const avisados = {};
+  function falhaServidor(k, motivo) {
+    const agora = Date.now(); if (agora - ultimaAcao > 10000 || agora - (avisados[k] || 0) < 60000) return; avisados[k] = agora;
+    try { const U = window.lgtUI; if (U && U.aviso) U.aviso('Motivo: ' + motivo, 'erro', 'Não foi enviado ao servidor'); } catch (e) { }
+  }
+  function confirmouServidor(k) {
+    if (!avisados[k]) return; delete avisados[k];
+    try { const U = window.lgtUI; if (U && U.aviso) U.aviso('A informação que estava pendente foi gravada no servidor.', 'ok', 'Enviado com sucesso'); } catch (e) { }
+  }
   const bloqueado = k => (recusas[k] || []).filter(t => Date.now() - t < 60000).length >= 3;   // a tela insiste: espera um minuto
   function agendar(k) {
     if (!eu || sessaoCaiu || bloqueado(k)) return;
@@ -75,7 +85,7 @@
       else r = await fetch('/api/dados/' + encodeURIComponent(k), { method: 'PUT', headers: cab, credentials: 'same-origin', body: JSON.stringify({ valor, versao: k in ver ? ver[k] : null }) });
       const d = await r.json().catch(() => ({}));
       falhou = false;
-      if (r.status === 401) { sessaoCaiu = true; }
+      if (r.status === 401) { sessaoCaiu = true; falhaServidor(k, 'sua sessão terminou. Saia, entre de novo e repita a operação.'); }
       else if (r.status === 409) {
         const junto = mesclar(base[k], valor, d.valor);
         ver[k] = d.versao; base[k] = d.valor;
@@ -87,13 +97,14 @@
           ver[k] = d.versao; base[k] = d.valor; if (orig.get.call(LS, k) === valor) orig.set.call(LS, k, d.valor);
         }
         else { ver[k] = d.versao; base[k] = valor; }
+        confirmouServidor(k);
       } else if (r.status === 403) {
         // sem permissão: volta ao que está no servidor (sem redesenhar, para não repetir)
         if (typeof d.valor === 'string') { orig.set.call(LS, k, d.valor); base[k] = d.valor; ver[k] = d.versao; }
         else if (base[k] != null) orig.set.call(LS, k, base[k]); else orig.rem.call(LS, k);
         negado(k, d.erro);
-      } else console.warn('LegislaGov: não salvou', k, d.erro);
-    } catch (e) { falhou = true; setTimeout(() => agendar(k), 5000); }
+      } else { console.warn('LegislaGov: não salvou', k, d.erro); falhaServidor(k, (d.erro || ('o servidor respondeu com erro ' + r.status)) + '.'); }
+    } catch (e) { falhou = true; falhaServidor(k, 'sem conexão com o servidor. O sistema tenta de novo sozinho; não feche esta página.'); setTimeout(() => agendar(k), 5000); }
     emEnvio.delete(k); status();
   }
   // site sem login: só acrescenta pedidos novos (ouvidoria, e-SIC, contato, inscrições)

@@ -149,7 +149,9 @@
     const chave = op.chave || op.docId; const pend = chave && manuais().find(x => (x.chave || x.docId) === chave && x.status === 'pendente');
     if (pend) return verPendente(pend);
     // ação nomeada (pode ser refeita por outra pessoa, ao autorizar) ou função comum
-    const fazer = op.acao ? (ass => executar(op.acao, ass, {})) : aoAssinar;
+    const fazer0 = op.acao ? (ass => executar(op.acao, ass, {})) : aoAssinar;
+    const falhou = e => { console.error(e); UI().aviso('Motivo: ' + ((e && e.message) || e || 'erro desconhecido') + '. A assinatura ficou guardada; tente enviar de novo.', 'erro', 'Não foi enviado'); };
+    const fazer = ass => { try { const r = fazer0(ass); if (r && typeof r.catch === 'function') r.catch(falhou); return r; } catch (e) { falhou(e); } };
     const codigo = 'LGV-' + (op.docId || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-10) + '-' + Date.now().toString(36).toUpperCase().slice(-5);
     const pdf = op.base || op.gerar(codigo);
     const esperado = { tamanho: pdf.length, hash: await sha256(pdf), codigo: op.base ? '' : codigo, pessoa: (op.signatario.completo || op.signatario.nome) };

@@ -53,7 +53,7 @@
   };
   const cab = (t, sub, acoes = '') => `<div class="letterhead"><div><h1>${t}</h1><div class="date">${sub}</div></div><div class="lgt-acoes">${acoes}</div></div>`;
   const verSite = (pag, txt = 'Ver no site') => `<a class="lgt-btn" href="../${pag}" target="_blank" rel="noopener">${ic('externo')} ${txt}</a>`;
-  const aviso = (m, t) => U().aviso(m, t);
+  const aviso = (m, t, ti) => U().aviso(m, t, ti);
   const somenteLeitura = () => edita() ? '' : '<p class="lgvr-regra">Seu acesso a esta área é somente consulta.</p>';
   const nota = '<p class="lgsc-nota">Tudo o que você confirma aqui aparece no site para todos os visitantes na hora. Antes de publicar, o sistema sempre pede “Confirme a publicação”.</p>';
 

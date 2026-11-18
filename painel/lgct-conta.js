@@ -11,7 +11,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ic = n => (window.lgv31Icon ? lgv31Icon(n) : '');
   const UI = () => window.lgtUI;
-  const aviso = (m, t) => UI() ? UI().aviso(m, t) : alert(m);
+  const aviso = (m, t, ti) => UI() ? UI().aviso(m, t, ti) : alert(m);
   const SYNC = () => window.LG_SYNC;
   const atual = () => { try { return typeof usuarioAtual !== 'undefined' ? usuarioAtual : null; } catch (e) { return null; } };
   const eu = () => (SYNC() && SYNC().eu) || atual() || {};

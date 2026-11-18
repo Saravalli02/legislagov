@@ -331,7 +331,7 @@
       listaProt().unshift(p); const d = dados(); d.rascunhos = d.rascunhos.filter(x => x.id !== g.rid); salvarDados(d);
       persistirProt('Propositura protocolada pelo Portal do Vereador', p); UI().log('Portal do Vereador', `Protocolou ${p.numero}${ctx.autorizacao ? ' (assinatura à mão autorizada)' : ''}`);
       if (ctx.autorizacao) return;
-      { const pr = comp().vereadores.find(x => x.id === comp().presidente); UI().aviso(`${p.numero} assinado e protocolado. Já está com o Presidente${pr ? ' ' + pr.nome : ''} para despacho.`); } abaProp = 'tramitando'; if (tela === 'proposituras' || tela === 'assinar') desenhar(); lgvrVer(p.id);
+      { const pr = comp().vereadores.find(x => x.id === comp().presidente); UI().aviso(`${p.numero} assinado e protocolado. Já está com o Presidente${pr ? ' ' + pr.nome : ''} para despacho.`, 'ok', `${T.nome} enviado com sucesso`); } abaProp = 'tramitando'; if (tela === 'proposituras' || tela === 'assinar') desenhar(); lgvrVer(p.id);
     },
     pendente(g, reg) { const d = dados(); const r = d.rascunhos.find(x => x.id === g.rid); if (r) { r.pendenteMao = reg.id; salvarDados(d); } abaProp = 'rascunhos'; desenhar(); },
     liberar(g) { const d = dados(); const r = d.rascunhos.find(x => x.id === g.rid); if (r) { delete r.pendenteMao; salvarDados(d); } }

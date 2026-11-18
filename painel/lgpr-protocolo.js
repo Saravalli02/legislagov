@@ -27,7 +27,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ler = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
   const UI = () => window.lgtUI;
-  const aviso = (m, t) => UI() ? UI().aviso(m, t) : alert(m);
+  const aviso = (m, t, ti) => UI() ? UI().aviso(m, t, ti) : alert(m);
   const eu = () => { try { return typeof usuarioAtual !== 'undefined' ? usuarioAtual : null; } catch (e) { return null; } };
   const meuNome = () => (eu() && (eu().nome || eu().usuario)) || 'Usuário';
   const municipio = () => { try { return (typeof municipioAtual !== 'undefined' && municipioAtual) ? municipioAtual.replace(/\s[—-]\s[A-Z]{2}$/, '') : 'Neves Paulista'; } catch (e) { return 'Neves Paulista'; } };
@@ -225,7 +225,7 @@
         if (/^projeto de lei$/i.test(r.type)) paraTramitacao(r);
         sucesso(r);
         desenhar();
-      } catch (e) { erro.textContent = e.message || 'Não foi possível protocolar.'; bt.disabled = false; bt.textContent = res ? 'Protocolar com este número' : 'Protocolar'; }
+      } catch (e) { erro.textContent = e.message || 'Não foi possível protocolar.'; aviso('Motivo: ' + (e.message || 'erro desconhecido') + ' Nada foi protocolado; confira e tente de novo.', 'erro', 'Protocolo não realizado'); bt.disabled = false; bt.textContent = res ? 'Protocolar com este número' : 'Protocolar'; }
     };
   };
   function desenharAnexos() {
@@ -244,6 +244,7 @@
     } catch (e) { console.warn('protocolo → tramitação', e); }
   }
   function sucesso(r) {
+    aviso(`${r.type} nº ${r.number} protocolado e enviado para ${r.to}.`, 'ok', /^projeto de lei$/i.test(r.type) ? 'Projeto de lei protocolado com sucesso' : 'Protocolo realizado com sucesso');
     UI().abrirModal(`<div class="lgt-form lgpr-feito"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Protocolado</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
       <div class="lgpr-selo" role="status"><span>${esc(r.type)}</span><b>${esc(r.number)}</b><small>${esc(quando(r.createdAt))}</small></div>
       <p class="lgt-p" style="text-align:center;padding:0 22px">${esc(r.subject)}<br>Enviado para <b>${esc(r.to)}</b>. ${/^projeto de lei$/i.test(r.type) ? 'Também entrou na caixa de matérias da Câmara.' : ''}</p>
