@@ -558,7 +558,7 @@
      ===================================================================== */
   window.lgfxPendencias = function () {
     const out = [];
-    try { calendario().filter(x => x.prox && x.dias <= 7).forEach(x => out.push({ dest: ['area:transparencia'], chave: `cal:${x.id}:${x.prox.toISOString().slice(0, 10)}`, titulo: `Publicar: ${x.nome}`, texto: x.base, prazo: { cor: x.cor, txt: x.dias < 0 ? `atrasado desde ${dBR(x.prox.toISOString())}` : x.dias === 0 ? 'vence hoje' : `vence em ${x.dias} dias`, cfg: { nome: x.nome } }, acao: "lgfxAbrir('calendario')", area: 'transparencia' })); } catch (e) { }
+    if (false) try { calendario().filter(x => x.prox && x.dias <= 7).forEach(x => out.push({ dest: ['area:transparencia'], chave: `cal:${x.id}:${x.prox.toISOString().slice(0, 10)}`, titulo: `Publicar: ${x.nome}`, texto: x.base, prazo: { cor: x.cor, txt: x.dias < 0 ? `atrasado desde ${dBR(x.prox.toISOString())}` : x.dias === 0 ? 'vence hoje' : `vence em ${x.dias} dias`, cfg: { nome: x.nome } }, acao: "lgfxAbrir('calendario')", area: 'transparencia' })); } catch (e) { }
     try { ouv().itens.filter(i => i.status !== 'respondido').forEach(i => { const pz = prazoOuv(i); out.push({ dest: ['perfil:secretaria', 'perfil:procurador'], chave: `ouv:${i.protocolo}`, titulo: `${i.canal === 'esic' ? 'Pedido de informação' : 'Ouvidoria'}: ${i.protocolo}`, texto: i.assunto, prazo: pz ? { ...pz, cfg: { nome: 'Resposta' } } : null, acao: "lgfxAbrir('ouvidoria')", area: 'legislativo' }); }); } catch (e) { }
     return out;
   };

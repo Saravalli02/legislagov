@@ -87,7 +87,8 @@
   window.lgavL10 = function (id) {   // abre o aviso do painel administrativo e marca como lido
     const n = ler('lgv10_notifications_v1', []).find(x => x.id === id); try { window.lgv10Read && lgv10Read(id); } catch (e) { }
     if (!n) return; const k = n.kind || '';
-    if (window.lgPerfil && lgPerfil() === 'vereador') {   // vereador não abre telas do Painel Administrativo
+    let areaL = ''; try { areaL = sessionStorage.getItem('lg_area') || ''; } catch (e) { }
+    if ((window.lgPerfil && lgPerfil() === 'vereador') || areaL === 'vereador') {   // no Portal do Vereador nada abre telas do Painel Administrativo
       const pid = k.startsWith('protocolo:') ? k.slice(10) : '';
       if (pid && window.lgprVer) return lgprVer(pid, true);
       if (window.lgv10Open) return lgv10Open(k === 'mensagem' ? 'inbox' : 'notifications');
@@ -111,11 +112,13 @@
   }
   function meuDestino(dest, me) {
     if (!me) return false;
-    if (dest.startsWith('v:')) return !!me.v && me.v.id === dest.slice(2);
+    // cada tarefa vai só para quem a faz: o administrador do sistema não recebe as tarefas dos outros,
+    // e quem "vê como" um vereador (demonstração) também não
+    if (dest.startsWith('v:')) return !!me.v && !me.demo && me.v.id === dest.slice(2);
     if (dest === 'eu') return true;
-    if (dest === 'pres') return me.pres;
-    if (dest.startsWith('perfil:')) return me.perfil === dest.slice(7) || me.perfil === 'adm';
-    if (dest === 'area:transparencia') return me.perfil !== 'vereador' && window.lgNivelArea && lgNivelArea('transparencia') === 'edicao';
+    if (dest === 'pres') return me.pres && !me.demo;
+    if (dest.startsWith('perfil:')) return me.perfil === dest.slice(7);
+    if (dest === 'area:transparencia') return ['financeiro', 'secretaria'].includes(me.perfil) && window.lgNivelArea && lgNivelArea('transparencia') === 'edicao';
     return false;
   }
 
@@ -170,7 +173,10 @@
   }
   function minhas() {
     const me = eu(); if (!me) return [];
-    const l = todas().filter(x => x.dest.some(d => meuDestino(d, me)));
+    let l = todas().filter(x => x.dest.some(d => meuDestino(d, me)));
+    // no Portal do Vereador só aparece o que é do vereador (nada do Administrativo ou da Transparência)
+    let areaAt = ''; try { areaAt = sessionStorage.getItem('lg_area') || ''; } catch (e) { }
+    if (areaAt === 'vereador' || me.perfil === 'vereador') l = l.filter(x => !x.area || x.area === 'vereador');
     try { if (window.lgplPendencias) lgplPendencias(me.v).forEach(x => l.push({ dest: ['eu'], ...x })); } catch (e) { }
     const ordem = x => x.urgente ? 0 : x.prazo && x.prazo.cor ? ({ vermelho: 1, amarelo: 2, verde: 4 }[x.prazo.cor] ?? 3) : x.info ? 6 : 3;
     return l.sort((a, b) => ordem(a) - ordem(b));
@@ -227,7 +233,7 @@
     let area = ''; try { area = sessionStorage.getItem('lg_area') || ''; } catch (e) { }
     const vai = () => { try { (new Function(x.acao))(); } catch (e) { console.warn('Aviso', e); } };
     // vereador fica sempre no Portal do Vereador: tarefa de outro painel abre a matéria em "Acompanhar matérias"
-    if (window.lgPerfil && lgPerfil() === 'vereador' && x.area && x.area !== 'vereador') { if (window.lgvrAbrir) lgvrAbrir('materias'); return; }
+    if (((window.lgPerfil && lgPerfil() === 'vereador') || area === 'vereador') && x.area && x.area !== 'vereador') { if (window.lgvrAbrir) lgvrAbrir('materias'); return; }
     if (x.area && x.area !== area && window.lgtAreasPermitidas && lgtAreasPermitidas().includes(x.area)) { lgv33TrocarArea(x.area); setTimeout(vai, 120); }
     else vai();
   }
