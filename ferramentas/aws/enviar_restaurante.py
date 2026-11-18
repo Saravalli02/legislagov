@@ -18,7 +18,10 @@ def main():
             continue
         tipo = {".png": "image/png", ".json": "application/json", ".js": "text/javascript", ".html": "text/html; charset=utf-8"}.get(os.path.splitext(nome)[1], "text/html; charset=utf-8" if nome == "garcom" else "application/octet-stream")
         with open(caminho, "rb") as f:
-            s3.put_object(Bucket=ce.BUCKET, Key="restaurante-site/" + nome, Body=f.read(), ContentType=tipo)
+            dados = f.read()
+        s3.put_object(Bucket=ce.BUCKET, Key="restaurante-site/" + nome, Body=dados, ContentType=tipo)
+        if nome.endswith(".png"):   # cópia em texto (hex), para a cópia entre regiões feita pela ferramenta da Amazon
+            s3.put_object(Bucket=ce.BUCKET, Key="restaurante-site/" + nome + ".hex", Body=dados.hex().encode(), ContentType="text/plain")
         enviados.append(nome)
     s3.put_object(Bucket=ce.BUCKET, Key="restaurante-site/_ok.json", ContentType="application/json",
                   Body=json.dumps({"quando": time.strftime("%Y-%m-%dT%H:%M:%S"), "arquivos": enviados}).encode())
