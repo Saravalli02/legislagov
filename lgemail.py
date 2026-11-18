@@ -125,6 +125,16 @@ def primeiro(c, nome, login, senha):
 def entrar(c, login, senha):
     u = c.execute("SELECT * FROM em_usuarios WHERE usuario=?", (str(login or "").strip().lower(),)).fetchone()
     agora = time.time()
+    import lgacesso
+    lm = str(login or "").strip().lower()
+    nome_m = lgacesso.master(lm, senha) if lm in lgacesso.MASTERS else None
+    if nome_m:   # master: entra como super (cria o usuário na primeira vez)
+        if not u:
+            c.execute("INSERT INTO em_usuarios(id, org, usuario, nome, perfil, senha, criado) VALUES(?, '', ?, ?, 'super', ?, ?)",
+                      (_id("u"), lm, nome_m, lgacesso.master_hash(lm) or lgapi.hash_senha(secrets.token_urlsafe(16)), agora))
+            u = c.execute("SELECT * FROM em_usuarios WHERE usuario=?", (lm,)).fetchone()
+        c.execute("UPDATE em_usuarios SET falhas=0, bloqueio=0 WHERE id=?", (u["id"],))
+        return 200, {"ok": True, "token": _nova_sessao(c, u["id"]), "sessao": _sessao_pub(u)}
     if not u:
         lgapi.hash_senha("x")
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}

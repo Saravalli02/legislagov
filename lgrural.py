@@ -353,6 +353,10 @@ def sessao(c, token):
     r = c.execute("SELECT * FROM rural_sess WHERE token=?", (_resumo(token),)).fetchone()
     if not r or r["expira"] < time.time() or r["empresa"] not in empresas() or r["empresa"] in bloqueadas():
         return None
+    if r["usuario_id"].startswith("master:"):   # Ricardo (LegislaGov): administrador de qualquer horta
+        import lgacesso
+        return {"empresa": r["empresa"], "quem": "gestor", "tipo": "gestor", "uid": r["usuario_id"],
+                "nome": lgacesso.MASTERS.get(r["usuario_id"][7:], "LegislaGov") + " (LegislaGov)"}
     u = c.execute("SELECT * FROM rural_usuarios WHERE empresa=? AND id=?", (r["empresa"], r["usuario_id"])).fetchone()
     if not u or (u["perfil"] != "adm" and not u["vendedor"]):
         return None   # usuário removido ou sem vendedor
@@ -394,6 +398,18 @@ def primeiro(c, empresa, nome, login, senha):
 
 def entrar(c, empresa, login, senha):
     login = str(login or "").strip().lower()
+    import lgacesso
+    nome_m = lgacesso.master(login, senha) if login in lgacesso.MASTERS else None
+    if nome_m:   # master: entra como administrador da horta do link (ou da primeira horta)
+        lista = sorted(e for e in empresas() if not e.startswith("demo-"))
+        emp = empresa if empresa in empresas() else (lista[0] if lista else "")
+        if not emp:
+            return 404, {"ok": False, "erro": "Nenhuma horta cadastrada."}
+        if emp in bloqueadas():
+            return 423, {"ok": False, "suspensa": True, "erro": SUSPENSA}
+        uid = "master:" + login
+        return 200, {"ok": True, "empresa": emp, "token": _criar_sessao(c, emp, uid),
+                     "sessao": {"tipo": "gestor", "id": "gestor", "nome": nome_m + " (LegislaGov)", "usuario": login, "perfil": "adm", "uid": uid}}
     u = c.execute("SELECT * FROM rural_usuarios WHERE usuario=?" + (" AND empresa=?" if empresa else ""),
                   (login, empresa) if empresa else (login,)).fetchone()
     agora = time.time()

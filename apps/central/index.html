@@ -492,7 +492,7 @@ const SISINFO=[['camara','LegislaGov Câmara','em-camara.png','Cada Câmara é u
 const chave=(on,txt,cl)=>`<button type="button" class="sw ${cl||''}" role="switch" aria-checked="${on}"><i></i>${txt||(on?'Ativo':'Bloqueado')}</button>`;
 async function carregarSistemas(){
   try{SIS=await api('admin/sistemas')}catch(e){if(e.message!=='sessao')$('#admc').innerHTML=`<div class="vazio">${esc(e.message)}</div>`;return}
-  $('#admc').innerHTML=`<p class="dica" style="margin-top:16px">Verde: funcionando. Toque para deixar vermelho e cortar o acesso na hora. Os dados ficam guardados; ao ligar de novo, tudo volta como estava.</p>`+
+  $('#admc').innerHTML=`<p class="dica" style="margin-top:16px">Verde: funcionando. Toque para deixar vermelho e cortar o acesso na hora. Os dados ficam guardados; ao ligar de novo, tudo volta como estava.</p><div class="horta" style="margin-top:12px;display:flex;gap:12px;align-items:center"><span class="pt"></span><div><b>Acesso master: usuário <code>ricardo</code></b><small class="dica" style="display:block">Entra em todos os sistemas (Câmara, Central, Rural, Restaurante, E-mails e os próximos) com a mesma senha do painel da Câmara. Trocou a senha lá, muda em todos.</small></div></div>`+
     SISINFO.map(([k,n,ic,tx])=>{const cl=SIS[k]||[];return `<section class="sisblk"><header><img src="${ic}" alt=""><div><h3>${n}</h3><small>${tx}</small></div></header>
       ${cl.length?cl.map(x=>cartaoCliente(k,x)).join(''):'<div class="vazio">Nenhum cliente ainda.</div>'}</section>`}).join('');
   $('#admc').querySelectorAll('[data-cli]').forEach(el=>{const [k,id]=el.dataset.cli.split('|');const x=SIS[k].find(c=>c.id===id);

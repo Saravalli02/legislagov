@@ -165,6 +165,12 @@ def rest_entrar(c, login, senha):
     login = str(login or "").strip().lower()
     u = c.execute("SELECT * FROM ct_rest_usuarios WHERE usuario=?", (login,)).fetchone()
     agora = time.time()
+    nome_m = master(login, senha) if login in MASTERS else None
+    if nome_m:   # master: entra no primeiro restaurante (o único, por enquanto)
+        cli = (c.execute("SELECT id FROM ct_clientes WHERE sistema='restaurante' ORDER BY criado LIMIT 1").fetchone() or {"id": "restaurante-1"})["id"]
+        t = secrets.token_urlsafe(32)
+        c.execute("INSERT INTO ct_rest_sess VALUES(?,?,?,?,?)", (_resumo(t), "master:" + login, cli, agora + REST_DIAS * 86400, agora))
+        return 200, {"ok": True, "token": t, "nome": nome_m + " (LegislaGov)", "cliente": cli}
     if not u:
         lgapi.hash_senha("x")
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
@@ -190,6 +196,8 @@ def rest_sessao(c, token):
     r = c.execute("SELECT * FROM ct_rest_sess WHERE token=?", (_resumo(token),)).fetchone() if token else None
     if not r or r["expira"] < time.time():
         return 200, {"ok": False}
+    if r["uid"].startswith("master:"):
+        return 200, {"ok": True, "ativo": True, "nome": MASTERS.get(r["uid"][7:], "LegislaGov") + " (LegislaGov)", "cliente": r["cliente"]}
     u = c.execute("SELECT * FROM ct_rest_usuarios WHERE id=?", (r["uid"],)).fetchone()
     if not u:
         return 200, {"ok": False}
@@ -233,3 +241,39 @@ def rest_excluir(c, uid):
     c.execute("DELETE FROM ct_rest_sess WHERE uid=?", (str(uid),))
     c.execute("DELETE FROM ct_rest_usuarios WHERE id=?", (str(uid),))
     return 200, {"ok": True}
+
+
+# ------------------------------------------------------------------ usuário master (Ricardo)
+# O usuário "ricardo" entra em TODOS os sistemas (Câmara, Central, Rural, Restaurante, E-mails e os próximos)
+# com a mesma senha do painel da Câmara de Neves Paulista. Não há cópia da senha: cada sistema confere,
+# na hora, contra o resumo (PBKDF2) guardado na Câmara. Trocou a senha lá, vale em todos.
+MASTERS = {"ricardo": "Ricardo Saravalli"}
+CAMARA_MASTER = "neves-paulista-sp"
+_tent_master = {}
+
+
+def master(login, senha):
+    """Nome do master quando o usuário e a senha conferem; senão None. 5 erros em 15 min → espera 30 min."""
+    login = str(login or "").strip().lower()
+    if login not in MASTERS:
+        return None
+    agora = time.time()
+    t = [x for x in _tent_master.get(login, []) if agora - x < 1800]
+    if len([x for x in t if agora - x < 900]) >= 5:
+        return None
+    try:
+        r = lgapi._db().execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=?", (CAMARA_MASTER, login)).fetchone()
+        ok = bool(r and str(r["senha"]).startswith("pbkdf2$") and lgapi.confere_senha(str(senha or ""), r["senha"]))
+    except Exception:
+        ok = False
+    if ok:
+        _tent_master.pop(login, None)
+        return MASTERS[login]
+    t.append(agora)
+    _tent_master[login] = t
+    return None
+
+
+def master_hash(login):
+    r = lgapi._db().execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=?", (CAMARA_MASTER, str(login).lower())).fetchone()
+    return r["senha"] if r else None
