@@ -135,6 +135,7 @@ async function tela(){
       <div class="cab"><div class="selo"><img src="${esc(x.icone)}" alt=""></div><div><h3 id="t-${esc(x.id)}">${esc(x.nome)}</h3><p>${esc(x.desc)}</p></div></div>
       ${x.id==='rural'?`<button class="btn" data-clientes="rural">Clientes, senhas e acesso</button>`:''}
       ${x.demo?`<button class="btn demo" data-demo="${esc(x.id)}">Criar demonstração</button>`:''}
+      ${x.qr?`<button class="btn" data-qr="${esc(x.qr[1])}" data-qrnome="${esc(x.qr[0])}" data-qrsis="${esc(x.nome)}">QR code do ${esc(x.qr[0].replace(/^App do /,'app do '))}</button>`:''}
       <a class="abrir" href="${esc(x.abrir[1])}" target="_blank" rel="noopener"><span>${esc(x.abrir[0])}</span>${seta}</a>
       ${(x.outros||[]).length?`<div class="outros">${x.outros.map(l=>`<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>`:''}
     </section>`).join('')}</div>
@@ -151,6 +152,7 @@ async function tela(){
   $('#sairBt').onclick=sair;$('#senhaBt').onclick=trocarSenha;
   document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>novaDemo(b.dataset.demo));
   document.querySelectorAll('[data-clientes]').forEach(b=>b.onclick=()=>telaRural());
+  document.querySelectorAll('[data-qr]').forEach(b=>b.onclick=()=>verQR(b.dataset.qr,b.dataset.qrnome,b.dataset.qrsis));
   document.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>mostrarDemo(P.demos.find(d=>d.id===b.dataset.ver)));
   document.querySelectorAll('[data-fim]').forEach(b=>b.onclick=()=>encerrar(b.dataset.fim));
 }
@@ -190,6 +192,17 @@ function mostrarDemo(d){
     $('#fx',f).onclick=fechar;
     $('#cp',f).onclick=async()=>{try{await navigator.clipboard.writeText(l)}catch(e){$('#lk',f).select();document.execCommand('copy')}$('#cp',f).textContent='Copiado'};
     const sh=$('#sh',f);if(sh)sh.onclick=()=>navigator.share({title:'Demonstração LegislaGov',text:txt}).catch(()=>{});
+    const desenhar=()=>{if(window.LGQR){$('#qr',f).innerHTML=LGQR.svg(l,200)}else setTimeout(desenhar,150)};desenhar();
+  });
+}
+function verQR(l,nome,sis){
+  const txt=`${nome} — ${sis}: ${l}`;
+  modal(`<h2>${esc(nome)}</h2><p class="dica">${esc(sis)}. Aponte a câmera do celular para o QR code e toque em “Adicionar à tela inicial”.</p>
+    <div class="qr" id="qr" aria-label="QR code do ${esc(nome)}"></div>
+    <div class="link"><input id="lk" readonly value="${esc(l)}" aria-label="Link"><button class="btn" id="cp">Copiar</button></div>
+    <div class="rod"><a class="btn" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">Enviar no WhatsApp</a><a class="btn" href="${esc(l)}" target="_blank" rel="noopener">Abrir aqui</a><button class="btn pri" id="fx">Fechar</button></div>`,f=>{
+    $('#fx',f).onclick=fechar;
+    $('#cp',f).onclick=async()=>{try{await navigator.clipboard.writeText(l)}catch(e){$('#lk',f).select();document.execCommand('copy')}$('#cp',f).textContent='Copiado'};
     const desenhar=()=>{if(window.LGQR){$('#qr',f).innerHTML=LGQR.svg(l,200)}else setTimeout(desenhar,150)};desenhar();
   });
 }

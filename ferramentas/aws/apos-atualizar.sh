@@ -56,6 +56,12 @@ if ! cmp -s "$APP/ferramentas/aws/relatorio.versao" /var/lib/legislagov/relatori
   systemd-run --unit="legislagov-relatorio-$(date +%s)" --no-block /bin/bash -c '/usr/local/bin/legislagov-relatorio > /var/log/legislagov-relatorio.log 2>&1' || true
 fi
 
+# ícones do LegislaGov Restaurante → depósito (restaurante-site/), quando restaurante.versao muda
+if ! cmp -s "$APP/ferramentas/aws/restaurante.versao" /var/lib/legislagov/relatorios/.versao-restaurante; then
+  cp "$APP/ferramentas/aws/restaurante.versao" /var/lib/legislagov/relatorios/.versao-restaurante
+  systemd-run --unit="legislagov-restaurante-$(date +%s)" --no-block /bin/bash -c 'set -a; . /etc/legislagov.env; set +a; python3 /opt/legislagov/app/ferramentas/aws/enviar_restaurante.py > /var/log/legislagov-restaurante.log 2>&1' || true
+fi
+
 # comando para definir senha de usuário direto no servidor
 cat > /usr/local/bin/legislagov-senha <<'EOS'
 #!/bin/bash
