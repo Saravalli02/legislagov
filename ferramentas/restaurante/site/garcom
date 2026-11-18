@@ -383,6 +383,26 @@ table td,table th{border-color:var(--line)}
 .gmesas button.ocupada{border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
 .gtabs{background:var(--card);border-color:var(--line)}.gtabs button{color:var(--mut)}.gtabs button.act{color:var(--acc)}
 
+/* ===== refino 4: venda no balcão ===== */
+body.v-mesas main{max-width:1560px}
+.mesas-wrap{display:grid;grid-template-columns:350px minmax(0,1fr);gap:18px;align-items:start}
+.balcao{position:sticky;top:132px;display:flex;flex-direction:column;gap:12px;padding:16px}
+.bal-cab{display:flex;gap:12px;align-items:center}.bal-cab b{display:block;font-size:1.08rem}.bal-cab small{color:var(--mut)}
+.bal-busca{position:relative}.bal-busca label{margin:0 0 6px}.bal-busca input{height:48px;font-size:1.02rem}
+.bal-sug{display:flex;flex-direction:column;margin-top:6px;gap:4px}.bal-sug:empty{display:none}
+.bal-sug button{display:flex;align-items:center;gap:10px;text-align:left;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--txt)}
+.bal-sug button.act,.bal-sug button:hover{border-color:var(--mut)}
+.bal-sug .cd{min-width:34px;height:26px;border-radius:7px;border:1px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:.82rem;color:var(--mut)}
+.bal-sug .nm{flex:1}
+.bal-itens{display:flex;flex-direction:column;gap:8px;max-height:44vh;overflow:auto}
+.bal-it{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}.bal-it .nm{flex:1;min-width:0}.bal-it .nm b{display:block;font-size:.95rem}.bal-it .nm small{color:var(--mut)}
+.bal-it .qty{display:flex;align-items:center;gap:6px}.bal-it .qty button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-weight:700}
+.bal-it .sub{min-width:74px;text-align:right}
+.bal-vazio{color:var(--mut);font-size:.9rem;margin:2px 0;line-height:1.45}
+.balcao .total{margin:0}
+.tag.cod{background:var(--chip);color:var(--txt);border:1px solid var(--line);font-weight:700}
+@media(max-width:980px){.mesas-wrap{grid-template-columns:1fr}.balcao{position:static}}
+
 @media print{body>*:not(#printArea){display:none!important}#printArea{display:block!important}.cupom{border:0}}
 </style>
 </head>
@@ -561,7 +581,7 @@ async function iniciar(){
 }
 function modoLocal(){if(mode!=='loading')return;mode='local';lsLoad();pronto()}
 let carregados=new Set(),prontoFeito=false;
-function pronto(){if(prontoFeito)return;prontoFeito=true;$('#loading').classList.add('hidden');hooks.forEach(h=>{try{h('*')}catch(e){}});render(true)}
+function pronto(){if(prontoFeito)return;prontoFeito=true;setTimeout(migrarCodigos,2500);$('#loading').classList.add('hidden');hooks.forEach(h=>{try{h('*')}catch(e){}});render(true)}
 function assinar(){
   const need=['produtos','mesas','movimentos','vendas','fila','estado','config'];
   const ok=c=>{carregados.add(c);if(need.every(n=>carregados.has(n)))pronto()};
@@ -632,7 +652,7 @@ function lgEnfeitar(raiz){if(!raiz)return;raiz.querySelectorAll('h2,h3').forEach
   raiz.querySelectorAll('.btn,.tabs button,.aviso').forEach(b=>{if(b.dataset.lgi)return;b.dataset.lgi=1;const t=b.innerHTML.trimStart();
     for(const [e,n] of Object.entries(LGBEMO)){if(t.startsWith(e)){b.innerHTML=`<svg class="bic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LGIC[n]}</svg>`+t.slice(e.length).trimStart();break}}})}
 function trocarTema(){const t=document.documentElement.dataset.tema==='escuro'?'claro':'escuro';document.documentElement.dataset.tema=t;try{localStorage.setItem('lg-tema',t)}catch(e){}}
-function render(force){
+function render(force){document.body.classList.toggle('v-mesas',view==='mesas');
   if(!prontoFeito)return;
   if(GARCOM){if(!force&&digitando()){pendente=true;return}pendente=false;$('#view').innerHTML=gRender();return}
   cabecalho();
@@ -655,8 +675,9 @@ function cabecalho(){
 function avisoMov(){return movAberto()?'':`<div class="aviso">⚠️ <span style="flex:1">O movimento do dia ainda <b>não foi aberto</b>. Abra para lançar consumo nas mesas.</span><button class="btn ok" onclick="go('movimento')">▶️ Começar movimento</button></div>`}
 
 /* ---------- COMANDAS (mesas e pedidos de retirada/entrega) ---------- */
+const BAL='balcao';
 const isDel=id=>String(id).startsWith('d-');
-function rotulo(id){if(!isDel(id))return 'Mesa '+id;const m=S.mesas[id]||{};return (m.tipo==='entrega'?'🛵 Entrega':'🥡 Retirada')+' nº '+(m.num||'?')+(m.cliente?' — '+m.cliente:'')}
+function rotulo(id){if(id===BAL)return 'Venda no balcão';if(!isDel(id))return 'Mesa '+id;const m=S.mesas[id]||{};return (m.tipo==='entrega'?'🛵 Entrega':'🥡 Retirada')+' nº '+(m.num||'?')+(m.cliente?' — '+m.cliente:'')}
 const rotV=v=>v.rotulo||('Mesa '+v.mesa);
 const pedidosAbertos=()=>Object.entries(S.mesas).filter(([k])=>isDel(k)).map(([k,m])=>({...m,id:k})).sort((a,b)=>(a.num||0)-(b.num||0));
 function addNaComanda(m,pid,q,por){
@@ -675,13 +696,13 @@ function vMesas(){
   const pa=pedidosAbertos();
   let h=avisoMov()+`<div class="row" style="margin-bottom:12px"><div class="tabs"><button class="${st.aba==='mesas'?'act':''}" onclick="st.aba='mesas';render(true)"><span style="color:#d32f2f">${MESA_LIVRE}</span> Mesas</button><button class="${st.aba==='delivery'?'act':''}" onclick="st.aba='delivery';render(true)">🛵 Retirada / Delivery${pa.length?` <span class="cnt">${pa.length}</span>`:''}</button></div><span style="flex:1"></span><button class="btn" onclick="reimprimirUltimo()">🧾 Reimprimir último recibo <kbd class="k">F9</kbd></button></div>`;
   if(st.aba==='delivery')return h+vDelivery();
-  h+=`<p style="color:var(--mut);margin:-4px 0 12px;font-size:.85rem" id="dica">Dica: no teclado, digite o número da mesa e aperte Enter para abrir.</p><div class="stats">
+  h+=`<div class="mesas-wrap">${GARCOM?'':vBalcao()}<div class="mesas-col"><p style="color:var(--mut);margin:-4px 0 12px;font-size:.85rem" id="dica">Dica: com o cursor fora da venda do balcão, digite o número da mesa e aperte Enter para abrir.</p><div class="stats">
    <div class="stat"><small>Mesas ocupadas</small><b>${ocup} de ${NM()}</b></div>
    <div class="stat"><small>Em aberto nas mesas</small><b>${brl(aberto)}</b></div>
    <div class="stat"><small>Vendido hoje</small><b>${brl(vendDia)}</b></div></div><div class="mesas">`;
   for(let i=1;i<=NM();i++){const t=totMesa(i),mm=mesa(i);
     h+=`<button class="mesa ${t>0?'ocupada':''} ${mm.conta?'conta':''}" onclick="abrirMesa(${i})">${mm.conta?'<span class="flag">🧾 CONTA</span>':''}<span class="ic">${t>0?MESA_OC:MESA_LIVRE}</span><b>${i}</b><span class="mv">${t>0?brl(t):'Livre'}</span>${mm.garcom&&t>0?`<small class="gnm">👤 ${esc(mm.garcom)}</small>`:''}</button>`}
-  return h+'</div>';
+  return h+'</div></div></div>';
 }
 function abrirMesa(n){curMesa=String(n);view='mesa';st.busca='';render(true);window.scrollTo(0,0)}
 
@@ -748,32 +769,68 @@ function vMesa(){
   <button class="btn acc" style="flex:1.4" ${its.length?'':'disabled'} onclick="fecharVenda()">💰 Fechar venda <kbd class="k">F8</kbd></button></div>
   ${(m.pedidos||[]).length?`<h3 style="margin-top:16px">🧑‍🍳 Pedidos enviados pelos garçons</h3>${m.pedidos.slice().reverse().map(p=>`<div class="pedlog"><b>${hr(p.hora)} · ${esc(p.por)}</b> — ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)).join(', ')}${p.obs?`<br><i>📝 ${esc(p.obs)}</i>`:''}</div>`).join('')}`:''}</section>
   <section class="card"><h3>➕ Lançar produto</h3>
-  <input data-focus placeholder="🔎 Buscar produto…" value="${esc(st.busca)}" oninput="st.busca=this.value;filtrarProds()">
+  <input data-focus placeholder="🔎 Código, nome ou código de barras (Enter lança)" value="${esc(st.busca)}" oninput="st.busca=this.value;filtrarProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(lancarTexto(curMesa,this.value)){st.busca='';this._restore=1;render(true);const f=$('#view [data-focus]');if(f)f.focus()}}">
   <div class="chips">${['Todas',...CATS].map(c=>`<button class="chip ${st.cat===c?'act':''}" onclick="st.cat='${c}';render(true)">${c==='Todas'?'Todas':CATIC[c]+' '+c}</button>`).join('')}</div>
   <div class="prods" id="prods">${gridProds()}</div></section></div>`;
   return h;
 }
 function gridProds(){
   const b=st.busca.trim().toLowerCase();
-  const ps=prodList().filter(p=>(st.cat==='Todas'||p.cat===st.cat)&&(!b||p.nome.toLowerCase().includes(b)));
+  const ps=prodList().filter(p=>(st.cat==='Todas'||p.cat===st.cat)&&(!b||casa(p,b)));
   if(!Object.keys(S.produtos).length)return `<div class="vazio" style="grid-column:1/-1">Nenhum produto cadastrado.<br><br><button class="btn pri" onclick="go('produtos')">🥤 Cadastrar produtos</button></div>`;
   if(!ps.length)return `<div class="vazio" style="grid-column:1/-1">Nada encontrado.</div>`;
   return ps.map(p=>{const d=disponivel(p),esg=d<=0;
-    return `<button class="prod ${esg?'esg':''}" onclick="addItem('${p.id}')"><div class="pi">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><b>${esc(p.nome)}</b><small>${esc(p.unidade||'')}</small><span class="pr">${brl(p.preco)}</span>${d!==Infinity?(esg?`<small class="st-esg">⛔ Esgotado</small>`:d<=estMin(p)?`<small class="low">⚠️ Restam ${d}</small>`:`<small>Estoque: ${d}</small>`):''}</button>`}).join('');
+    return `<button class="prod ${esg?'esg':''}" onclick="addItem('${p.id}')"><div class="pi">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><b>${esc(p.nome)}</b><small>${p.codigo?'cód. '+p.codigo+(p.unidade?' · ':''):''}${esc(p.unidade||'')}</small><span class="pr">${brl(p.preco)}</span>${d!==Infinity?(esg?`<small class="st-esg">⛔ Esgotado</small>`:d<=estMin(p)?`<small class="low">⚠️ Restam ${d}</small>`:`<small>Estoque: ${d}</small>`):''}</button>`}).join('');
 }
 function filtrarProds(){const g=$('#prods');if(g)g.innerHTML=gridProds()}
-function addItem(pid){
-  if(!movAberto())return toast('Abra o movimento do dia primeiro (menu 🔐 Movimento).');
-  const p=S.produtos[pid];if(!p)return;
-  if(disponivel(p)<=0)return toast(`${p.nome} está sem estoque.`);
-  const n=curMesa;mutate('mesas',n,m=>addNaComanda(m,pid,1));
-  toast(`✅ ${p.nome} lançado — ${rotulo(n)}`);alertaEstoque([pid]);
+function lancarEm(n,pid){
+  if(!movAberto()){toast('Abra o movimento do dia primeiro (menu 🔐 Movimento).');return false}
+  const p=S.produtos[pid];if(!p)return false;
+  if(disponivel(p)<=0){toast(`${p.nome} está sem estoque.`);return false}
+  mutate('mesas',n,m=>addNaComanda(m,pid,1));
+  toast(`✅ ${p.nome} lançado — ${rotulo(n)}`);alertaEstoque([pid]);bip();return true
 }
-function qtd(pid,d){
+function addItem(pid){lancarEm(curMesa,pid)}
+function qtdEm(n,pid,d){
   if(d>0){const p=S.produtos[pid];if(p&&disponivel(p)<=0)return toast('Sem estoque suficiente.')}
-  const n=curMesa;mutate('mesas',n,m=>{if(!m)return ABORT;return vazioMesa(n,addNaComanda(m,pid,d))});
+  mutate('mesas',n,m=>{if(!m)return ABORT;return vazioMesa(n,addNaComanda(m,pid,d))});
   if(d>0)alertaEstoque([pid]);
 }
+function qtd(pid,d){qtdEm(curMesa,pid,d)}
+/* ---------- CÓDIGO DO PRODUTO E CÓDIGO DE BARRAS ---------- */
+const casa=(p,b)=>p.nome.toLowerCase().includes(b)||String(p.codigo||'')===b||(!!p.barras&&p.barras===b);
+function proxCodigo(){let m=0;for(const p of Object.values(S.produtos))m=Math.max(m,+p.codigo||0);return m+1}
+function acharProduto(t){t=String(t||'').trim();if(!/^\d+$/.test(t))return null;const ps=Object.values(S.produtos);
+  return ps.find(p=>p.barras&&p.barras===t)||ps.find(p=>String(p.codigo||'')===String(+t))||null}
+function buscaProds(t){t=String(t||'').trim().toLowerCase();if(!t)return[];
+  const ex=acharProduto(t);const l=prodList().filter(p=>casa(p,t));if(ex&&!l.includes(ex))l.unshift(ex);return l.slice(0,8)}
+function migrarCodigos(){if(GARCOM)return;let c=proxCodigo();
+  prodList().filter(p=>!p.codigo).forEach(p=>{const cod=c++;mutate('produtos',p.id,cur=>cur&&!cur.codigo?{...cur,codigo:cod}:ABORT)})}
+/* lança pelo texto digitado (código, código de barras ou nome) na comanda n; devolve true se lançou */
+function lancarTexto(n,t){t=String(t||'').trim();if(!t)return false;
+  const p=acharProduto(t);if(p)return lancarEm(n,p.id);
+  const l=buscaProds(t);if(l.length===1)return lancarEm(n,l[0].id);
+  toast(/^\d+$/.test(t)?`Código ${t} não encontrado. Confira em Produtos.`:(l.length?'Mais de um produto com esse nome: escolha na lista.':'Nenhum produto com esse nome.'));return false}
+function bip(){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=1100;g.gain.value=.05;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.07)}catch(e){}}
+/* ---------- VENDA NO BALCÃO (sem abrir mesa) ---------- */
+const ICB=`<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18l-1.5 11h-15z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/></svg>`;
+function vBalcao(){const its=mesa(BAL).itens||[],tot=totItens(its);
+  return `<aside class="balcao card"><div class="bal-cab"><span class="hic" style="margin:0">${ICB}</span><div><b>Venda no balcão</b><small>Venda rápida, sem abrir mesa</small></div></div>
+  <div class="bal-busca"><label for="balq">Código, nome ou código de barras</label><input id="balq" autocomplete="off" placeholder="Ex.: 1, Coca-Cola ou passe o leitor" oninput="balSugerir()" onkeydown="balTecla(event)"><div id="balsug" class="bal-sug"></div></div>
+  <div class="bal-itens">${its.length?its.map(i=>`<div class="bal-it"><div class="nm"><b>${esc(i.nome)}</b><small>${brl(i.preco)} cada</small></div><div class="qty"><button onclick="qtdEm(BAL,'${i.pid}',-1);balRedesenhar()" aria-label="Menos">−</button><span>${i.qtd}</span><button onclick="qtdEm(BAL,'${i.pid}',1);balRedesenhar()" aria-label="Mais">+</button></div><b class="sub">${brl(i.preco*i.qtd)}</b></div>`).join('')
+    :`<p class="bal-vazio">Digite o código do produto (ex.: <b>1</b>) e aperte <b>Enter</b>, procure pelo nome ou passe o leitor de código de barras.</p>`}</div>
+  <div class="total"><span>Total</span><span>${brl(tot)}</span></div>
+  <div class="row"><button class="btn" style="flex:1" ${its.length?'':'disabled'} onclick="limparBalcao()">Limpar</button><button class="btn acc" style="flex:1.6" ${its.length?'':'disabled'} onclick="receberBalcao()">💰 Receber <kbd class="k">F8</kbd></button></div></aside>`}
+function balRedesenhar(foco){render(true);if(foco!==false){const q=$('#balq');if(q)q.focus()}}
+function balSugerir(){const q=$('#balq'),b=$('#balsug');if(!q||!b)return;const l=q.value.trim()?buscaProds(q.value):[];
+  b.innerHTML=l.map((p,i)=>`<button type="button" class="${i===0?'act':''}" onmousedown="event.preventDefault();lancarEm(BAL,'${p.id}');$('#balq').value='';balRedesenhar()"><span class="cd">${p.codigo||'—'}</span><span class="nm">${esc(nomeP(p))}</span><b>${brl(p.preco)}</b></button>`).join('')}
+function balTecla(e){if(e.key!=='Enter')return;e.preventDefault();const q=e.target,t=q.value.trim();
+  if(!t){if((mesa(BAL).itens||[]).length)receberBalcao();return}
+  const p=acharProduto(t),l=p?[p]:buscaProds(t);
+  if(l.length&&lancarEm(BAL,l[0].id)){q.value='';balRedesenhar()}else if(!l.length)toast(/^\d+$/.test(t)?`Código ${t} não encontrado. Confira em Produtos.`:'Nenhum produto com esse nome.')}
+function limparBalcao(){confirmar('Limpar a venda do balcão? Os itens lançados saem da venda.',()=>{del('mesas',BAL);balRedesenhar(false)})}
+function receberBalcao(){if(!(mesa(BAL).itens||[]).length)return toast('Lance pelo menos um produto na venda do balcão.');curMesa=BAL;fecharVenda()}
+
 
 /* ---------- FECHAR VENDA ---------- */
 const soDig=x=>String(x||'').replace(/\D/g,'');
@@ -833,7 +890,7 @@ async function finalizar(){
   if(isDel(n))st.aba='delivery';
   go('mesas');
   abrirModal(`<div style="text-align:center"><div style="font-size:3.5rem">✅</div><h2>Venda finalizada!</h2>
-  <p>${esc(v.rotulo)} ${isDel(n)?'concluído':'liberada'} · ${esc(v.pagamento)} · <b>${brl(v.total)}</b>${v.cpf?`<br>${tipoDoc(v.cpf)} na nota: <b>${v.cpf}</b>`:''}</p></div>
+  <p>${esc(v.rotulo)} ${n===BAL?'concluída':isDel(n)?'concluído':'liberada'} · ${esc(v.pagamento)} · <b>${brl(v.total)}</b>${v.cpf?`<br>${tipoDoc(v.cpf)} na nota: <b>${v.cpf}</b>`:''}</p></div>
   ${v.nota?`<div class="aviso" style="margin:0 0 10px">🧾 Nota fiscal <b>a emitir</b> — ficou na lista <b>Notas a emitir</b> (menu Histórico).</div>`:''}
   ${baixados.length?`<div class="calc" style="font-size:.85rem">📦 Baixa automática no estoque:<br>${baixados.join('<br>')}</div>`:''}
   <div class="row" style="margin-top:14px"><button class="btn" style="flex:1" onclick="reimprimirUltimo()">🖨️ Recibo <kbd class="k">F9</kbd></button>
@@ -886,7 +943,7 @@ async function doBaixar(){
 /* ---------- PRODUTOS ---------- */
 function vProdutos(){
   const b=st.pbusca.trim().toLowerCase();
-  const ps=prodList().filter(p=>(st.pcat==='Todas'||p.cat===st.pcat)&&(!b||p.nome.toLowerCase().includes(b)));
+  const ps=prodList().filter(p=>(st.pcat==='Todas'||p.cat===st.pcat)&&(!b||casa(p,b)));
   let h=`<div class="row" style="margin-bottom:12px"><h2 style="margin:0;flex:1">🥤 Produtos</h2><button class="btn acc" onclick="formProduto()">➕ Novo produto</button></div>
   <input data-focus placeholder="🔎 Buscar…" value="${esc(st.pbusca)}" oninput="st.pbusca=this.value;clearTimeout(window._pb);window._pb=setTimeout(()=>{const v=$('#view [data-focus]');v._restore=1;render(true);const f=$('#view [data-focus]');f.focus();f.setSelectionRange(f.value.length,f.value.length)},250)">
   <div class="chips">${['Todas',...CATS].map(c=>`<button class="chip ${st.pcat===c?'act':''}" onclick="st.pcat='${c}';render(true)">${c==='Todas'?'Todas':CATIC[c]+' '+c}</button>`).join('')}</div>`;
@@ -894,7 +951,7 @@ function vProdutos(){
   h+='<div class="plist">';
   ps.forEach(p=>{const l=p.preco-(p.custo||0),mg=p.preco>0?l/p.preco*100:0;
     h+=`<div class="pcard"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="info">
-    <b>${esc(p.nome)}</b><span class="tag">${esc(p.cat)}</span>${p.unidade?`<span class="tag">${esc(p.unidade)}</span>`:''}
+    <b>${esc(p.nome)}</b>${p.codigo?`<span class="tag cod">cód. ${p.codigo}</span>`:''}<span class="tag">${esc(p.cat)}</span>${p.barras?`<span class="tag">▮▮ ${esc(p.barras)}</span>`:''}${p.unidade?`<span class="tag">${esc(p.unidade)}</span>`:''}
     <div style="margin-top:6px">Custo: ${brl(p.custo)} · Venda: <b>${brl(p.preco)}</b></div>
     <div class="${l>=0?'lucro':'prej'}">Lucro: ${brl(l)} (${mg.toFixed(0)}%)</div>
     <div style="color:var(--mut)">Estoque: ${p.estoque===''||p.estoque==null?'não controlado':p.estoque}</div>
@@ -909,6 +966,8 @@ function formProduto(id){
   <div style="flex:1;color:var(--mut);font-size:.9rem">Toque no quadro para colocar a foto do produto.<br>${fImg?`<button class="btn" style="margin-top:6px" onclick="fImg=null;$('#fprev').innerHTML='📷'">Remover foto</button>`:''}</div></div>
   <input type="file" id="fimg" accept="image/*" class="hidden" onchange="lerImg(this.files[0],240,u=>{fImg=u;$('#fprev').innerHTML='<img src='+u+'>'})">
   <label>Nome do produto *</label><input id="fnome" value="${esc(p.nome)}" placeholder="Ex.: Coca-Cola">
+  <div class="grid2"><div><label>Código do produto</label><input id="fcod" inputmode="numeric" value="${p.codigo||proxCodigo()}" placeholder="Ex.: 1"><small style="color:var(--mut)">Digite este número no caixa para lançar.</small></div>
+  <div><label>Código de barras (opcional)</label><input id="fbar" inputmode="numeric" value="${esc(p.barras||'')}" placeholder="Clique e passe o leitor" onkeydown="if(event.key==='Enter')event.preventDefault()"><small style="color:var(--mut)">Com o leitor, o produto entra sozinho na venda.</small></div></div>
   <div class="grid2"><div><label>Tamanho / medida</label><input id="fun" value="${esc(p.unidade)}" placeholder="Ex.: 2 Litros, Lata 350ml"></div>
   <div><label>Categoria</label><select id="fcat">${CATS.map(c=>`<option ${p.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
   <div><label>Quanto pagou (custo) R$</label><input id="fcus" inputmode="decimal" value="${p.custo}" placeholder="0,00" oninput="calcLucro()"></div>
@@ -927,7 +986,11 @@ function salvarProduto(id){
   if(!nome)return toast('Informe o nome do produto.');if(preco<=0)return toast('Informe o preço de venda.');
   const e=$('#fest').value.trim();if(e==='')return toast('Informe a quantidade em estoque (pode ser 0).');
   const old=id?S.produtos[id]:null,est=Math.max(0,Math.round(num(e)));
-  const campos={nome,unidade:$('#fun').value.trim(),cat:$('#fcat').value,custo:num($('#fcus').value),preco,estoqueMin:Math.max(0,Math.round(num($('#fmin').value))),img:fImg||''};
+  const codigo=Math.round(num($('#fcod').value)),barras=soDig($('#fbar').value);
+  if(codigo<1)return toast('Informe o código do produto (1, 2, 3…).');
+  const dup=Object.values(S.produtos).find(x=>x.id!==id&&+x.codigo===codigo);if(dup)return toast(`O código ${codigo} já é do produto ${dup.nome}.`);
+  const dupb=barras&&Object.values(S.produtos).find(x=>x.id!==id&&x.barras===barras);if(dupb)return toast(`Esse código de barras já é do produto ${dupb.nome}.`);
+  const campos={codigo,barras,nome,unidade:$('#fun').value.trim(),cat:$('#fcat').value,custo:num($('#fcus').value),preco,estoqueMin:Math.max(0,Math.round(num($('#fmin').value))),img:fImg||''};
   const pid=id||uid(),mudouEst=!old||+old.estoque!==est;
   mutate('produtos',pid,cur=>{const p={...(cur||{}),...campos,id:pid};
     if(!cur){p.estoque=est;p.hist=histEst(p,'cadastro',est)}else if(mudouEst){p.hist=histEst(cur,'ajuste',est-(+cur.estoque||0));p.estoque=est}
@@ -992,12 +1055,14 @@ function salvarAjuste(id){const q=Math.max(0,Math.round(num($('#aq').value))),mn
 /* ---------- ATALHOS ---------- */
 let numBuf='';
 function ajuda(){abrirModal(`<h2>⌨️ Teclas de atalho</h2><table>
-${[['F1','Esta ajuda'],['F2','Mesas'],['F3','Produtos'],['F4','Estoque'],['F6','Histórico'],['F7','Relatórios'],['nº + Enter','Na tela de mesas: abre a mesa (ex.: 1 2 Enter = mesa 12)'],['F8','Na mesa: fechar venda · no pagamento: finalizar'],['P / D / C','Pagamento: Pix / Débito / Crédito'],['F9','Reimprimir o último recibo'],['F10','Imprimir o consumo da mesa'],['Esc','Fechar janela / voltar']].map(([k,t])=>`<tr><td><kbd class="k" style="font-size:.9rem">${k}</kbd></td><td>${t}</td></tr>`).join('')}</table>
+${[['F1','Esta ajuda'],['F2','Mesas'],['F3','Produtos'],['F4','Estoque'],['F6','Histórico'],['F7','Relatórios'],['nº + Enter','Na tela de mesas: abre a mesa (ex.: 1 2 Enter = mesa 12)'],['Código + Enter','Na venda do balcão ou dentro da mesa: lança o produto (ex.: 40 Enter)'],['Leitor','Passe o código de barras: o produto entra na venda aberta'],['F8','Na mesa: fechar venda · no pagamento: finalizar'],['P / D / C','Pagamento: Pix / Débito / Crédito'],['F9','Reimprimir o último recibo'],['F10','Imprimir o consumo da mesa'],['Esc','Fechar janela / voltar']].map(([k,t])=>`<tr><td><kbd class="k" style="font-size:.9rem">${k}</kbd></td><td>${t}</td></tr>`).join('')}</table>
 <button class="btn pri big" style="margin-top:14px" onclick="fecharModal()">Entendi</button>`)}
 function f8(){
   if(modalTipo==='venda'){if(st.pag)finalizar();else toast('Escolha o pagamento: P = Pix · D = Débito · C = Crédito');return}
   if(view==='mesa'&&(mesa(curMesa).itens||[]).length){fecharModal();fecharVenda()}
+  else if(view==='mesas'&&(mesa(BAL).itens||[]).length)receberBalcao()
   else toast('Abra uma mesa com consumo para fechar a venda (F8).')}
+let scan='',scanT=0;
 document.addEventListener('keydown',e=>{
   if(GARCOM)return;
   const k=e.key,aberto=!$('#modalBg').classList.contains('hidden');
@@ -1007,8 +1072,15 @@ document.addEventListener('keydown',e=>{
   if(k==='Escape'){if(!$('#alerta').classList.contains('hidden'))$('#alerta').classList.add('hidden');if(aberto)fecharModal();else if(view==='mesa')go('mesas');return}
   if(aberto&&modalTipo==='venda'){if(document.activeElement&&document.activeElement.tagName==='INPUT'&&document.activeElement.type!=='checkbox'){if(k==='Enter'&&st.pag){e.preventDefault();finalizar()}return}const p={p:'Pix',d:'Débito',c:'Crédito'}[k.toLowerCase()];
     if(p){e.preventDefault();st.pag=p;modalVenda()}else if(k==='Enter'&&st.pag){e.preventDefault();finalizar()}return}
+  // leitor de código de barras: números chegando muito rápido + Enter (fora de qualquer campo)
+  if(!aberto&&!digitando()&&(view==='mesas'||view==='mesa')){const agora=Date.now();
+    if(/^\d$/.test(k)){scan=(agora-scanT<60?scan:'')+k;scanT=agora}
+    else if(k==='Enter'&&scan.length>=6&&agora-scanT<120){e.preventDefault();const c=scan;scan='';numBuf='';
+      const p=acharProduto(c);if(!p){toast(`Código de barras ${c} não cadastrado. Cadastre em Produtos.`);return}
+      if(view==='mesa')lancarEm(curMesa,p.id);else{lancarEm(BAL,p.id);balRedesenhar(false)}return}}
+  if(view==='mesa'&&!aberto&&!digitando()&&/^\d$/.test(k)){const f=$('#view [data-focus]');if(f){f.focus()}}
   if(view==='mesas'&&!aberto&&!digitando()){
-    if(/^\d$/.test(k)){numBuf=(numBuf+k).slice(-2);toast(`Mesa ${numBuf} — aperte Enter para abrir`)}
+    if(/^\d$/.test(k)){numBuf=(numBuf+k).slice(-2);if(scan.length<3)toast(`Mesa ${numBuf} — aperte Enter para abrir`)}
     else if(k==='Enter'&&numBuf){const n=+numBuf;numBuf='';if(n>=1&&n<=NM())abrirMesa(n);else toast('Mesa inválida (1 a '+NM()+')')}
     else if(k==='Backspace'){numBuf=numBuf.slice(0,-1)}}
 });
@@ -1028,7 +1100,7 @@ function vHistorico(){
   if(st.hNota==='emitida')vs=vs.filter(v=>v.nota&&v.nota.status==='emitida');
   if(st.hNota==='cpf')vs=vs.filter(v=>v.cpf);
   let h=`<div class="row" style="margin-bottom:6px"><h2 style="margin:0;flex:1">📜 Histórico de mesas</h2>
-  <select style="width:auto" onchange="st.hMesa=this.value;render(true)"><option value="">Todas as mesas</option><option value="d" ${st.hMesa==='d'?'selected':''}>🛵 Retirada/Delivery</option>${Array.from({length:NM()},(_,i)=>`<option ${st.hMesa==String(i+1)?'selected':''} value="${i+1}">Mesa ${i+1}</option>`).join('')}</select></div>
+  <select style="width:auto" onchange="st.hMesa=this.value;render(true)"><option value="">Todas as mesas</option><option value="d" ${st.hMesa==='d'?'selected':''}>🛵 Retirada/Delivery</option><option value="balcao" ${st.hMesa==='balcao'?'selected':''}>Venda no balcão</option>${Array.from({length:NM()},(_,i)=>`<option ${st.hMesa==String(i+1)?'selected':''} value="${i+1}">Mesa ${i+1}</option>`).join('')}</select></div>
   <div class="chips">${[['','Todas as vendas'],['pendente',`🧾 Notas a emitir (${npn})`],['emitida','✅ Notas emitidas'],['cpf','🪪 Com CPF']].map(([k,t])=>`<button class="chip ${st.hNota===k?'act':''}" onclick="st.hNota='${k}';render(true)">${t}</button>`).join('')}</div>`;
   if(!vs.length)return h+`<div class="card vazio">${st.hNota==='pendente'?'✅ Nenhuma nota pendente.':'Nenhuma venda encontrada.'}</div>`;
   h+='<div class="hist">';
@@ -1199,7 +1271,7 @@ function gMesa(){
   if(!g.cat){h+=`<div class="gpad"><div class="gcats">${cats.map(c=>`<button onclick="g.cat='${c}';render(true)"><i>${CATIC[c]}</i>${c}<small>${prodList().filter(p=>p.cat===c).length} itens</small></button>`).join('')}</div>${!cats.length?'<div class="card vazio">Nenhum produto cadastrado no caixa.</div>':''}</div>`}
   else{h+=`<div class="gchips"><button onclick="g.cat=null;render(true)">☰ Menus</button>${cats.map(c=>`<button class="${g.cat===c?'act':''}" onclick="g.cat='${c}';render(true);window.scrollTo(0,0)">${CATIC[c]} ${c}</button>`).join('')}</div><div class="gpad">`;
     prodList().filter(p=>p.cat===g.cat).forEach(p=>{const q=cart()[p.id]||0,d=disponivel(p)-q;
-      h+=`<div class="gprod ${disponivel(p)<=0?'esg':''}"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${esc(p.unidade||'')}</small><span class="pr">${brl(p.preco)}</span>${disponivel(p)<=0?'<small class="st-esg">⛔ Esgotado</small>':d!==Infinity&&d<=estMin(p)?`<small class="low">⚠️ restam ${Math.max(0,d)}</small>`:''}</div>
+      h+=`<div class="gprod ${disponivel(p)<=0?'esg':''}"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${p.codigo?'cód. '+p.codigo+(p.unidade?' · ':''):''}${esc(p.unidade||'')}</small><span class="pr">${brl(p.preco)}</span>${disponivel(p)<=0?'<small class="st-esg">⛔ Esgotado</small>':d!==Infinity&&d<=estMin(p)?`<small class="low">⚠️ restam ${Math.max(0,d)}</small>`:''}</div>
       <div class="gqty">${q?`<button onclick="gAdd('${p.id}',-1)">−</button><span>${q}</span>`:''}<button class="mais" onclick="gAdd('${p.id}',1)">+</button></div></div>`});
     h+='</div>'}
   const ci=cartItens();
