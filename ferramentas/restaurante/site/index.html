@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#1b2433">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -427,6 +427,89 @@ label.sw i::after{content:"";position:absolute;top:3px;left:3px;width:22px;heigh
 label.sw input:checked+i{background:#1f9d55}label.sw input:checked+i::after{left:21px}
 label.sw input:focus-visible+i{outline:3px solid #d32f2f55;outline-offset:2px}
 
+/* ===== refino 6: visual do modelo ===== */
+:root{--hdr:#1b2433;--hdr2:#141b27;--painel:#ffffffd9;--sombra:0 1px 2px #1018280f,0 6px 16px #10182814;--verm:#c62828;--verm2:#8e1414}
+:root[data-tema=escuro]{--painel:#0f141cdb;--sombra:0 1px 2px #0006,0 8px 20px #0008}
+body{background:linear-gradient(160deg,#eef1f5 0%,#f7f8fa 45%,#eceff3 100%) fixed}
+:root[data-tema=escuro] body{background:linear-gradient(160deg,#07090d,#0d1118) fixed}
+body::after{content:"";position:fixed;right:0;bottom:0;width:min(44vw,640px);height:140px;pointer-events:none;z-index:0;opacity:.9;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 140' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23e53935' stop-opacity='.15'/%3E%3Cstop offset='1' stop-color='%23b71c1c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 140C180 120 360 70 640 0v140z' fill='url(%23g)'/%3E%3Cpath d='M120 140C300 118 470 80 640 34v106z' fill='%23c62828' opacity='.85'/%3E%3C/svg%3E") no-repeat right bottom/100% 100%}
+/* cabeçalho escuro com o detalhe vermelho */
+header{background:linear-gradient(100deg,var(--hdr2),var(--hdr) 55%,#222c3d)!important;color:#fff!important;border-bottom:0!important;padding:12px 24px!important;position:relative;overflow:hidden}
+header::before{content:"";position:absolute;left:250px;top:-40px;width:230px;height:160px;border-radius:0 0 0 100%;border-bottom:3px solid #e53935;transform:rotate(-12deg);opacity:.9;pointer-events:none}
+header::after{content:"";position:absolute;left:300px;top:-60px;width:160px;height:150px;background:radial-gradient(closest-side,#e5393533,transparent);pointer-events:none}
+header>*{position:relative;z-index:1}
+.brand b{color:#fff!important;font-size:1.45rem}.brand span{color:#fff!important;opacity:.85;letter-spacing:4px!important}
+#logo{width:50px;height:50px}
+header .sino{background:#ffffff0d;border:1px solid #ffffff3d;color:#fff;width:46px;height:46px;border-radius:13px;box-shadow:none}
+header .sino:hover{background:#ffffff1f;border-color:#ffffff66}
+header .badge{border-color:var(--hdr)}
+header .pill{background:#ffffff0a!important;border:1.5px solid #22c55e!important;color:#fff!important;font-weight:600}
+header .pill.off{border-color:#ef4444!important}
+header .pill small,header .pill span{color:#ffffffb3!important}
+/* menu: botões retangulares com borda */
+nav{background:transparent!important;border-bottom:0!important;box-shadow:none!important;padding:16px 24px 6px!important;gap:12px!important;position:relative;top:auto}
+nav button{background:linear-gradient(180deg,#fff,#f3f5f8)!important;border:1px solid #dfe3ea!important;border-radius:16px!important;box-shadow:var(--sombra);min-width:96px!important;min-height:94px;padding:10px 12px 8px!important;color:#1f2733!important;font-weight:700!important;justify-content:center}
+:root[data-tema=escuro] nav button{background:linear-gradient(180deg,#161c26,#111620)!important;border-color:#263040!important;color:#e6ebf2!important}
+nav button i{background:transparent!important;border:0!important;box-shadow:none!important;width:40px!important;height:38px!important;color:inherit!important}
+nav button .nico{width:31px!important;height:31px!important;stroke-width:1.8}
+nav button .mico{width:40px!important;height:28px!important}
+nav button small{color:#6b7380!important}
+nav button:hover{border-color:#b9c0cc!important;transform:translateY(-1px)}
+nav button.act{background:linear-gradient(180deg,#e53935,#b71c1c)!important;border-color:#9b1717!important;color:#fff!important;box-shadow:0 8px 18px #c6282855,inset 0 1px 0 #ffffff40}
+nav button.act i{color:#fff!important}nav button.act small{color:#ffffffcc!important}
+/* painel central */
+main{position:relative;z-index:1;background:var(--painel);border:1px solid #e3e7ed;border-radius:24px;box-shadow:0 10px 40px #1018280d;margin:10px auto 120px!important;padding:22px!important;backdrop-filter:blur(6px)}
+:root[data-tema=escuro] main{border-color:#1e2733}
+body.v-mesas main{max-width:1600px}
+/* abas mesas / delivery */
+.tabs{background:#e9edf2!important;border:1px solid #dde2e9!important;border-radius:14px!important;padding:5px!important;box-shadow:inset 0 1px 2px #1018280d}
+.tabs button{border-radius:10px!important;font-weight:700}
+.tabs button.act{background:#fff!important;box-shadow:0 2px 6px #10182822,0 0 0 1px #dfe3ea!important}
+:root[data-tema=escuro] .tabs{background:#121821!important;border-color:#232c39!important}:root[data-tema=escuro] .tabs button.act{background:#1b2330!important}
+/* cartões de resumo com cor separando */
+.stat{display:flex;align-items:center;gap:14px;box-shadow:var(--sombra);border:1px solid #e3e7ed!important;padding:16px 18px 16px 20px!important}
+.stat::before{top:0!important;bottom:0!important;width:5px!important;border-radius:0!important}
+.stat .st-ic{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:13px}
+.stat.s1::before{background:#d32f2f}.stat.s1 .st-ic{color:#d32f2f;background:#fdecec}
+.stat.s2::before{background:#f59e0b}.stat.s2 .st-ic{color:#e8900c;background:#fff4df}
+.stat.s3::before{background:#16a34a}.stat.s3 .st-ic{color:#16a34a;background:#e6f6ec}
+:root[data-tema=escuro] .stat .st-ic{background:#ffffff0d}
+.stat small{font-weight:700;color:#3b4350}:root[data-tema=escuro] .stat small{color:var(--mut)}
+.stat b{font-size:1.6rem!important}
+/* mesas com volume */
+.mesa{background:linear-gradient(180deg,#fff,#f6f8fb)!important;border:1px solid #dfe3ea!important;box-shadow:var(--sombra);min-height:130px}
+:root[data-tema=escuro] .mesa{background:linear-gradient(180deg,#161c26,#10151e)!important;border-color:#263040!important}
+.mesa:hover{transform:translateY(-2px);border-color:#b9c0cc!important}
+.mesa .ic{border:0!important;background:transparent!important;width:46px;height:34px}
+.mesa b{font-size:1.75rem}
+.mesa .mv{background:#e3f4e8!important;color:#15803d!important;font-size:.82rem;padding:3px 12px}
+.mesa.ocupada{background:linear-gradient(180deg,#fff5f5,#fde9e9)!important;border:2px solid #e05252!important;box-shadow:0 6px 16px #d32f2f22!important}
+.mesa.ocupada .ic{color:#d32f2f!important;background:transparent!important}
+.mesa.ocupada .mv{background:#f9caca!important;color:#a51d1d!important}
+:root[data-tema=escuro] .mesa.ocupada{background:linear-gradient(180deg,#2a1416,#220f11)!important}
+/* venda no balcão com faixa vermelha */
+.balcao{padding:0!important;overflow:hidden;box-shadow:var(--sombra);border:1px solid #e3e7ed!important;gap:0!important}
+.balcao>*{margin-left:16px;margin-right:16px}
+.bal-cab{margin:0!important;padding:14px 16px;background:linear-gradient(100deg,#c62828,#8e1414);color:#fff}
+.bal-cab b{color:#fff;font-size:1.25rem}.bal-cab small{color:#ffffffd0!important}
+.bal-ic{display:grid;place-items:center;width:44px;height:44px}.bal-ic svg{width:34px;height:34px}
+.bal-busca{margin-top:14px}
+input.lupa{padding-left:42px!important;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23384150' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m20 20-4.6-4.6'/%3E%3C/svg%3E") no-repeat 13px center/20px!important;box-shadow:inset 0 1px 2px #1018280d}
+.bal-itens{margin-top:12px}
+.bal-tot{margin-top:12px!important;padding:12px 14px;border-radius:12px;background:linear-gradient(90deg,#fdf0f0,#fbe2e2)}
+.bal-tot span:last-child{color:#c62828}
+:root[data-tema=escuro] .bal-tot{background:#2a1416}
+.balcao .row{margin:12px 16px 16px}
+.btn.acc{background:linear-gradient(180deg,#e53935,#b71c1c)!important;border-color:#9b1717!important;color:#fff!important;box-shadow:0 6px 14px #c6282840}
+.btn{box-shadow:0 1px 2px #1018280f}
+@media(max-width:760px){header::before,header::after{display:none}nav{padding:12px 12px 4px!important;gap:8px!important}nav button{min-width:82px!important;min-height:80px}main{border-radius:18px;padding:14px!important;margin:8px 8px 90px!important}body::after{height:70px}}
+
+nav button{justify-content:flex-start!important;padding-top:14px!important}
+main{width:calc(100% - 48px)}
+:root[data-tema=escuro] nav button.act{background:linear-gradient(180deg,#e53935,#b71c1c)!important;border-color:#9b1717!important;color:#fff!important}
+.glogin .logo{border:0!important;background:transparent!important;box-shadow:none!important}
+@media(max-width:760px){main{width:auto}}
 @media print{body>*:not(#printArea){display:none!important}#printArea{display:block!important}.cupom{border:0}}
 </style>
 </head>
@@ -722,9 +805,9 @@ function vMesas(){
   let h=avisoMov()+`<div class="row" style="margin-bottom:12px"><div class="tabs"><button class="${st.aba==='mesas'?'act':''}" onclick="st.aba='mesas';render(true)"><span style="color:#d32f2f">${MESA_LIVRE}</span> Mesas</button><button class="${st.aba==='delivery'?'act':''}" onclick="st.aba='delivery';render(true)">🛵 Retirada / Delivery${pa.length?` <span class="cnt">${pa.length}</span>`:''}</button></div><span style="flex:1"></span><button class="btn" onclick="reimprimirUltimo()">🧾 Reimprimir último recibo <kbd class="k">F9</kbd></button></div>`;
   if(st.aba==='delivery')return h+vDelivery();
   h+=`<div class="mesas-wrap">${GARCOM?'':vBalcao()}<div class="mesas-col"><p style="color:var(--mut);margin:-4px 0 12px;font-size:.85rem" id="dica">Dica: com o cursor fora da venda do balcão, digite o número da mesa e aperte Enter para abrir.</p><div class="stats">
-   <div class="stat"><small>Mesas ocupadas</small><b>${ocup} de ${NM()}</b></div>
-   <div class="stat"><small>Em aberto nas mesas</small><b>${brl(aberto)}</b></div>
-   <div class="stat"><small>Vendido hoje</small><b>${brl(vendDia)}</b></div></div><div class="mesas">`;
+   <div class="stat s1"><span class="st-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="3.2"/><circle cx="16.5" cy="8.6" r="2.7"/><path d="M2 19.5c0-3.4 2.7-5.6 6-5.6s6 2.2 6 5.6z"/><path d="M14.6 19.5c0-1.9-.6-3.5-1.7-4.6.9-.5 2-.8 3.1-.8 2.9 0 5 1.9 5 5.4z"/></svg></span><div><small>Mesas ocupadas</small><b>${ocup} de ${NM()}</b></div></div>
+   <div class="stat s2"><span class="st-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><ellipse cx="9" cy="6.5" rx="6" ry="2.6"/><path d="M3 6.5v3c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-3c0 1.4-2.7 2.6-6 2.6S3 7.9 3 6.5z"/><path d="M3 11v3c0 1.4 2.7 2.6 6 2.6.8 0 1.6-.1 2.3-.2v-3.2c-.7.1-1.5.2-2.3.2-3.3 0-6-1.2-6-2.4z"/><ellipse cx="17" cy="13.5" rx="5" ry="2.2"/><path d="M12 13.5v2.6c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2v-2.6c0 1.2-2.2 2.2-5 2.2s-5-1-5-2.2z"/><path d="M12 17.6v2.4c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2v-2.4c0 1.2-2.2 2.2-5 2.2s-5-1-5-2.2z"/></svg></span><div><small>Em aberto nas mesas</small><b>${brl(aberto)}</b></div></div>
+   <div class="stat s3"><span class="st-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><rect x="3" y="14" width="3.6" height="7" rx="1"/><rect x="8.6" y="10.5" width="3.6" height="10.5" rx="1"/><rect x="14.2" y="12.5" width="3.6" height="8.5" rx="1"/><path d="M16.2 3.2h5.2v5.2l-1.9-1.9-4.4 4.4-1.5-1.5 4.4-4.4z"/></svg></span><div><small>Vendido hoje</small><b>${brl(vendDia)}</b></div></div></div><div class="mesas">`;
   for(let i=1;i<=NM();i++){const t=totMesa(i),mm=mesa(i);
     h+=`<button class="mesa ${t>0?'ocupada':''} ${mm.conta?'conta':''}" onclick="abrirMesa(${i})">${mm.conta?'<span class="flag">🧾 CONTA</span>':''}<span class="ic">${t>0?MESA_OC:MESA_LIVRE}</span><b>${i}</b><span class="mv">${t>0?brl(t):'Livre'}</span>${mm.garcom&&t>0?`<small class="gnm">👤 ${esc(mm.garcom)}</small>`:''}</button>`}
   return h+'</div></div></div>';
@@ -844,11 +927,11 @@ function bip(){try{const a=new (window.AudioContext||window.webkitAudioContext)(
 /* ---------- VENDA NO BALCÃO (sem abrir mesa) ---------- */
 const ICB=`<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18l-1.5 11h-15z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/></svg>`;
 function vBalcao(){const its=mesa(BAL).itens||[],tot=totItens(its);
-  return `<aside class="balcao card"><div class="bal-cab"><span class="hic" style="margin:0">${ICB}</span><div><b>Venda no balcão</b><small>Venda rápida, sem abrir mesa</small></div></div>
-  <div class="bal-busca"><label for="balq">Código, nome ou código de barras</label><input id="balq" autocomplete="off" placeholder="Ex.: 1, Coca-Cola ou passe o leitor" oninput="balSugerir()" onkeydown="balTecla(event)"><div id="balsug" class="bal-sug"></div></div>
+  return `<aside class="balcao card"><div class="bal-cab"><span class="bal-ic">${ICB}</span><div><b>Venda no balcão</b><small>Venda rápida, sem abrir mesa</small></div></div>
+  <div class="bal-busca"><label for="balq">Código, nome ou código de barras</label><input id="balq" class="lupa" autocomplete="off" placeholder="Ex.: 1, Coca-Cola ou passe o leitor" oninput="balSugerir()" onkeydown="balTecla(event)"><div id="balsug" class="bal-sug"></div></div>
   <div class="bal-itens">${its.length?its.map(i=>`<div class="bal-it"><div class="nm"><b>${esc(i.nome)}</b><small>${brl(i.preco)} cada</small></div><div class="qty"><button onclick="qtdEm(BAL,'${i.pid}',-1);balRedesenhar()" aria-label="Menos">−</button><span>${i.qtd}</span><button onclick="qtdEm(BAL,'${i.pid}',1);balRedesenhar()" aria-label="Mais">+</button></div><b class="sub">${brl(i.preco*i.qtd)}</b></div>`).join('')
     :`<p class="bal-vazio">Digite o código do produto (ex.: <b>1</b>) e aperte <b>Enter</b>, procure pelo nome ou passe o leitor de código de barras.</p>`}</div>
-  <div class="total"><span>Total</span><span>${brl(tot)}</span></div>
+  <div class="total bal-tot"><span>Total</span><span>${brl(tot)}</span></div>
   <div class="row"><button class="btn" style="flex:1" ${its.length?'':'disabled'} onclick="limparBalcao()">Limpar</button><button class="btn acc" style="flex:1.6" ${its.length?'':'disabled'} onclick="receberBalcao()">💰 Receber <kbd class="k">F8</kbd></button></div></aside>`}
 function balRedesenhar(foco){render(true);if(foco!==false){const q=$('#balq');if(q)q.focus()}}
 function balSugerir(){const q=$('#balq'),b=$('#balsug');if(!q||!b)return;const l=q.value.trim()?buscaProds(q.value):[];
