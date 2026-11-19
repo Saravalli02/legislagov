@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
+<meta name="lg-versao" content="lg-v14">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -513,6 +514,10 @@ nav button{justify-content:flex-start!important;padding-top:14px!important}
 @media(max-width:560px){.stats{grid-template-columns:1fr!important}}
 .cdp-it .thumb{position:relative;overflow:hidden}.cdp-it .ilu{position:absolute;left:2px;bottom:2px;font-size:.55rem;font-weight:700;background:#ffffffd9;color:#555;border-radius:4px;padding:0 3px}.cdp-it .nm small{display:block}
 .codfixo{height:46px;display:flex;align-items:center;padding:0 14px;border:1px dashed var(--line);border-radius:10px;background:var(--chip);font-weight:800;font-size:1.15rem;color:var(--txt)}
+header .atu-bt{width:auto;padding:0 14px;gap:8px;display:inline-flex;align-items:center;font-weight:700;font-size:.9rem;position:relative}
+header .atu-bt.nova{border-color:#22c55e!important;box-shadow:0 0 0 3px #22c55e33}
+.atu-dot{position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid var(--hdr)}
+@media(max-width:760px){header .atu-bt .atu-tx{display:none}header .atu-bt{padding:0;width:46px;justify-content:center}}
 main{width:calc(100% - 48px)}
 :root[data-tema=escuro] nav button.act{background:linear-gradient(180deg,#e53935,#b71c1c)!important;border-color:#9b1717!important;color:#fff!important}
 .glogin .logo{border:0!important;background:transparent!important;box-shadow:none!important}
@@ -597,6 +602,7 @@ main{width:calc(100% - 48px)}
   </div>
   <div class="hdr-r">
     <button class="sino" id="sino" onclick="abrirAvisos()" title="Avisos de estoque" aria-label="Avisos de estoque"><svg class="nico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span id="badge" class="badge hidden">0</span></button>
+    <button class="sino atu-bt" id="atuBt" onclick="atualizarApp()" title="Atualizar o sistema para a versão mais nova" aria-label="Atualizar o sistema"><svg class="nico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 20.5V16h-4.5"/></svg><span class="atu-tx">Atualizar</span><i class="atu-dot" hidden></i></button>
     <button class="sino tema-bt" id="temaBt" onclick="trocarTema()" title="Claro ou escuro" aria-label="Trocar entre claro e escuro"><svg class="nico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
     <div class="pill" id="status"></div>
   </div>
@@ -834,6 +840,16 @@ function lgEnfeitar(raiz){if(!raiz)return;raiz.querySelectorAll('h2,h3').forEach
   for(const [e,n] of Object.entries(LGEMO)){const t=h.innerHTML.trimStart();if(t.startsWith(e)){h.innerHTML=lgIco(n)+t.slice(e.length).trimStart();h.classList.add('comic');break}}});
   raiz.querySelectorAll('.btn,.tabs button,.aviso').forEach(b=>{if(b.dataset.lgi)return;b.dataset.lgi=1;const t=b.innerHTML.trimStart();
     for(const [e,n] of Object.entries(LGBEMO)){if(t.startsWith(e)){b.innerHTML=`<svg class="bic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LGIC[n]}</svg>`+t.slice(e.length).trimStart();break}}})}
+/* ---------- ATUALIZAR O APP ---------- */
+const VERSAO=(document.querySelector('meta[name=lg-versao]')||{}).content||'';let novaVersao=false;
+async function atualizarApp(){const fazer=async()=>{try{if('serviceWorker' in navigator){const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.update().catch(()=>{})))}}catch(e){}
+    try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(e){}
+    try{lsSet('lg-atualizado',String(Date.now()))}catch(e){}location.reload()};
+  if(window.lgCarregando)lgCarregando('Atualizando o sistema…',fazer,'Atualizado');else fazer()}
+async function conferirVersao(){if(mode!=='api'||!VERSAO)return;try{const r=await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'});const t=await r.text();const m=t.match(/name="lg-versao" content="([^"]+)"/);
+  if(m&&m[1]!==VERSAO&&!novaVersao){novaVersao=true;const d=document.querySelector('.atu-dot');if(d)d.hidden=false;const b=$('#atuBt');if(b)b.classList.add('nova');toast('🆕 Tem versão nova do sistema. Toque em “Atualizar” no topo.');if(GARCOM)render(true)}}catch(e){}}
+setTimeout(conferirVersao,20000);setInterval(conferirVersao,5*60000);
+addEventListener('load',()=>{try{const t=+lsGet('lg-atualizado','0');if(t&&Date.now()-t<15000){lsSet('lg-atualizado','');setTimeout(()=>toast('✅ Sistema atualizado'),1200)}}catch(e){}});
 function trocarTema(){const t=document.documentElement.dataset.tema==='escuro'?'claro':'escuro';document.documentElement.dataset.tema=t;try{localStorage.setItem('lg-tema',t)}catch(e){}}
 function render(force){document.body.classList.toggle('v-mesas',view==='mesas');aplicarBobina();
   if(!prontoFeito)return;
@@ -1533,7 +1549,7 @@ function gRender(){
   document.body.classList.add('gmode');
   const u=gUser();let h='';
   if(!u)return gLogin();
-  h+=`<div class="gtop"><div class="logo" style="width:38px;height:38px">${S.config.logo?`<img src="${S.config.logo}">`:LOGO_SVG}</div><div style="flex:1;line-height:1.1"><b>LegislaGov</b><br><small>👤 ${esc(u.nome)}${mode==='api'?(online?' · 🟢 online':' · 🔴 sem conexão'):''}</small></div><button class="gbtn" onclick="confirmar('Sair do app?',()=>{lsSet('lg-garcom',null);render(true)})">Sair</button></div>`;
+  h+=`<div class="gtop"><div class="logo" style="width:38px;height:38px">${S.config.logo?`<img src="${S.config.logo}">`:LOGO_SVG}</div><div style="flex:1;line-height:1.1"><b>LegislaGov</b><br><small>👤 ${esc(u.nome)}${mode==='api'?(online?' · 🟢 online':' · 🔴 sem conexão'):''}</small></div><button class="gbtn" style="white-space:nowrap" onclick="atualizarApp()" title="Atualizar o app">↻ Atualizar${novaVersao?' •':''}</button><button class="gbtn" onclick="confirmar('Sair do app?',()=>{lsSet('lg-garcom',null);render(true)})">Sair</button></div>`;
   if(!movAberto())h+=`<div class="aviso" style="margin:10px">⚠️ O caixa ainda não abriu o movimento do dia. Os pedidos só podem ser enviados depois.</div>`;
   if(g.tela==='mesas')h+=gMesas();
   else if(g.tela==='mesa')h+=gMesa();
