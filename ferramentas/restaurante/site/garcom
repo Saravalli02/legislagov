@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v14">
+<meta name="lg-versao" content="lg-v15">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -636,8 +636,16 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const dt=iso=>iso?new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
 const hr=iso=>iso?new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
 const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n};
-const CATS=['Bebidas','Pratos','Porções','Lanches','Sobremesas','Outros'];
-const CATIC={Bebidas:'🥤',Pratos:'🍛',Porções:'🍟',Lanches:'🍔',Sobremesas:'🍨',Outros:'🍽️'};
+/* menus (categorias): a lista completa; cada restaurante escolhe quais usa em Ajustes › Menus (config.geral.categorias) */
+const TODAS_CATS=['Bebidas','Pratos','Porções','Oriental','Lanches','Doces','Sobremesas','Outros'];
+const CATS_PADRAO=['Bebidas','Pratos','Porções','Lanches','Sobremesas','Outros'];
+const CATIC={Bebidas:'🥤',Pratos:'🍛',Porções:'🍟',Oriental:'🍣',Lanches:'🍔',Doces:'🍫',Sobremesas:'🍨',Outros:'🍽️'};
+let CATS=CATS_PADRAO.slice();
+function catsEscolhidas(){const c=(S.config||{}).categorias;return Array.isArray(c)&&c.length?TODAS_CATS.filter(x=>c.includes(x)):CATS_PADRAO}
+/* as escolhidas + qualquer uma que ainda tenha produto (para nenhum produto sumir da tela) */
+function atualizarCats(){const e=catsEscolhidas(),usadas=new Set(Object.values(S.produtos||{}).map(p=>p.cat));CATS=TODAS_CATS.filter(x=>e.includes(x)||usadas.has(x))}
+function trocarCat(c,on){const l=catsEscolhidas().filter(x=>x!==c);if(on)l.push(c);if(!l.length)return toast('Deixe pelo menos um menu');
+  mutate('config','geral',x=>({...(x||{}),categorias:TODAS_CATS.filter(y=>l.includes(y))}))}
 const PAGS=[['Pix','💠'],['Débito','💳'],['Crédito','💳']];
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600)}
 function erro(e){console.error(e);const c=e&&e.code;
@@ -851,7 +859,7 @@ async function conferirVersao(){if(mode!=='api'||!VERSAO)return;try{const r=awai
 setTimeout(conferirVersao,20000);setInterval(conferirVersao,5*60000);
 addEventListener('load',()=>{try{const t=+lsGet('lg-atualizado','0');if(t&&Date.now()-t<15000){lsSet('lg-atualizado','');setTimeout(()=>toast('✅ Sistema atualizado'),1200)}}catch(e){}});
 function trocarTema(){const t=document.documentElement.dataset.tema==='escuro'?'claro':'escuro';document.documentElement.dataset.tema=t;try{localStorage.setItem('lg-tema',t)}catch(e){}}
-function render(force){document.body.classList.toggle('v-mesas',view==='mesas');aplicarBobina();
+function render(force){document.body.classList.toggle('v-mesas',view==='mesas');aplicarBobina();atualizarCats();
   if(!prontoFeito)return;
   if(GARCOM){if(!force&&digitando()){pendente=true;return}pendente=false;$('#view').innerHTML=gRender();return}
   cabecalho();
@@ -1200,7 +1208,7 @@ function formProduto(id){
   <div class="grid2"><div><label>Código do produto</label><div class="codfixo" aria-label="Código do produto">${p.codigo||proxCodigo()}</div><small style="color:var(--mut)">${p.codigo?'Fixo: não muda.':'Gerado sozinho, em sequência.'} Digite este número no caixa para lançar.</small></div>
   <div><label>Código de barras (opcional)</label><input id="fbar" inputmode="numeric" value="${esc(p.barras||'')}" placeholder="Clique e passe o leitor" onkeydown="if(event.key==='Enter')event.preventDefault()"><small style="color:var(--mut)">Com o leitor, o produto entra sozinho na venda.</small></div></div>
   <div class="grid2"><div><label>Tamanho / medida</label><input id="fun" value="${esc(p.unidade)}" placeholder="Ex.: 2 Litros, Lata 350ml"></div>
-  <div><label>Categoria</label><select id="fcat">${CATS.map(c=>`<option ${p.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
+  <div><label>Categoria</label><select id="fcat">${TODAS_CATS.filter(c=>catsEscolhidas().includes(c)||p.cat===c).map(c=>`<option ${p.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
   <div><label>Quanto pagou (custo) R$</label><input id="fcus" inputmode="decimal" value="${p.custo}" placeholder="0,00" oninput="calcLucro()"></div>
   <div><label>Preço de venda R$ *</label><input id="fpre" inputmode="decimal" value="${p.preco}" placeholder="0,00" oninput="calcLucro()"></div>
   <div style="grid-column:1/-1"><label>Descrição no cardápio digital (opcional)</label><input id="fdesc" maxlength="160" value="${esc(p.desc||'')}" placeholder="Ex.: 8 peças de salmão com cream cheese"></div>
@@ -1428,7 +1436,7 @@ function fotoGenerica(nome,cat){const n=String(nome||'').toLowerCase().normalize
     [/agua/,'agua'],[/suco|limonada|laranjada|vitamina|shake|batida/,'suco'],[/sushi|temaki|sashimi|hot ?roll|uramaki|niguiri|joe|combinado|japa|yakisoba/,'sushi'],[/pizza|esfiha/,'pizza'],
     [/burger|lanche|x-|xis|sanduiche|hot ?dog|cachorro|misto|bauru/,'lanche'],[/batata|frita|porc|calabresa|frango|isca|mandioca|polenta|petisco|pastel|coxinha|salgad/,'porcao'],
     [/sorvete|acai|pudim|doce|sobremesa|bolo|torta|mousse|brigadeiro|petit|pave|cocada/,'sobremesa']];
-  let t=(T.find(([r])=>r.test(n))||[])[1]||({Bebidas:'lata','Porções':'porcao',Lanches:'lanche',Sobremesas:'sobremesa',Pratos:'prato'}[c])||'prato';
+  let t=(T.find(([r])=>r.test(n))||[])[1]||({Bebidas:'lata','Porções':'porcao',Oriental:'sushi',Lanches:'lanche',Doces:'sobremesa',Sobremesas:'sobremesa',Pratos:'prato'}[c])||'prato';
   const cor=/guarana|kuat/.test(n)?'#2e9d3a':/fanta|laranja|sukita/.test(n)?'#f08c00':/sprite|soda|limao/.test(n)?'#27a35a':/tonica|schweppes/.test(n)?'#d9b021':'#d62828';
   const B={cerveja:['#fff6e0','#ffe2a8'],lata:['#fff0ef','#ffd9d6'],agua:['#eef7ff','#d3e9ff'],suco:['#fff5e6','#ffe0b8'],sushi:['#f3f7f2','#dfeadb'],pizza:['#fff4e8','#ffe1c2'],lanche:['#fff6ea','#ffe3c4'],porcao:['#fff8e8','#ffe9b8'],sobremesa:['#fff0f6','#ffd9e9'],prato:['#f5f6f8','#e4e8ee']}[t];
   const D={
@@ -1474,6 +1482,8 @@ function vCardapio(){const c=cdp(),ps=prodList(),noc=ps.filter(p=>c.ids.includes
     <button class="btn" onclick="cdpFoto('${p.id}')">📷 ${p.img?'Trocar foto':'Pôr foto'}</button>${p.img?`<button class="btn" title="Tirar a foto" onclick="mutate('produtos','${p.id}',x=>x?{...x,img:''}:ABORT)">🗑️</button>`:''}<button class="btn" onclick="formProduto('${p.id}')">✏️</button><label class="sw"><input type="checkbox" ${c.ids.includes(p.id)?'checked':''} onchange="cdpTrocar('${p.id}',this.checked)"><i></i></label></div>`).join('')}`).join(''):'<div class="vazio">Cadastre produtos primeiro em Produtos.</div>'}</div>`}
 function vConfig(){const c=S.config||{},l=c.logo,gs=c.garcons||[];
   return `<h2>⚙️ Ajustes</h2><div class="cfg">
+  <div class="card"><h3>🗂️ Menus (categorias dos produtos)</h3><p style="color:var(--mut);margin:0 0 8px">Marque os menus que o restaurante usa. Eles aparecem no cadastro de produtos, no app do garçom e no cardápio digital.</p>
+  <div class="grid2">${TODAS_CATS.map(x=>`<label class="chk"><input type="checkbox" ${catsEscolhidas().includes(x)?'checked':''} onchange="trocarCat('${x}',this.checked)"><span>${CATIC[x]} ${x}${Object.values(S.produtos||{}).some(p=>p.cat===x)?' <small style="color:var(--mut)">('+Object.values(S.produtos).filter(p=>p.cat===x).length+' produtos)</small>':''}</span></label>`).join('')}</div></div>
   <div class="card"><h3>🧑‍🍳 Garçons (app do celular)</h3>
   ${gs.length?gs.map(g=>`<div class="it"><div class="thumb">👤</div><div class="nm"><b>${esc(g.nome)}</b><small>PIN ••••</small></div><button class="btn" onclick="trocarPin('${g.id}')">🔑 PIN</button><button class="btn" onclick="removerGarcom('${g.id}')">🗑️</button></div>`).join(''):'<p style="color:var(--mut)">Nenhum garçom cadastrado.</p>'}
   <div class="grid2" style="margin-top:6px"><div><label>Nome</label><input id="gn" placeholder="Ex.: João"></div><div><label>PIN (4 números)</label><input id="gp" inputmode="numeric" maxlength="4" placeholder="1234"></div></div>
