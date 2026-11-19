@@ -512,6 +512,7 @@ nav button{justify-content:flex-start!important;padding-top:14px!important}
 .movbox .stats{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 @media(max-width:560px){.stats{grid-template-columns:1fr!important}}
 .cdp-it .thumb{position:relative;overflow:hidden}.cdp-it .ilu{position:absolute;left:2px;bottom:2px;font-size:.55rem;font-weight:700;background:#ffffffd9;color:#555;border-radius:4px;padding:0 3px}.cdp-it .nm small{display:block}
+.codfixo{height:46px;display:flex;align-items:center;padding:0 14px;border:1px dashed var(--line);border-radius:10px;background:var(--chip);font-weight:800;font-size:1.15rem;color:var(--txt)}
 main{width:calc(100% - 48px)}
 :root[data-tema=escuro] nav button.act{background:linear-gradient(180deg,#e53935,#b71c1c)!important;border-color:#9b1717!important;color:#fff!important}
 .glogin .logo{border:0!important;background:transparent!important;box-shadow:none!important}
@@ -995,13 +996,14 @@ function qtdEm(n,pid,d){
 function qtd(pid,d){qtdEm(curMesa,pid,d)}
 /* ---------- CÓDIGO DO PRODUTO E CÓDIGO DE BARRAS ---------- */
 const casa=(p,b)=>p.nome.toLowerCase().includes(b)||String(p.codigo||'')===b||(!!p.barras&&p.barras===b);
-function proxCodigo(){let m=0;for(const p of Object.values(S.produtos))m=Math.max(m,+p.codigo||0);return m+1}
+function proxCodigo(){let m=+((S.config||{}).ultCodigo)||0;for(const p of Object.values(S.produtos))m=Math.max(m,+p.codigo||0);return m+1}
+function guardarUltCodigo(c){mutate('config','geral',x=>(+((x||{}).ultCodigo)||0)>=c?ABORT:{...(x||{}),ultCodigo:c})}
 function acharProduto(t){t=String(t||'').trim();if(!/^\d+$/.test(t))return null;const ps=Object.values(S.produtos);
   return ps.find(p=>p.barras&&p.barras===t)||ps.find(p=>String(p.codigo||'')===String(+t))||null}
 function buscaProds(t){t=String(t||'').trim().toLowerCase();if(!t)return[];
   const ex=acharProduto(t);const l=prodList().filter(p=>casa(p,t));if(ex&&!l.includes(ex))l.unshift(ex);return l.slice(0,8)}
 function migrarCodigos(){if(GARCOM)return;let c=proxCodigo();
-  prodList().filter(p=>!p.codigo).forEach(p=>{const cod=c++;mutate('produtos',p.id,cur=>cur&&!cur.codigo?{...cur,codigo:cod}:ABORT)})}
+  const sem=prodList().filter(p=>!p.codigo);sem.forEach(p=>{const cod=c++;mutate('produtos',p.id,cur=>cur&&!cur.codigo?{...cur,codigo:cod}:ABORT)});if(sem.length)guardarUltCodigo(c-1)}
 /* lança pelo texto digitado (código, código de barras ou nome) na comanda n; devolve true se lançou */
 function lancarTexto(n,t){t=String(t||'').trim();if(!t)return false;
   const p=acharProduto(t);if(p)return lancarEm(n,p.id);
@@ -1179,7 +1181,7 @@ function formProduto(id){
   <div style="flex:1;color:var(--mut);font-size:.9rem">Toque no quadro para colocar a foto do produto.<br>${fImg?`<button class="btn" style="margin-top:6px" onclick="fImg=null;$('#fprev').innerHTML='📷'">Remover foto</button>`:''}<button class="btn" style="margin-top:6px" onclick="fImg=fotoGenerica($('#fnome').value,$('#fcat').value);$('#fprev').innerHTML='<img src=&quot;'+fImg+'&quot; style=&quot;width:100%;height:100%;object-fit:cover&quot;>'">✨ Usar foto ilustrativa</button></div></div>
   <input type="file" id="fimg" accept="image/*" class="hidden" onchange="lerImg(this.files[0],240,u=>{fImg=u;$('#fprev').innerHTML='<img src='+u+'>'})">
   <label>Nome do produto *</label><input id="fnome" value="${esc(p.nome)}" placeholder="Ex.: Coca-Cola">
-  <div class="grid2"><div><label>Código do produto</label><input id="fcod" inputmode="numeric" value="${p.codigo||proxCodigo()}" placeholder="Ex.: 1"><small style="color:var(--mut)">Digite este número no caixa para lançar.</small></div>
+  <div class="grid2"><div><label>Código do produto</label><div class="codfixo" aria-label="Código do produto">${p.codigo||proxCodigo()}</div><small style="color:var(--mut)">${p.codigo?'Fixo: não muda.':'Gerado sozinho, em sequência.'} Digite este número no caixa para lançar.</small></div>
   <div><label>Código de barras (opcional)</label><input id="fbar" inputmode="numeric" value="${esc(p.barras||'')}" placeholder="Clique e passe o leitor" onkeydown="if(event.key==='Enter')event.preventDefault()"><small style="color:var(--mut)">Com o leitor, o produto entra sozinho na venda.</small></div></div>
   <div class="grid2"><div><label>Tamanho / medida</label><input id="fun" value="${esc(p.unidade)}" placeholder="Ex.: 2 Litros, Lata 350ml"></div>
   <div><label>Categoria</label><select id="fcat">${CATS.map(c=>`<option ${p.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
@@ -1201,15 +1203,13 @@ function salvarProduto(id){
   if(!nome)return toast('Informe o nome do produto.');if(preco<=0)return toast('Informe o preço de venda.');
   const e=$('#fest').value.trim();if(e==='')return toast('Informe a quantidade em estoque (pode ser 0).');
   const old=id?S.produtos[id]:null,est=Math.max(0,Math.round(num(e)));
-  const codigo=Math.round(num($('#fcod').value)),barras=soDig($('#fbar').value);
-  if(codigo<1)return toast('Informe o código do produto (1, 2, 3…).');
-  const dup=Object.values(S.produtos).find(x=>x.id!==id&&+x.codigo===codigo);if(dup)return toast(`O código ${codigo} já é do produto ${dup.nome}.`);
+  const codigo=(old&&+old.codigo)||proxCodigo(),barras=soDig($('#fbar').value);
   const dupb=barras&&Object.values(S.produtos).find(x=>x.id!==id&&x.barras===barras);if(dupb)return toast(`Esse código de barras já é do produto ${dupb.nome}.`);
   const campos={codigo,barras,nome,unidade:$('#fun').value.trim(),cat:$('#fcat').value,custo:num($('#fcus').value),preco,estoqueMin:Math.max(0,Math.round(num($('#fmin').value))),img:fImg||'',desc:($('#fdesc')||{value:''}).value.trim()};
   const pid=id||uid(),mudouEst=!old||+old.estoque!==est;
-  mutate('produtos',pid,cur=>{const p={...(cur||{}),...campos,id:pid};
+  mutate('produtos',pid,cur=>{const p={...(cur||{}),...campos,id:pid};if(cur&&+cur.codigo)p.codigo=+cur.codigo;
     if(!cur){p.estoque=est;p.hist=histEst(p,'cadastro',est)}else if(mudouEst){p.hist=histEst(cur,'ajuste',est-(+cur.estoque||0));p.estoque=est}
-    return p});const p={id:pid};const ncdp=!!($('#fcdp')||{}).checked;if(ncdp!==cdpTem(pid))cdpTrocar(pid,ncdp);fecharModal();toast('✅ Produto salvo');alertaEstoque([p.id]);
+    return p});guardarUltCodigo(codigo);const p={id:pid};const ncdp=!!($('#fcdp')||{}).checked;if(ncdp!==cdpTem(pid))cdpTrocar(pid,ncdp);fecharModal();toast('✅ Produto salvo');alertaEstoque([p.id]);
 }
 function apagarProduto(id){const p=S.produtos[id];confirmar(`Apagar o produto <b>${esc(p.nome)}</b>?`,()=>{del('produtos',id);toast('Produto apagado')})}
 function lerImg(file,max,cb){if(!file)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
