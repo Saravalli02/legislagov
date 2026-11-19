@@ -15,8 +15,8 @@ const cardapio=async st=>{if(pub.v&&Date.now()-pub.t<20000)return pub.v;
   const ps=(await Promise.all(ids.map(id=>doc(st,'produtos',id)))).filter(x=>x&&x.data).map(x=>({...x.data,id:x.id}));
   const e=await doc(st,'estado','atual'),ed=(e&&e.data)||{},mv=ed.movId?await doc(st,'movimentos',ed.movId):null;
   const ativo=cd.ativo!==false,aberto=ativo&&!!(mv&&mv.data&&!mv.data.fechamento);
-  const v={loja:{nome:c.razao||'Restaurante',logo:c.logo||'',fone:c.fone||'',endereco:c.endereco||'',whatsapp:cd.whatsapp||''},ativo,aberto,
-    tipos:cd.tipos||{retirada:true,local:true,entrega:true},taxa:+cd.taxa||0,pagamentos:cd.pagamentos||['Pix','Crédito','Débito','Dinheiro'],aviso:cd.aviso||'',
+  const v={loja:{nome:c.razao||'Restaurante',logo:c.logo||'',fone:c.fone||'',endereco:c.endereco||'',whatsapp:cd.whatsapp||''},ativo,aberto,genericas:cd.genericas!==false,
+    tipos:cd.tipos||{retirada:true,local:true,entrega:false},taxa:+cd.taxa||0,pagamentos:cd.pagamentos||['Pix','Crédito','Débito','Dinheiro'],aviso:cd.aviso||'',
     produtos:ps.map(p=>({id:p.id,nome:p.nome,unidade:p.unidade||'',cat:p.cat||'Outros',preco:+p.preco||0,custo:+p.custo||0,desc:p.desc||'',img:p.img||'',
       esgotado:!(p.estoque===''||p.estoque==null)&&+p.estoque<=0}))};
   pub.t=Date.now();pub.v=v;return v};

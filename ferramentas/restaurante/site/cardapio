@@ -74,6 +74,15 @@ textarea.campo{height:70px;padding:10px 13px;resize:vertical}
 .wa{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:52px;border-radius:14px;background:#1f9d55;color:#fff;font-weight:700;margin-top:16px;text-decoration:none}
 .sec{width:100%;height:50px;border-radius:14px;border:1px solid var(--line);background:var(--card);font-weight:700;margin-top:10px}
 .rod{text-align:center;color:var(--mut);font-size:.78rem;margin-top:26px}
+.fixo{position:sticky;top:0;z-index:6;background:var(--bg);padding:10px 0 2px;margin:0 -16px;padding-left:16px;padding-right:16px}
+.fixo .linha{display:flex;gap:10px;align-items:center}.fixo .busca{margin-top:0;flex:1;min-width:0}
+.carro{position:relative;flex:none;display:flex;align-items:center;gap:8px;height:46px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:700;color:var(--ink)}
+.carro.cheio{border-color:var(--acc);color:var(--acc)}
+.carro .ct{position:absolute;top:-7px;right:-7px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--acc);color:#fff;font-size:.78rem;display:grid;place-items:center;border:2px solid var(--bg)}
+nav.cats{position:static}
+.prod .ft{position:relative}.ilu{position:absolute;left:6px;bottom:6px;font-size:.62rem;font-weight:700;background:#ffffffd9;color:#555;border-radius:6px;padding:1px 5px}
+.voltar{display:block;width:100%;text-align:left;font-weight:700;color:var(--acc);padding:4px 2px 12px}
+@media(max-width:420px){.carro .tx{display:none}}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #c6282855;outline-offset:2px}
 @media(prefers-color-scheme:dark){:root{--bg:#0b0c0f;--card:#14161b;--ink:#eef0f3;--mut:#9aa0aa;--line:#262a31;--chip:#1c1f25}
   .campo{background:#0f1115}.pill{background:#0f2a1d;color:#4fd18b}.pill.off{background:#2a1212;color:#ff8a80}.aviso{background:#2a2410;border-color:#4a3e17}
@@ -162,12 +171,36 @@ async function carregar(){try{const r=await fetch('/api/cardapio',{cache:'no-sto
   const ids=new Set(D.produtos.map(p=>p.id));for(const k in carro)if(!ids.has(k))delete carro[k];
   document.title=(D.loja.nome||'Cardápio')+' · Cardápio';tela()}
   catch(e){$('#app').innerHTML='<div class="vazio" style="padding-top:80px">Não deu para abrir o cardápio. Confira a internet e recarregue a página.</div>'}}
+/* foto genérica (ilustração) para produto sem foto, escolhida pelo nome e pela categoria */
+function fotoGenerica(nome,cat){const n=String(nome||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''),c=String(cat||'');
+  const T=[[/cerveja|chop|skol|brahma|antar|heineken|budweiser|itaipava|amstel|stella|corona|devassa|eisenbahn|spaten/,'cerveja'],[/coca|cola|guarana|fanta|sprite|refri|pepsi|soda|tonica|kuat|schweppes|sukita|dolly/,'lata'],
+    [/agua/,'agua'],[/suco|limonada|laranjada|vitamina|shake|batida/,'suco'],[/sushi|temaki|sashimi|hot ?roll|uramaki|niguiri|joe|combinado|japa|yakisoba/,'sushi'],[/pizza|esfiha/,'pizza'],
+    [/burger|lanche|x-|xis|sanduiche|hot ?dog|cachorro|misto|bauru/,'lanche'],[/batata|frita|porc|calabresa|frango|isca|mandioca|polenta|petisco|pastel|coxinha|salgad/,'porcao'],
+    [/sorvete|acai|pudim|doce|sobremesa|bolo|torta|mousse|brigadeiro|petit|pave|cocada/,'sobremesa']];
+  let t=(T.find(([r])=>r.test(n))||[])[1]||({Bebidas:'lata','Porções':'porcao',Lanches:'lanche',Sobremesas:'sobremesa',Pratos:'prato'}[c])||'prato';
+  const cor=/guarana|kuat/.test(n)?'#2e9d3a':/fanta|laranja|sukita/.test(n)?'#f08c00':/sprite|soda|limao/.test(n)?'#27a35a':/tonica|schweppes/.test(n)?'#d9b021':'#d62828';
+  const B={cerveja:['#fff6e0','#ffe2a8'],lata:['#fff0ef','#ffd9d6'],agua:['#eef7ff','#d3e9ff'],suco:['#fff5e6','#ffe0b8'],sushi:['#f3f7f2','#dfeadb'],pizza:['#fff4e8','#ffe1c2'],lanche:['#fff6ea','#ffe3c4'],porcao:['#fff8e8','#ffe9b8'],sobremesa:['#fff0f6','#ffd9e9'],prato:['#f5f6f8','#e4e8ee']}[t];
+  const D={
+   cerveja:'<path d="M138 92h12a16 16 0 0 1 16 16v22a16 16 0 0 1-16 16h-12" fill="none" stroke="#e39a17" stroke-width="10"/><rect x="58" y="74" width="82" height="100" rx="12" fill="#f4b02a"/><rect x="66" y="84" width="10" height="78" rx="5" fill="#fff" opacity=".35"/><circle cx="96" cy="120" r="3" fill="#fff" opacity=".7"/><circle cx="114" cy="140" r="4" fill="#fff" opacity=".6"/><circle cx="104" cy="156" r="2.5" fill="#fff" opacity=".7"/><path d="M54 80c0-14 12-22 24-18 6-12 26-12 32 0 12-6 30 2 30 18z" fill="#fffdf6"/>',
+   lata:'<rect x="68" y="44" width="64" height="118" rx="12" fill="'+cor+'"/><ellipse cx="100" cy="46" rx="32" ry="9" fill="#cfd4da"/><ellipse cx="100" cy="46" rx="22" ry="5" fill="#aeb5bd"/><path d="M68 98c20-14 44 14 64-2v24c-20 16-44-12-64 2z" fill="#fff" opacity=".9"/><rect x="76" y="56" width="9" height="96" rx="4.5" fill="#fff" opacity=".28"/><ellipse cx="100" cy="161" rx="32" ry="7" fill="#9aa1a9"/>',
+   agua:'<rect x="88" y="30" width="24" height="16" rx="4" fill="#2b6cb0"/><path d="M84 52c0-6 32-6 32 0l8 22v88a12 12 0 0 1-12 12H88a12 12 0 0 1-12-12V74z" fill="#9fd3f5"/><rect x="76" y="98" width="48" height="34" fill="#fff"/><path d="M90 115c4-8 8-8 10 0s6 8 10 0" fill="none" stroke="#2b6cb0" stroke-width="3" stroke-linecap="round"/><rect x="84" y="60" width="7" height="100" rx="3.5" fill="#fff" opacity=".45"/>',
+   suco:'<path d="M118 28l-14 62" stroke="#e53935" stroke-width="7" stroke-linecap="round"/><path d="M62 62h76l-10 108H72z" fill="#ffffff" opacity=".7"/><path d="M66 84h68l-8 86H74z" fill="#ffa62b"/><circle cx="62" cy="64" r="20" fill="#ffd166"/><circle cx="62" cy="64" r="14" fill="#ffb703"/><path d="M62 50v28M48 64h28M52 54l20 20M72 54L52 74" stroke="#ffe8a3" stroke-width="2"/><rect x="80" y="92" width="8" height="66" rx="4" fill="#fff" opacity=".35"/>',
+   sushi:'<ellipse cx="100" cy="128" rx="78" ry="34" fill="#fff"/><ellipse cx="100" cy="132" rx="78" ry="34" fill="#000" opacity=".06"/>'+[[64,112],[100,100],[136,112]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="24" fill="#1f2d2a"/><circle cx="${x}" cy="${y}" r="18" fill="#fffaf2"/><circle cx="${x}" cy="${y}" r="9" fill="#ff7f50"/><circle cx="${x+3}" cy="${y-2}" r="3" fill="#7cc36a"/>`).join('')+'<path d="M150 62l-60 70M160 70l-62 68" stroke="#8a5a2b" stroke-width="4" stroke-linecap="round"/>',
+   pizza:'<circle cx="100" cy="104" r="70" fill="#e9b56b"/><circle cx="100" cy="104" r="60" fill="#f6c84c"/><path d="M100 104L100 44M100 104l52 30M100 104l-52 30" stroke="#e9b56b" stroke-width="4"/>'+[[78,74],[126,80],[72,118],[120,128],[100,96],[140,108],[88,146]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9" fill="#d64545"/>`).join('')+'<circle cx="112" cy="62" r="3" fill="#4f9d3a"/><circle cx="62" cy="96" r="3" fill="#4f9d3a"/><circle cx="138" cy="146" r="3" fill="#4f9d3a"/>',
+   lanche:'<path d="M42 96a58 44 0 0 1 116 0z" fill="#eaa54d"/>'+[[70,76],[92,66],[114,70],[132,82],[84,86],[106,82]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="4" ry="2.4" fill="#fff4dc"/>`).join('')+'<path d="M38 104c10-8 18 6 28-2s18 6 28-2 18 6 28-2 18 6 28-2 16 4 12 8H38z" fill="#6abf4b"/><path d="M44 110l40 24 40-24z" fill="#ffcc33"/><rect x="40" y="110" width="120" height="22" rx="11" fill="#7a4428"/><rect x="44" y="134" width="112" height="26" rx="10" fill="#e39a45"/>',
+   porcao:'<path d="M60 92h80l-12 76H72z" fill="#d62828"/><path d="M60 92h80l-3 18H63z" fill="#b71c1c"/>'+[[70,50,72],[82,40,86],[94,46,80],[106,36,92],[118,44,84],[128,54,74],[76,60,64],[112,58,70]].map(([x,y,h])=>`<rect x="${x}" y="${y}" width="9" height="${h}" rx="3" fill="#f7c948" transform="rotate(${(x-100)/6} ${x} ${y+h})"/>`).join('')+'<path d="M84 128h32" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".85"/>',
+   sobremesa:'<path d="M70 108l30 76 30-76z" fill="#e8b06a"/><path d="M78 118l38 18M74 108l48 46M92 108l30 14M84 140l20-10" stroke="#c98b45" stroke-width="3"/><circle cx="82" cy="98" r="22" fill="#ff9ec2"/><circle cx="118" cy="98" r="22" fill="#8b5a3c"/><circle cx="100" cy="74" r="24" fill="#fff6e8"/><circle cx="100" cy="50" r="7" fill="#e53935"/><path d="M100 43c2-8 8-12 14-12" stroke="#4f9d3a" stroke-width="3" fill="none"/>',
+   prato:'<circle cx="100" cy="104" r="62" fill="#fff"/><circle cx="100" cy="104" r="62" fill="none" stroke="#dfe3e8" stroke-width="3"/><circle cx="100" cy="104" r="46" fill="#f7f8fa"/><ellipse cx="88" cy="96" rx="20" ry="14" fill="#f4ead3"/><ellipse cx="114" cy="112" rx="18" ry="12" fill="#8a4b2a"/><circle cx="96" cy="122" r="7" fill="#6abf4b"/><circle cx="110" cy="88" r="5" fill="#e74c3c"/><path d="M26 64v32a8 8 0 0 0 16 0V64M34 64v96" stroke="#9aa3ad" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M168 64c-8 6-10 22-10 34h10v62" stroke="#9aa3ad" stroke-width="5" stroke-linecap="round" fill="none"/>'}[t];
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><radialGradient id="b" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="${B[0]}"/><stop offset="1" stop-color="${B[1]}"/></radialGradient></defs><rect width="200" height="200" fill="url(#b)"/><ellipse cx="100" cy="182" rx="56" ry="7" fill="#000" opacity=".07"/>${D}</svg>`;
+  return 'data:image/svg+xml,'+encodeURIComponent(svg)}
+
+const foto=p=>p.img||(D.genericas!==false?fotoGenerica(p.nome,p.cat):'');
 const prod=id=>D.produtos.find(p=>p.id===id);
 const itens=()=>Object.entries(carro).map(([id,q])=>({p:prod(id),q})).filter(x=>x.p&&x.q>0);
 const subtotal=()=>itens().reduce((s,x)=>s+x.p.preco*x.q,0);
 function mudar(id,d){carro[id]=Math.max(0,Math.min(50,(carro[id]||0)+d));if(!carro[id])delete carro[id];salvar();tela()}
 function cartaoProd(p){const q=carro[p.id]||0;
-  return `<div class="prod ${p.esgotado?'esg':''}"><div class="ft">${p.img?`<img src="${p.img}" alt="" loading="lazy">`:'🍽️'}</div><div class="tx"><b>${esc(p.nome)}${p.unidade?' <span style="font-weight:500;color:var(--mut)">'+esc(p.unidade)+'</span>':''}</b>${p.desc?`<small>${esc(p.desc)}</small>`:''}
+  return `<div class="prod ${p.esgotado?'esg':''}"><div class="ft">${foto(p)?`<img src="${foto(p)}" alt="" loading="lazy">${p.img?'':'<span class="ilu">Ilustração</span>'}`:'🍽️'}</div><div class="tx"><b>${esc(p.nome)}${p.unidade?' <span style="font-weight:500;color:var(--mut)">'+esc(p.unidade)+'</span>':''}</b>${p.desc?`<small>${esc(p.desc)}</small>`:''}
   <div class="pr"><span>${brl(p.preco)}</span>${p.esgotado?'<em style="color:var(--mut);font-size:.85rem">Esgotado</em>':!D.aberto?'':q?`<div class="qt"><button aria-label="Tirar um" onclick="mudar('${p.id}',-1)">−</button><span>${q}</span><button aria-label="Pôr mais um" onclick="mudar('${p.id}',1)">+</button></div>`:`<button class="add" onclick="mudar('${p.id}',1)">Adicionar</button>`}</div></div></div>`}
 function tela(){if(!D)return;const L=D.loja,cats=[...new Set(D.produtos.map(p=>p.cat))];window.CATS_=cats;
   const b=busca.trim().toLowerCase(),ps=D.produtos.filter(p=>(!cat||p.cat===cat)&&(!b||(p.nome+' '+p.desc).toLowerCase().includes(b)));
@@ -175,19 +208,21 @@ function tela(){if(!D)return;const L=D.loja,cats=[...new Set(D.produtos.map(p=>p
   $('#app').innerHTML=`<header class="loja"><div class="in"><div class="lg">${L.logo?`<img src="${L.logo}" alt="">`:esc((L.nome||'R').trim()[0]||'R')}</div><div class="lj"><h1>${esc(L.nome)}</h1>${L.endereco?`<p>${esc(L.endereco)}</p>`:''}
     <span class="pill ${D.aberto?'':'off'}">${D.aberto?'Aberto · recebendo pedidos':'Fechado agora · pedidos indisponíveis'}</span></div></div></header>
   <div class="wrap">${D.aviso?`<div class="aviso">${esc(D.aviso)}</div>`:''}
-  <input class="busca" placeholder="Buscar no cardápio" value="${esc(busca)}" oninput="busca=this.value;tela();const i=$('.busca');i.focus();i.setSelectionRange(i.value.length,i.value.length)">
-  ${cats.length>1?`<nav class="cats"><button class="${cat?'':'act'}" onclick="cat='';tela()">Tudo</button>${cats.map((c,i)=>`<button class="${cat===c?'act':''}" onclick="cat=CATS_[${i}];tela()">${esc(c)}</button>`).join('')}</nav>`:''}
+  <div class="fixo"><div class="linha"><input class="busca" placeholder="Buscar no cardápio" value="${esc(busca)}" oninput="busca=this.value;tela();const i=$('.busca');i.focus();i.setSelectionRange(i.value.length,i.value.length)">
+  <button class="carro ${n?'cheio':''}" onclick="abrir()" aria-label="Abrir o carrinho, ${n} itens"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h3l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.3a1.6 1.6 0 0 0 1.6-1.2l1.6-7.3H6.2"/></svg><span class="tx">Carrinho</span>${n?`<span class="ct">${n}</span>`:''}</button></div>
+  ${cats.length>1?`<nav class="cats"><button class="${cat?'':'act'}" onclick="cat='';tela()">Tudo</button>${cats.map((c,i)=>`<button class="${cat===c?'act':''}" onclick="cat=CATS_[${i}];tela()">${esc(c)}</button>`).join('')}</nav>`:''}</div>
   ${ps.length?(cat||b?ps.map(cartaoProd).join(''):cats.map(c=>`<h2 class="cat">${esc(c)}</h2>${ps.filter(p=>p.cat===c).map(cartaoProd).join('')}`).join('')):`<div class="vazio">${D.produtos.length?'Nada encontrado.':'O cardápio ainda está sendo montado.'}</div>`}
   <p class="rod">Cardápio digital · LegislaGov Restaurante</p></div>
-  ${n&&D.aberto?`<div class="barra"><button onclick="abrir()"><span><span class="n">${n}</span>Ver pedido</span><span>${brl(subtotal())}</span></button></div>`:''}${folha?folha():''}`}
+  ${n&&D.aberto?`<div class="barra"><button onclick="abrir()"><span><span class="n">${n}</span>Ver carrinho</span><span>${brl(subtotal())}</span></button></div>`:''}${folha?folha():''}`}
 function abrir(){fim=null;folha=fFolha;tela()}
 function fechar(){folha=null;tela()}
 function fFolha(){if(fim)return fSucesso();const its=itens(),tps=Object.keys(TIPOS).filter(k=>D.tipos[k]);if(!PED.tipo&&tps.length===1)PED.tipo=tps[0];
   const taxa=PED.tipo==='entrega'?D.taxa:0;
   return `<div class="folha" onclick="if(event.target===this)fechar()"><div class="in" role="dialog" aria-modal="true" aria-label="Seu pedido">
-  <div class="topo"><h3>Seu pedido</h3><button class="x" onclick="fechar()" aria-label="Fechar">×</button></div>
-  <div class="bloco">${its.map(x=>`<div class="li"><div class="nm"><b>${esc(x.p.nome)}</b><small>${brl(x.p.preco)} cada</small></div><div class="qt"><button onclick="mudar('${x.p.id}',-1)" aria-label="Tirar um">−</button><span>${x.q}</span><button onclick="mudar('${x.p.id}',1)" aria-label="Pôr mais um">+</button></div></div>`).join('')||'<p style="color:var(--mut);margin:0">Nenhum item. Volte e escolha no cardápio.</p>'}</div>
-  <div class="bloco"><h4>Como você quer?</h4><div class="opc">${tps.map(k=>`<button class="${PED.tipo===k?'act':''}" onclick="PED.tipo='${k}';tela()">${TIPOS[k][0]}<small>${k==='entrega'&&D.taxa?'Taxa '+brl(D.taxa):TIPOS[k][1]}</small></button>`).join('')}</div></div>
+  <div class="topo"><h3>Seu carrinho</h3><button class="x" onclick="fechar()" aria-label="Fechar">×</button></div>
+  <button class="voltar" onclick="fechar()">← Continuar escolhendo</button>
+  <div class="bloco">${its.map(x=>`<div class="li"><div class="nm"><b>${esc(x.p.nome)}</b><small>${brl(x.p.preco)} cada</small></div><div class="qt"><button onclick="mudar('${x.p.id}',-1)" aria-label="Tirar um">−</button><span>${x.q}</span><button onclick="mudar('${x.p.id}',1)" aria-label="Pôr mais um">+</button></div></div>`).join('')||'<p style="color:var(--mut);margin:0">Seu carrinho está vazio. Toque em <b>Adicionar</b> nos produtos do cardápio.</p>'}</div>
+  ${its.length&&D.aberto?`<div class="bloco"><h4>Como você quer?</h4><div class="opc">${tps.map(k=>`<button class="${PED.tipo===k?'act':''}" onclick="PED.tipo='${k}';tela()">${TIPOS[k][0]}<small>${k==='entrega'&&D.taxa?'Taxa '+brl(D.taxa):TIPOS[k][1]}</small></button>`).join('')}</div></div>
   <div class="bloco"><h4>Seus dados</h4><label for="fn">Nome</label><input id="fn" class="campo" autocomplete="name" value="${esc(PED.nome)}" oninput="PED.nome=this.value">
   <label for="ff">WhatsApp</label><input id="ff" class="campo" inputmode="tel" autocomplete="tel" placeholder="(17) 99999-9999" value="${esc(PED.fone)}" oninput="PED.fone=this.value">
   ${PED.tipo==='entrega'?`<label for="fe">Endereço de entrega</label><input id="fe" class="campo" autocomplete="street-address" placeholder="Rua, número, bairro" value="${esc(PED.endereco)}" oninput="PED.endereco=this.value">`:''}</div>
@@ -195,7 +230,7 @@ function fFolha(){if(fim)return fSucesso();const its=itens(),tps=Object.keys(TIP
   ${PED.pagamento==='Dinheiro'?`<label for="ft">Troco para quanto? (opcional)</label><input id="ft" class="campo" inputmode="decimal" placeholder="Ex.: 100" value="${esc(PED.troco)}" oninput="PED.troco=this.value">`:''}
   <label for="fo">Observação (opcional)</label><textarea id="fo" class="campo" maxlength="200" placeholder="Ex.: sem cebola, ponto da carne" oninput="PED.obs=this.value">${esc(PED.obs)}</textarea></div>
   <div class="bloco"><div class="tot"><span>Itens</span><span>${brl(subtotal())}</span></div>${taxa?`<div class="tot"><span>Taxa de entrega</span><span>${brl(taxa)}</span></div>`:''}<div class="tot g"><span>Total</span><span>${brl(subtotal()+taxa)}</span></div></div>
-  <button class="enviar" id="env" ${its.length?'':'disabled'} onclick="enviar()">Fazer pedido</button><p class="erro" id="err" role="alert"></p></div></div>`}
+  <button class="enviar" id="env" onclick="enviar()">Fazer pedido</button><p class="erro" id="err" role="alert"></p>`:!D.aberto&&its.length?'<p class="vazio" style="padding:14px">O restaurante não está recebendo pedidos agora.</p>':''}</div></div>`}
 async function enviar(){const e=$('#err'),bt=$('#env');e.textContent='';
   if(!PED.tipo)return e.textContent='Escolha se vai retirar, comer no local ou receber em casa.';
   if(PED.nome.trim().length<2)return e.textContent='Escreva seu nome.';
