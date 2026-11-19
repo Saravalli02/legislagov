@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cardápio digital</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
+<style>
+:root{--bg:#f6f6f7;--card:#fff;--ink:#18181b;--mut:#6b6f76;--line:#e8e8ec;--acc:#c62828;--acc2:#a51d1d;--ok:#16794a;--chip:#f0f0f3}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,textarea{font:inherit;color:var(--ink)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 120px}
+header.loja{background:var(--card);border-bottom:1px solid var(--line)}
+header.loja .in{max-width:760px;margin:0 auto;padding:22px 16px 18px;display:flex;gap:16px;align-items:center}
+.lg{width:68px;height:68px;border-radius:18px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;overflow:hidden;flex:none;font-weight:800;font-size:26px;color:var(--acc)}
+.lg img{width:100%;height:100%;object-fit:contain}
+.lj h1{margin:0;font-size:1.45rem;letter-spacing:-.02em;line-height:1.15}
+.lj p{margin:4px 0 0;color:var(--mut);font-size:.92rem}
+.pill{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 10px;border-radius:999px;font-size:.8rem;font-weight:700;background:#e7f6ee;color:var(--ok)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.off{background:#f6e9e9;color:#a51d1d}
+.aviso{margin:14px 0 0;padding:11px 14px;border-radius:12px;background:#fff8e6;border:1px solid #f2e2b3;font-size:.92rem}
+nav.cats{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0 10px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+nav.cats::-webkit-scrollbar{display:none}
+nav.cats button{flex:none;padding:9px 15px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-weight:600;font-size:.92rem;color:var(--mut)}
+nav.cats button.act{background:var(--ink);border-color:var(--ink);color:#fff}
+.busca{width:100%;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:0 14px;margin-top:14px;font-size:1rem}
+h2.cat{font-size:1.1rem;margin:22px 2px 10px;letter-spacing:-.01em}
+.prod{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;align-items:stretch}
+.prod .ft{width:96px;height:96px;border-radius:12px;background:var(--chip);flex:none;overflow:hidden;display:grid;place-items:center;font-size:30px}
+.prod .ft img{width:100%;height:100%;object-fit:cover}
+.prod .tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.prod b{font-size:1rem;line-height:1.25}
+.prod small{color:var(--mut);font-size:.86rem;line-height:1.35;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prod .pr{margin-top:auto;padding-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.prod .pr span{font-weight:800;font-size:1.02rem}
+.prod.esg{opacity:.55}
+.add{height:38px;min-width:38px;padding:0 14px;border-radius:11px;background:var(--acc);color:#fff;font-weight:700;font-size:.95rem}
+.add:hover{background:var(--acc2)}
+.qt{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:11px;padding:3px}
+.qt button{width:32px;height:30px;border-radius:8px;font-size:1.2rem;font-weight:700;color:var(--acc)}
+.qt span{min-width:22px;text-align:center;font-weight:700}
+.vazio{text-align:center;color:var(--mut);padding:40px 10px}
+.barra{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 30%);z-index:10}
+.barra button{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:728px;margin:0 auto;height:56px;border-radius:16px;background:var(--acc);color:#fff;padding:0 18px;font-weight:700;font-size:1.02rem;box-shadow:0 10px 26px #c6282840}
+.barra .n{background:#ffffff33;border-radius:8px;padding:3px 9px;margin-right:10px}
+.folha{position:fixed;inset:0;z-index:20;background:#0007;display:flex;align-items:flex-end;justify-content:center}
+.folha .in{background:var(--bg);width:100%;max-width:760px;max-height:94vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom))}
+.folha h3{margin:0;font-size:1.25rem}
+.topo{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.x{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:22px;line-height:1;color:var(--mut)}
+.bloco{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.bloco h4{margin:0 0 10px;font-size:.98rem}
+.li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:0}.li .nm{flex:1;min-width:0}.li .nm small{display:block;color:var(--mut)}
+.opc{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.opc button{border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:12px 10px;font-weight:600;text-align:left}
+.opc button small{display:block;color:var(--mut);font-weight:500;font-size:.8rem;margin-top:2px}
+.opc button.act{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+label{display:block;font-size:.86rem;color:var(--mut);margin:10px 0 5px;font-weight:600}
+.campo{width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 13px;font-size:1rem}
+textarea.campo{height:70px;padding:10px 13px;resize:vertical}
+.tot{display:flex;justify-content:space-between;font-size:.95rem;padding:3px 0}.tot.g{font-size:1.15rem;font-weight:800;padding-top:8px}
+.enviar{width:100%;height:56px;border-radius:16px;background:var(--acc);color:#fff;font-weight:800;font-size:1.05rem;margin-top:6px}
+.enviar:disabled{opacity:.6}
+.erro{color:#b42318;font-weight:600;min-height:1.2em;margin:8px 2px 0}
+.ok{text-align:center;padding:30px 10px}
+.ok .ic{width:76px;height:76px;border-radius:50%;background:#e7f6ee;color:var(--ok);display:grid;place-items:center;margin:0 auto 14px}
+.ok h2{margin:0 0 6px;font-size:1.5rem}.ok .num{font-size:2.2rem;font-weight:800;letter-spacing:-.02em;margin:8px 0}
+.ok p{color:var(--mut);margin:6px 0}
+.wa{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:52px;border-radius:14px;background:#1f9d55;color:#fff;font-weight:700;margin-top:16px;text-decoration:none}
+.sec{width:100%;height:50px;border-radius:14px;border:1px solid var(--line);background:var(--card);font-weight:700;margin-top:10px}
+.rod{text-align:center;color:var(--mut);font-size:.78rem;margin-top:26px}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #c6282855;outline-offset:2px}
+@media(prefers-color-scheme:dark){:root{--bg:#0b0c0f;--card:#14161b;--ink:#eef0f3;--mut:#9aa0aa;--line:#262a31;--chip:#1c1f25}
+  .campo{background:#0f1115}.pill{background:#0f2a1d;color:#4fd18b}.pill.off{background:#2a1212;color:#ff8a80}.aviso{background:#2a2410;border-color:#4a3e17}
+  nav.cats button.act{background:#eef0f3;color:#0b0c0f}.opc button.act{border-color:#eef0f3;box-shadow:inset 0 0 0 1px #eef0f3}.lg{background:#fff}}
+</style>
+</head>
+<body>
+<div id="app"><div class="vazio" style="padding-top:80px">Carregando o cardápio…</div></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+let D=null,cat='',busca='',carro={},folha=null,fim=null,PED={tipo:'',pagamento:'',nome:'',fone:'',endereco:'',troco:'',obs:''};
+try{carro=JSON.parse(localStorage.getItem('lg-cdp-carro')||'{}');Object.assign(PED,JSON.parse(localStorage.getItem('lg-cdp-dados')||'{}'));PED.tipo='';PED.pagamento=''}catch(e){}
+const salvar=()=>{try{localStorage.setItem('lg-cdp-carro',JSON.stringify(carro));localStorage.setItem('lg-cdp-dados',JSON.stringify({nome:PED.nome,fone:PED.fone,endereco:PED.endereco}))}catch(e){}};
+const TIPOS={retirada:['Retirar no local','Busco quando ficar pronto'],local:['Comer no local','Já deixa pronto pra mim'],entrega:['Entrega','Receber em casa']};
+async function carregar(){try{const r=await fetch('/api/cardapio',{cache:'no-store'});D=await r.json();
+  const ids=new Set(D.produtos.map(p=>p.id));for(const k in carro)if(!ids.has(k))delete carro[k];
+  document.title=(D.loja.nome||'Cardápio')+' · Cardápio';tela()}
+  catch(e){$('#app').innerHTML='<div class="vazio" style="padding-top:80px">Não deu para abrir o cardápio. Confira a internet e recarregue a página.</div>'}}
+const prod=id=>D.produtos.find(p=>p.id===id);
+const itens=()=>Object.entries(carro).map(([id,q])=>({p:prod(id),q})).filter(x=>x.p&&x.q>0);
+const subtotal=()=>itens().reduce((s,x)=>s+x.p.preco*x.q,0);
+function mudar(id,d){carro[id]=Math.max(0,Math.min(50,(carro[id]||0)+d));if(!carro[id])delete carro[id];salvar();tela()}
+function cartaoProd(p){const q=carro[p.id]||0;
+  return `<div class="prod ${p.esgotado?'esg':''}"><div class="ft">${p.img?`<img src="${p.img}" alt="" loading="lazy">`:'🍽️'}</div><div class="tx"><b>${esc(p.nome)}${p.unidade?' <span style="font-weight:500;color:var(--mut)">'+esc(p.unidade)+'</span>':''}</b>${p.desc?`<small>${esc(p.desc)}</small>`:''}
+  <div class="pr"><span>${brl(p.preco)}</span>${p.esgotado?'<em style="color:var(--mut);font-size:.85rem">Esgotado</em>':!D.aberto?'':q?`<div class="qt"><button aria-label="Tirar um" onclick="mudar('${p.id}',-1)">−</button><span>${q}</span><button aria-label="Pôr mais um" onclick="mudar('${p.id}',1)">+</button></div>`:`<button class="add" onclick="mudar('${p.id}',1)">Adicionar</button>`}</div></div></div>`}
+function tela(){if(!D)return;const L=D.loja,cats=[...new Set(D.produtos.map(p=>p.cat))];window.CATS_=cats;
+  const b=busca.trim().toLowerCase(),ps=D.produtos.filter(p=>(!cat||p.cat===cat)&&(!b||(p.nome+' '+p.desc).toLowerCase().includes(b)));
+  const n=itens().reduce((s,x)=>s+x.q,0);
+  $('#app').innerHTML=`<header class="loja"><div class="in"><div class="lg">${L.logo?`<img src="${L.logo}" alt="">`:esc((L.nome||'R').trim()[0]||'R')}</div><div class="lj"><h1>${esc(L.nome)}</h1>${L.endereco?`<p>${esc(L.endereco)}</p>`:''}
+    <span class="pill ${D.aberto?'':'off'}">${D.aberto?'Aberto · recebendo pedidos':'Fechado agora · pedidos indisponíveis'}</span></div></div></header>
+  <div class="wrap">${D.aviso?`<div class="aviso">${esc(D.aviso)}</div>`:''}
+  <input class="busca" placeholder="Buscar no cardápio" value="${esc(busca)}" oninput="busca=this.value;tela();const i=$('.busca');i.focus();i.setSelectionRange(i.value.length,i.value.length)">
+  ${cats.length>1?`<nav class="cats"><button class="${cat?'':'act'}" onclick="cat='';tela()">Tudo</button>${cats.map((c,i)=>`<button class="${cat===c?'act':''}" onclick="cat=CATS_[${i}];tela()">${esc(c)}</button>`).join('')}</nav>`:''}
+  ${ps.length?(cat||b?ps.map(cartaoProd).join(''):cats.map(c=>`<h2 class="cat">${esc(c)}</h2>${ps.filter(p=>p.cat===c).map(cartaoProd).join('')}`).join('')):`<div class="vazio">${D.produtos.length?'Nada encontrado.':'O cardápio ainda está sendo montado.'}</div>`}
+  <p class="rod">Cardápio digital · LegislaGov Restaurante</p></div>
+  ${n&&D.aberto?`<div class="barra"><button onclick="abrir()"><span><span class="n">${n}</span>Ver pedido</span><span>${brl(subtotal())}</span></button></div>`:''}${folha?folha():''}`}
+function abrir(){fim=null;folha=fFolha;tela()}
+function fechar(){folha=null;tela()}
+function fFolha(){if(fim)return fSucesso();const its=itens(),tps=Object.keys(TIPOS).filter(k=>D.tipos[k]);if(!PED.tipo&&tps.length===1)PED.tipo=tps[0];
+  const taxa=PED.tipo==='entrega'?D.taxa:0;
+  return `<div class="folha" onclick="if(event.target===this)fechar()"><div class="in" role="dialog" aria-modal="true" aria-label="Seu pedido">
+  <div class="topo"><h3>Seu pedido</h3><button class="x" onclick="fechar()" aria-label="Fechar">×</button></div>
+  <div class="bloco">${its.map(x=>`<div class="li"><div class="nm"><b>${esc(x.p.nome)}</b><small>${brl(x.p.preco)} cada</small></div><div class="qt"><button onclick="mudar('${x.p.id}',-1)" aria-label="Tirar um">−</button><span>${x.q}</span><button onclick="mudar('${x.p.id}',1)" aria-label="Pôr mais um">+</button></div></div>`).join('')||'<p style="color:var(--mut);margin:0">Nenhum item. Volte e escolha no cardápio.</p>'}</div>
+  <div class="bloco"><h4>Como você quer?</h4><div class="opc">${tps.map(k=>`<button class="${PED.tipo===k?'act':''}" onclick="PED.tipo='${k}';tela()">${TIPOS[k][0]}<small>${k==='entrega'&&D.taxa?'Taxa '+brl(D.taxa):TIPOS[k][1]}</small></button>`).join('')}</div></div>
+  <div class="bloco"><h4>Seus dados</h4><label for="fn">Nome</label><input id="fn" class="campo" autocomplete="name" value="${esc(PED.nome)}" oninput="PED.nome=this.value">
+  <label for="ff">WhatsApp</label><input id="ff" class="campo" inputmode="tel" autocomplete="tel" placeholder="(17) 99999-9999" value="${esc(PED.fone)}" oninput="PED.fone=this.value">
+  ${PED.tipo==='entrega'?`<label for="fe">Endereço de entrega</label><input id="fe" class="campo" autocomplete="street-address" placeholder="Rua, número, bairro" value="${esc(PED.endereco)}" oninput="PED.endereco=this.value">`:''}</div>
+  <div class="bloco"><h4>Forma de pagamento</h4><div class="opc">${D.pagamentos.map(x=>`<button class="${PED.pagamento===x?'act':''}" onclick="PED.pagamento='${esc(x)}';tela()">${esc(x)}<small>${x==='Pix'?'Na entrega ou no balcão':x==='Dinheiro'?'Informe o troco':'Na maquininha'}</small></button>`).join('')}</div>
+  ${PED.pagamento==='Dinheiro'?`<label for="ft">Troco para quanto? (opcional)</label><input id="ft" class="campo" inputmode="decimal" placeholder="Ex.: 100" value="${esc(PED.troco)}" oninput="PED.troco=this.value">`:''}
+  <label for="fo">Observação (opcional)</label><textarea id="fo" class="campo" maxlength="200" placeholder="Ex.: sem cebola, ponto da carne" oninput="PED.obs=this.value">${esc(PED.obs)}</textarea></div>
+  <div class="bloco"><div class="tot"><span>Itens</span><span>${brl(subtotal())}</span></div>${taxa?`<div class="tot"><span>Taxa de entrega</span><span>${brl(taxa)}</span></div>`:''}<div class="tot g"><span>Total</span><span>${brl(subtotal()+taxa)}</span></div></div>
+  <button class="enviar" id="env" ${its.length?'':'disabled'} onclick="enviar()">Fazer pedido</button><p class="erro" id="err" role="alert"></p></div></div>`}
+async function enviar(){const e=$('#err'),bt=$('#env');e.textContent='';
+  if(!PED.tipo)return e.textContent='Escolha se vai retirar, comer no local ou receber em casa.';
+  if(PED.nome.trim().length<2)return e.textContent='Escreva seu nome.';
+  if(PED.fone.replace(/\D/g,'').length<10)return e.textContent='Escreva seu WhatsApp com DDD.';
+  if(PED.tipo==='entrega'&&PED.endereco.trim().length<5)return e.textContent='Escreva o endereço de entrega.';
+  if(!PED.pagamento)return e.textContent='Escolha a forma de pagamento.';
+  bt.disabled=true;bt.textContent='Enviando…';salvar();
+  try{const r=await fetch('/api/pedido',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...PED,itens:itens().map(x=>({id:x.p.id,qtd:x.q}))})});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok&&d.num){fim={...d,itens:itens().map(x=>x.q+'x '+x.p.nome),tipo:PED.tipo,pagamento:PED.pagamento};carro={};salvar();PED.obs='';tela();return}
+    e.textContent=d.erro||'Não foi possível enviar o pedido. Tente de novo.';if(r.status===409||r.status===400)carregar()}
+  catch(x){e.textContent='Sem internet. Confira a conexão e tente de novo.'}
+  bt.disabled=false;bt.textContent='Fazer pedido'}
+function fSucesso(){const L=D.loja,w=(L.whatsapp||'').replace(/\D/g,''),wn=w?(w.length<=11?'55'+w:w):'';
+  const txt=`Olá! Fiz o pedido nº ${fim.num} pelo cardápio digital.\n${fim.itens.join('\n')}\nTotal: ${brl(fim.total)}\n${TIPOS[fim.tipo][0]} · ${fim.pagamento}\nNome: ${PED.nome}`;
+  return `<div class="folha"><div class="in" role="dialog" aria-modal="true" aria-label="Pedido realizado"><div class="ok"><div class="ic"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+  <h2>Pedido realizado com sucesso!</h2><div class="num">Nº ${fim.num}</div><p><b>${esc(L.nome)}</b> já recebeu seu pedido.</p>
+  <p>${fim.tipo==='entrega'?'Já vamos preparar e sair para a entrega.':fim.tipo==='local'?'Vamos deixar pronto para quando você chegar.':'Avisamos quando estiver pronto para retirar.'}</p><p>Total: <b>${brl(fim.total)}</b> · ${esc(fim.pagamento)}</p>
+  ${wn?`<a class="wa" href="https://wa.me/${wn}?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">Enviar comprovante no WhatsApp</a>`:''}
+  <button class="sec" onclick="fim=null;folha=null;carregar()">Fazer outro pedido</button></div></div></div>`}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&folha&&!fim)fechar()});
+carregar();setInterval(()=>{if(!folha)carregar()},60000);
+</script>
+</body>
+</html>
