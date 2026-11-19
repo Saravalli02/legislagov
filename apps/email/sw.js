@@ -1,7 +1,7 @@
 /* Painel de e-mails: guarda o app no celular para abrir mesmo sem internet.
    Sempre tenta a versão nova primeiro; sem internet, usa a cópia guardada. Os dados (/api/) nunca vêm da cópia. */
-const CACHE = 'lgemail-v1';
-const ARQS = ['./', 'index.html', 'icone-192.png', 'icone-512.png', 'icone-180.png'];
+const CACHE = 'lgemail-v2';
+const ARQS = ['./', 'index.html', 'carregando.js', 'icone-192.png', 'icone-512.png', 'icone-180.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARQS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

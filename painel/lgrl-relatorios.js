@@ -588,3 +588,12 @@
   @media(max-width:640px){.lgrl-catalogo{display:none}.lgrl-sel-cel{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--lg28-muted);margin:4px 0 12px}.lgrl-sel-cel select{height:48px;border-radius:10px;border:1px solid var(--lg28-stroke);background:var(--lg28-panel);color:var(--lg28-ink);padding:0 10px;font-size:16px}.lgrl-zero{display:none!important}.lgrl-dica-zero{display:block;color:var(--lg28-muted);font-size:12.5px;margin:6px 0 0}.lgrl-grade{grid-template-columns:1fr}.lgrl-campos label{flex:1 1 45%}.lgrl-campos input,.lgrl-campos select{min-width:0;width:100%}.lgrl-acoes,.lgrl-acoes .lgt-btn{width:100%;justify-content:center}}`;
   document.head.appendChild(css);
 })();
+
+/* aviso de carregando nas tarefas pesadas (assets/carregando.js) */
+(function () {
+  const embrulhar = (nome, t, pronto) => { const f = window[nome]; if (typeof f !== 'function' || f._lgc) return;
+    const g = function () { const a = arguments, eu = this; return window.lgCarregando ? window.lgCarregando(t, () => f.apply(eu, a), pronto) : f.apply(eu, a); };
+    g._lgc = true; window[nome] = g; };
+  embrulhar('lgrlAbrir', 'Gerando relatório…', 'Relatório pronto');
+  embrulhar('lgrlPlanilha', 'Gerando planilha…', 'Planilha pronta');
+})();

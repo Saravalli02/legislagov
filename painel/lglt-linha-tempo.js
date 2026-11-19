@@ -177,3 +177,11 @@
   @media(max-width:700px){.lglt-lista{margin-left:0;border-left:0}.lglt-ev{grid-template-columns:28px minmax(0,1fr) auto;border-radius:8px}.lglt-hora{position:static;grid-column:1/-1;text-align:left;display:flex;gap:8px;align-items:baseline}.lglt-busca{margin-left:0;max-width:none}}`;
   document.head.appendChild(css);
 })();
+
+/* aviso de carregando nas tarefas pesadas (assets/carregando.js) */
+(function () {
+  const embrulhar = (nome, t, pronto) => { const f = window[nome]; if (typeof f !== 'function' || f._lgc) return;
+    const g = function () { const a = arguments, eu = this; return window.lgCarregando ? window.lgCarregando(t, () => f.apply(eu, a), pronto) : f.apply(eu, a); };
+    g._lgc = true; window[nome] = g; };
+  embrulhar('lgltAbrir', 'Carregando a linha do tempo…', 'Pronto');
+})();

@@ -466,3 +466,11 @@
   }`;
   document.head.appendChild(css);
 })();
+
+/* aviso de carregando nas tarefas pesadas (assets/carregando.js) */
+(function () {
+  const embrulhar = (nome, t, pronto) => { const f = window[nome]; if (typeof f !== 'function' || f._lgc) return;
+    const g = function () { const a = arguments, eu = this; return window.lgCarregando ? window.lgCarregando(t, () => f.apply(eu, a), pronto) : f.apply(eu, a); };
+    g._lgc = true; window[nome] = g; };
+  embrulhar('lgprPlanilha', 'Gerando planilha…', 'Planilha pronta');
+})();
