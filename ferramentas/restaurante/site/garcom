@@ -927,13 +927,23 @@ function editarCliente(id){const m=S.mesas[id];
   <label>Nome</label><input id="nc" value="${esc(m.cliente)}"><label>Telefone</label><input id="nf" value="${esc(m.fone)}">
   <label>Endereço</label><input id="ne" value="${esc(m.endereco)}"><label>Observação</label><input id="no" value="${esc(m.obs)}">
   <div class="row" style="margin-top:14px"><button class="btn bad" onclick="cancelarPedido('${id}')">🗑️ Cancelar pedido</button><span style="flex:1"></span><button class="btn" onclick="fecharModal()">Voltar</button><button class="btn ok" onclick="mutate('mesas','${id}',m=>m?{...m,cliente:$('#nc').value.trim(),fone:$('#nf').value.trim(),endereco:$('#ne').value.trim(),obs:$('#no').value.trim()}:ABORT);fecharModal()">💾 Salvar</button></div>`)}
+function cancelarMesa(n){const m=mesa(n),its=m.itens||[],tot=totItens(its);
+  abrirModal(`<h2>🗑️ Cancelar a Mesa ${esc(n)}?</h2><p>Tudo o que foi lançado nesta mesa será apagado e a mesa fica livre. <b>Nada é cobrado e nada sai do estoque.</b></p>
+  ${its.length?`<div class="card" style="margin:10px 0">${its.map(i=>`<div class="row" style="padding:3px 0"><span style="flex:1">${i.qtd}x ${esc(i.nome)}</span><b>${brl(i.preco*i.qtd)}</b></div>`).join('')}<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px"><b style="flex:1">Total cancelado</b><b>${brl(tot)}</b></div></div>`:''}
+  <label>Motivo (fica registrado no relatório do dia)</label><input id="cmMot" maxlength="120" placeholder="Ex.: cliente desistiu, lançado na mesa errada">
+  <div class="row" style="margin-top:14px"><button class="btn" style="flex:1" onclick="fecharModal()">Voltar</button><button class="btn bad" style="flex:1.4" onclick="confirmarCancelarMesa('${n}')">🗑️ Cancelar mesa e limpar tudo</button></div>`);
+  setTimeout(()=>$('#cmMot')&&$('#cmMot').focus(),50)}
+async function confirmarCancelarMesa(n){const m=clone(mesa(n)),its=m.itens||[],mot=($('#cmMot')||{value:''}).value.trim();fecharModal();
+  const ok=await mutate('mesas',n,()=>null);if(!ok)return toast('Não foi possível cancelar. Tente de novo.');
+  const mv=movAtual();if(mv)mutate('movimentos',mv.id,x=>x?{...x,cancelamentos:[...(x.cancelamentos||[]),{rotulo:rotulo(n),itens:its,total:totItens(its),hora:new Date().toISOString(),motivo:mot,garcom:m.garcom||''}].slice(-200)}:ABORT);
+  curMesa=null;go('mesas');toast('🗑️ Mesa '+n+' cancelada e liberada')}
 function cancelarPedido(id){confirmar('Cancelar este pedido? Os itens lançados serão descartados.',()=>{del('mesas',id);go('mesas');toast('Pedido cancelado')})}
 
 /* ---------- CAIXA DA COMANDA ---------- */
 function vMesa(){
   const n=curMesa,m=mesa(n),its=m.itens||[],tot=totItens(its),dl=isDel(n);
   if(dl&&!S.mesas[n]){setTimeout(()=>go('mesas'));return ''}
-  let h=avisoMov()+`<div class="row" style="margin-bottom:12px"><button class="btn" onclick="${dl?"st.aba='delivery';":''}go('mesas')">← ${dl?'Pedidos':'Mesas'}</button><h2 style="margin:0;flex:1">${esc(rotulo(n))}</h2>${m.aberta&&its.length?`<span style="color:var(--mut)">aberta às ${hr(m.aberta)}${m.garcom?' · 👤 '+esc(m.garcom):''}</span>`:''}</div>`;
+  let h=avisoMov()+`<div class="row" style="margin-bottom:12px"><button class="btn" onclick="${dl?"st.aba='delivery';":''}go('mesas')">← ${dl?'Pedidos':'Mesas'}</button><h2 style="margin:0;flex:1">${esc(rotulo(n))}</h2>${m.aberta&&its.length?`<span style="color:var(--mut)">aberta às ${hr(m.aberta)}${m.garcom?' · 👤 '+esc(m.garcom):''}</span>`:''}${!dl&&(its.length||m.conta)?`<button class="btn" style="color:#b42318;border-color:#f3b8b3" onclick="cancelarMesa('${n}')">🗑️ Cancelar mesa</button>`:''}</div>`;
   if(m.conta)h+=`<div class="aviso" style="background:#fdecea;border-color:#f3a59c">🧾 <span style="flex:1"><b>${esc(m.conta.por||'Garçom')}</b> pediu a conta às ${hr(m.conta.hora)}.</span><button class="btn" onclick="mutate('mesas','${n}',x=>x?{...x,conta:null}:ABORT)">Limpar aviso</button></div>`;
   if(dl)h+=`<div class="card" style="margin-bottom:12px"><div class="row"><div style="flex:1"><b>${esc(m.cliente)}</b>${m.fone?` · 📞 ${esc(m.fone)}`:''}${m.endereco?`<br>📍 ${esc(m.endereco)}`:''}${m.obs?`<br>📝 ${esc(m.obs)}`:''}${m.pagamento?`<br>💳 Vai pagar com ${esc(m.pagamento)}${m.troco?' · troco para '+esc(m.troco):''}`:''}</div>${m.fone?`<button class="btn" onclick="avisarCliente('${n}')">💬 WhatsApp</button>`:''}<button class="btn" onclick="imprimir(ticketPedido({...S.mesas['${n}'],id:'${n}'}),'pedido-${n}')">🖨️ Pedido</button><button class="btn" onclick="editarCliente('${n}')">✏️ Editar</button></div>
   <div class="chips" style="margin-bottom:0">${Object.entries(STATUS).filter(([k])=>k!=='saiu'||m.tipo==='entrega').map(([k,[i,t]])=>`<button class="chip ${(m.status||'preparo')===k?'act':''}" onclick="setStatus('${n}','${k}')">${i} ${t}</button>`).join('')}</div></div>`;
@@ -1376,15 +1386,16 @@ function relHtml(id,tela){
   const pr={};vs.forEach(v=>v.itens.forEach(i=>{const k=i.nome;const o=pr[k]||(pr[k]={q:0,v:0,c:0});o.q+=i.qtd;o.v+=i.preco*i.qtd;o.c+=(i.custo||0)*i.qtd}));
   const prs=Object.entries(pr).sort((a,b)=>b[1].v-a[1].v);
   const cab=`<div><b>Abertura:</b> ${dt(m.abertura)}<br><b>Fechamento:</b> ${m.fechamento?dt(m.fechamento):'em aberto'}</div>`;
+  const cns=m.cancelamentos||[],tcan=cns.length?`<table><tr><th>Hora</th><th>Mesa</th><th class="n">Valor</th></tr>${cns.map(c=>`<tr><td>${hr(c.hora)}</td><td>${esc(c.rotulo)}${c.motivo?'<br><small>'+esc(c.motivo)+'</small>':''}</td><td class="n">${brl(c.total)}</td></tr>`).join('')}</table>`:'';
   const resumo=`<table><tr><td>Vendas (mesas fechadas)</td><td class="n">${vs.length}</td></tr><tr><td>Ticket médio</td><td class="n">${brl(vs.length?tot/vs.length:0)}</td></tr>
   <tr><td><b>Total vendido</b></td><td class="n"><b>${brl(tot)}</b></td></tr><tr><td>Custo dos produtos</td><td class="n">${brl(cus)}</td></tr><tr><td><b>Lucro real</b></td><td class="n"><b>${brl(luc)}</b></td></tr></table>`;
   const tpag=`<table><tr><th>Pagamento</th><th class="n">Qtd</th><th class="n">Valor</th></tr>${Object.entries(pag).map(([p,o])=>`<tr><td>${esc(p)}</td><td class="n">${o.n}</td><td class="n">${brl(o.v)}</td></tr>`).join('')}</table>`;
   const tpr=prs.length?`<table><tr><th>Produto</th><th class="n">Qtd</th><th class="n">Vendido</th><th class="n">Lucro</th></tr>${prs.map(([n,o])=>`<tr><td>${esc(n)}</td><td class="n">${o.q}</td><td class="n">${brl(o.v)}</td><td class="n">${brl(o.v-o.c)}</td></tr>`).join('')}</table>`:'<div class="vazio">Nenhum produto vendido.</div>';
-  if(!tela)return `<div class="cupom">${cupomCab()}<div class="c">RELATÓRIO DO MOVIMENTO</div><hr>${cab}<hr>${resumo}<hr><b>Por forma de pagamento</b>${tpag}<hr><b>Produtos vendidos</b>${tpr}</div>`;
+  if(!tela)return `<div class="cupom">${cupomCab()}<div class="c">RELATÓRIO DO MOVIMENTO</div><hr>${cab}<hr>${resumo}<hr><b>Por forma de pagamento</b>${tpag}<hr><b>Produtos vendidos</b>${tpr}${tcan?'<hr><b>Mesas canceladas</b>'+tcan:''}</div>`;
   return `<div class="stats"><div class="stat"><small>Total vendido</small><b>${brl(tot)}</b></div><div class="stat"><small>Custo</small><b>${brl(cus)}</b></div>
   <div class="stat"><small>Lucro real</small><b class="${luc>=0?'lucro':'prej'}">${brl(luc)}</b></div><div class="stat"><small>Vendas</small><b>${vs.length}</b></div></div>
   <div class="caixa"><div class="card"><h3>🗓️ Movimento</h3>${cab}<br>${resumo}<br><h3>💳 Por forma de pagamento</h3>${tpag}</div>
-  <div class="card"><h3>🥤 Produtos vendidos</h3>${tpr}</div></div>`;
+  <div class="card"><h3>🥤 Produtos vendidos</h3>${tpr}${tcan?'<h3 style="margin-top:16px">🗑️ Mesas canceladas ('+cns.length+')</h3>'+tcan:''}</div></div>`;
 }
 
 /* ---------- AJUSTES ---------- */
