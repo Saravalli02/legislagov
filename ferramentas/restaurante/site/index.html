@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v24">
+<meta name="lg-versao" content="lg-v25">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -1676,6 +1676,7 @@ function cartaoFornecedores(){const ps=Object.values(S.produtos).filter(p=>p.for
 /* Ajustes › Balança */
 /* códigos dos produtos: sequenciais e travados; com a opção ligada, pode mudar (ex.: igualar à balança) e o sistema troca com quem já tinha o número */
 const codLivre=()=>!!(S.config||{}).codLivre;
+function trocarCodLivre(){const v=!codLivre();mutate('config','geral',c=>({...(c||{}),codLivre:v}));toast(v?'🔓 Agora dá para mudar o código dos produtos':'🔒 Códigos travados de novo')}
 function trocarCodigo(id,velho,novo){novo=Math.floor(num(novo));velho=+velho||0;if(!(novo>=1&&novo<=999999))return toast('Código inválido (use de 1 a 999999).');if(novo===velho)return;
   const p=S.produtos[id],o=Object.values(S.produtos).find(x=>x&&x.id!==id&&+x.codigo===novo);
   if(o)mutate('produtos',o.id,c=>c?{...c,codigo:velho}:ABORT);
@@ -1683,7 +1684,7 @@ function trocarCodigo(id,velho,novo){novo=Math.floor(num(novo));velho=+velho||0;
   toast(o?`🔁 ${(p&&p.nome)||'Produto'} agora é o ${novo}; ${o.nome} foi para o ${velho}`:`✅ ${(p&&p.nome)||'Produto'} agora é o código ${novo}`)}
 function cartaoCodigos(){const on=codLivre(),ps=on?Object.values(S.produtos||{}).filter(p=>p&&p.nome).sort((a,b)=>(+a.codigo||0)-(+b.codigo||0)):[];
   return `<div class="card"><h3>🔢 Códigos dos produtos</h3><p style="color:var(--mut);margin:0 0 8px">O código é criado sozinho, em sequência (1, 2, 3…), e fica travado. Ligue para poder mudar${ACG?' — por exemplo, para ficar igual ao número de cada produto na balança':''}.</p>
-  <button type="button" class="sw" style="max-width:520px" aria-checked="${on}" onclick="mutate('config','geral',c=>({...(c||{}),codLivre:!codLivre()}))"><i></i>Permitir mudar o código do produto${ACG?' (vincular com a balança)':''}</button>
+  <button type="button" class="sw" style="max-width:520px" aria-checked="${on}" onclick="trocarCodLivre()"><i></i>Permitir mudar o código do produto${ACG?' (vincular com a balança)':''}</button>
   ${on?`<p style="color:var(--mut);font-size:.9rem;margin:10px 0 6px">Digite o novo número e aperte Enter. Se o número já for de outro produto, os dois <b>trocam</b> de código sozinhos — nunca fica repetido.</p>
   <input class="lupa codl-q" placeholder="Procurar produto" value="${esc(st.codQ||'')}" oninput="st.codQ=this.value;render(true);setTimeout(()=>{const i=document.querySelector('.codl-q');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}},0)">
   <div class="codl">${ps.filter(p=>!st.codQ||p.nome.toLowerCase().includes(st.codQ.toLowerCase())||String(p.codigo)===st.codQ.trim()).slice(0,300).map(p=>`<div class="codl-i"><input inputmode="numeric" value="${+p.codigo||''}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onchange="trocarCodigo('${p.id}',${+p.codigo||0},this.value)"><span>${CATIC[p.cat]||''} ${esc(nomeP(p))}</span>${ehKg(p)?'<small>kg</small>':''}</div>`).join('')||'<div class="vazio">Nenhum produto.</div>'}</div>`:''}</div>`}
