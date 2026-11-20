@@ -185,7 +185,7 @@ async function tela(){
   const s=P.sessao, nome=(s.nome||'').split(' ')[0];
   const ativas=P.demos.filter(d=>d.ativa), velhas=P.demos.filter(d=>!d.ativa).slice(0,15);
   const seta='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
-  $('#app').innerHTML=`<header class="topo"><div class="topo-in"><a class="marca" href="./" id="inicioBt" title="Voltar para a Central"><img src="gr-emblema.png" alt=""><span>GR <b>Central</b><small>Área restrita</small></span></a><div class="esp"></div>
+  $('#app').innerHTML=`<header class="topo"><div class="topo-in"><a class="marca" href="./" id="inicioBt" title="Voltar para a Central"><img src="gr-emblema.webp" alt=""><span>GR <b>Central</b><small>Área restrita</small></span></a><div class="esp"></div>
     <span class="quem">${esc(s.nome)}</span>${seletorTema()}<button class="tbtn" id="senhaBt">Senha</button><button class="tbtn" id="sairBt">Sair</button></div></header>
   <main>
     <h1>Olá, ${esc(nome)}.</h1>
@@ -628,7 +628,7 @@ async function telaSeguranca(){
 function seletorTema(){const t=document.documentElement.dataset.tema;return `<div class="tema" role="group" aria-label="Aparência"><button type="button" data-tema="claro" aria-pressed="${t==='claro'}">Claro</button><button type="button" data-tema="escuro" aria-pressed="${t==='escuro'}">Escuro</button></div>`}
 function ligarTema(){document.querySelectorAll('[data-tema]').forEach(b=>b.onclick=()=>{document.documentElement.dataset.tema=b.dataset.tema;try{localStorage.setItem('lgc_tema',b.dataset.tema)}catch(e){}document.querySelectorAll('[data-tema]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tema===b.dataset.tema));const m=document.querySelector('meta[name=theme-color]');if(m)m.content=b.dataset.tema==='escuro'?'#06080d':'#f4f6f9'})}
 function telaEntrar(){
-  $('#app').innerHTML=`<div class="entrar">${seletorTema()}<form id="fe" autocomplete="on"><span class="marca"><img src="gr-emblema.png" alt=""><span>GR <b>Central</b></span></span>
+  $('#app').innerHTML=`<div class="entrar">${seletorTema()}<form id="fe" autocomplete="on"><span class="marca"><img src="gr-emblema.webp" alt=""><span>GR <b>Central</b></span></span>
     <h1>Área restrita</h1><p class="dica">No primeiro acesso, use o mesmo usuário e senha do painel da Câmara.</p>
     <label>Usuário<input id="eu" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
     <label>Senha<input id="es" type="password" autocomplete="current-password" required></label>

@@ -58,7 +58,7 @@ SISTEMAS = [
     {"id": "atendimento", "nome": "Atendimento WhatsApp", "icone": "em-atendimento.png", "cor": "#1fa86a",
      "desc": "Conversas do WhatsApp da Câmara e da Prefeitura, com atendentes.",
      "abrir": ["Abrir o atendimento", "https://teste.legislagov.com.br/cliente/"], "outros": [], "demo": False},
-    {"id": "site-gr", "nome": "Site GR Software", "icone": "gr-emblema.png", "cor": "#19e3d0",
+    {"id": "site-gr", "nome": "Site GR Software", "icone": "gr-emblema.webp", "cor": "#19e3d0",
      "desc": "Portal da empresa: seu sistema, do seu jeito. Modelos prontos e personalização.",
      "abrir": ["Abrir o site da GR", "https://teste.legislagov.com.br/gr/"], "outros": [["grsoftware.com.br (quando comprar)", "https://grsoftware.com.br/"]], "demo": False},
     {"id": "site", "nome": "Site LegislaGov (Câmaras)", "icone": "em-site.png", "cor": "#7b8796",

@@ -171,7 +171,7 @@ main{padding-bottom:calc(env(safe-area-inset-bottom) + 104px)}
 </head>
 <body>
 <header>
-  <div class="logo"><img src="logo-rural.png" alt=""></div>
+  <div class="logo"><img src="logo-gr.webp" alt=""></div>
   <div style="min-width:0"><h1 id="nomeApp">GR <span>Rural</span></h1><small id="quem">Gestão da horta</small></div>
   <div style="margin-left:auto;text-align:right"><button id="badgeLic" style="border:0;background:#ffffff26;color:#fff;border-radius:20px;padding:5px 10px;font-weight:700;font-size:13px">🔑 …</button><div class="sync" id="sync" style="margin-top:3px">carregando…</div></div>
 </header>
@@ -363,14 +363,14 @@ function acessoSuspenso(){
   try{Object.keys(localStorage).filter(k=>/^lgr(_token|_sessao|ural:)/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
   try{if(GEO.watch!=null){navigator.geolocation.clearWatch(GEO.watch);GEO.watch=null}}catch(e){}
   document.body.className='';document.body.style.cssText='margin:0;background:#fff';
-  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><img src="logo-rural.png" alt="" style="height:64px;width:auto"><h1 style="font-size:22px;margin:14px 0 6px">Acesso suspenso</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O acesso a este sistema está suspenso no momento. Para voltar a usar, fale com a GR Software.</p><button onclick="location.reload()" style="margin-top:18px;font:700 15px system-ui,Arial;padding:12px 18px;border-radius:12px;border:1px solid #c9d6cc;background:#fff;color:#1d2a20">Tentar de novo</button></div>';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><img src="logo-gr.webp" alt="" style="height:64px;width:auto"><h1 style="font-size:22px;margin:14px 0 6px">Acesso suspenso</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O acesso a este sistema está suspenso no momento. Para voltar a usar, fale com a GR Software.</p><button onclick="location.reload()" style="margin-top:18px;font:700 15px system-ui,Arial;padding:12px 18px;border-radius:12px;border:1px solid #c9d6cc;background:#fff;color:#1d2a20">Tentar de novo</button></div>';
 }
 function demoEncerrada(){
   if(ENCERRADA)return;ENCERRADA=true;TOKEN='';ui.sess=null;
   try{Object.keys(localStorage).filter(k=>/^lgr/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
   try{caches&&caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)))}catch(e){}
   document.body.className='';document.body.style.cssText='margin:0;background:#fff';
-  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><img src="logo-rural.png" alt="" style="height:64px;width:auto"><h1 style="font-size:22px;margin:12px 0 6px">Demonstração encerrada</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O prazo desta demonstração do GR Rural terminou e os dados de exemplo foram apagados deste aparelho.</p><p style="max-width:34ch;color:#5b6b5e;line-height:1.5">Para usar na sua horta, fale com a GR Software.</p><a href="https://legislagov.com.br" style="color:#2e7d32;font-weight:700">legislagov.com.br</a></div>';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><img src="logo-gr.webp" alt="" style="height:64px;width:auto"><h1 style="font-size:22px;margin:12px 0 6px">Demonstração encerrada</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O prazo desta demonstração do GR Rural terminou e os dados de exemplo foram apagados deste aparelho.</p><p style="max-width:34ch;color:#5b6b5e;line-height:1.5">Para usar na sua horta, fale com a GR Software.</p><a href="https://legislagov.com.br" style="color:#2e7d32;font-weight:700">legislagov.com.br</a></div>';
 }
 async function entrarDemo(){
   const ps=new URLSearchParams(location.search),dm=(ps.get('demo')||'').trim().toLowerCase();if(!dm)return;
@@ -487,7 +487,7 @@ function vLogin(){
     <p style="color:var(--sub);margin-top:0">Crie o <b>administrador</b> da horta. Ele tem acesso a tudo e cria os outros usuários.</p></div>
     <div class="card">${campo('pNome','Nome','text','name')}${campo('pUsu','Usuário (para entrar)','text','username')}${campo('pS1','Senha (mínimo 8 caracteres)','password','new-password')}${campo('pS2','Repita a senha','password','new-password')}
     <button class="btn" id="criarAdm" style="margin-top:14px">Criar e entrar</button><div id="logMsg" class="neg" style="margin-top:8px;font-size:14px"></div></div>${botaoBaixar()}`;
-  return `<div style="text-align:center;padding:20px 6px 4px"><div><img src="logo-rural.png" alt="GR Rural" style="height:72px;width:auto"></div><h2 style="margin-bottom:4px">Entrar</h2><p style="color:var(--sub);margin-top:0">Use o usuário e a senha que você recebeu.</p></div>
+  return `<div style="text-align:center;padding:20px 6px 4px"><div><img src="logo-gr.webp" alt="GR Rural" style="height:72px;width:auto"></div><h2 style="margin-bottom:4px">Entrar</h2><p style="color:var(--sub);margin-top:0">Use o usuário e a senha que você recebeu.</p></div>
     ${entradaInfo.erro?`<div class="aviso">${esc(entradaInfo.erro)}</div>`:''}
     <form class="card" id="fLogin" onsubmit="return false">${campo('lUsu','Usuário','text','username')}${campo('lSen','Senha','password','current-password')}
     <button class="btn" id="entrarBt" type="submit" style="margin-top:14px">Entrar</button><div id="logMsg" class="neg" style="margin-top:8px;font-size:14px"></div></form>${botaoBaixar()}`;
