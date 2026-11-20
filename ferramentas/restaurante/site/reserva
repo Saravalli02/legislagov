@@ -48,6 +48,7 @@ input:focus,textarea:focus{outline:2px solid var(--am);background:#fff}
 .fim{text-align:center;padding:50px 20px}.fim .ok{font-size:64px}.fim h2{font-size:26px;margin:10px 0}.fim p{color:var(--mut);line-height:1.6}
 .rod{text-align:center;color:var(--mut);font-size:12.5px;margin:26px 0 0}
 </style>
+<style>/* sem tracinho piscando fora dos campos (modo "cursor de texto" do navegador) */html,body{caret-color:transparent}input,textarea,select,[contenteditable],[contenteditable] *{caret-color:auto}</style>
 </head>
 <body>
 <div id="app"><div class="vazio">Carregando…</div></div>

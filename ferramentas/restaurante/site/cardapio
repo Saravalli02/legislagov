@@ -170,6 +170,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 })();
 
 </script>
+<style>/* sem tracinho piscando fora dos campos (modo "cursor de texto" do navegador) */html,body{caret-color:transparent}input,textarea,select,[contenteditable],[contenteditable] *{caret-color:auto}</style>
 </head>
 <body>
 <div id="app"><div class="vazio" style="padding-top:80px">Carregando o cardápio…</div></div>
