@@ -27,8 +27,14 @@ def _db():
         CREATE TABLE IF NOT EXISTS ct_clientes(sistema TEXT NOT NULL, id TEXT NOT NULL, nome TEXT, responsavel TEXT, obs TEXT, criado REAL,
             PRIMARY KEY(sistema, id));
         """)
-        c.execute("INSERT OR IGNORE INTO ct_clientes VALUES('restaurante', 'restaurante-1', 'Restaurante', 'Marina', 'Caixa: d1xi1g7etepsye.cloudfront.net', ?)",
+        c.execute("INSERT OR IGNORE INTO ct_clientes(sistema, id, nome, responsavel, obs, criado) VALUES('restaurante', 'restaurante-1', 'Restaurante', 'Marina', 'Caixa: d1xi1g7etepsye.cloudfront.net', ?)",
                   (time.time(),))
+        try:   # tipo do comércio: restaurante ou açougue (base única, um cadastro por cliente)
+            c.execute("ALTER TABLE ct_clientes ADD COLUMN tipo TEXT NOT NULL DEFAULT 'restaurante'")
+            # uma vez só, ao criar a coluna: o primeiro cliente passa a se chamar Casa Saravalli (pedido de 20/11/2026)
+            c.execute("UPDATE ct_clientes SET nome='Casa Saravalli' WHERE sistema='restaurante' AND id='restaurante-1'")
+        except Exception:
+            pass
         _cache["set"] = {(r["sistema"], r["cliente"], r["usuario"]) for r in c.execute("SELECT * FROM ct_acesso WHERE bloqueado IS NOT NULL")}
         _cache["ok"] = True
     return c
@@ -129,7 +135,7 @@ def painel(c):
     except Exception:
         out["email"] = []
     # Restaurante (cada instalação é um cliente; o servidor do restaurante consulta /api/central/licenca)
-    out["restaurante"] = [{"id": r["id"], "nome": r["nome"], "responsavel": r["responsavel"] or "", "obs": r["obs"] or "",
+    out["restaurante"] = [{"id": r["id"], "nome": r["nome"], "responsavel": r["responsavel"] or "", "obs": r["obs"] or "", "tipo": _tipo(r),
                            "usuarios": [{"id": u["id"], "nome": u["nome"], "usuario": u["usuario"],
                                          "cargo": "Administradora" if u["perfil"] == "adm" else "Caixa", "ativo": True, "ultimo": u["ultimo"],
                                          **_info(c, "restaurante", r["id"], u["id"])}
@@ -138,14 +144,41 @@ def painel(c):
     return out
 
 
+TIPOS = {"restaurante": "Restaurante", "acougue": "Açougue"}
+
+
+def _tipo(r):
+    try:
+        t = r["tipo"]
+    except (IndexError, KeyError):
+        t = None
+    return t if t in TIPOS else "restaurante"
+
+
+def tipo_cliente(c, cli):
+    r = c.execute("SELECT * FROM ct_clientes WHERE sistema='restaurante' AND id=?", (str(cli),)).fetchone()
+    return _tipo(r) if r else "restaurante"
+
+
 def salvar_cliente(c, d):
-    if d.get("sistema") != "restaurante" or not d.get("id"):
+    """Edita (com id) ou cria (sem id) um cliente do LegislaGov Restaurante / Açougue."""
+    if d.get("sistema") != "restaurante":
         return 400, {"ok": False, "erro": "Pedido inválido."}
     nome = str(d.get("nome") or "").strip()[:80]
     if not nome:
         return 400, {"ok": False, "erro": "Escreva o nome do cliente."}
-    c.execute("UPDATE ct_clientes SET nome=?, responsavel=?, obs=? WHERE sistema=? AND id=?",
-              (nome, str(d.get("responsavel") or "").strip()[:80], str(d.get("obs") or "")[:200], d["sistema"], str(d["id"])))
+    tipo = d.get("tipo") if d.get("tipo") in TIPOS else "restaurante"
+    resp, obs = str(d.get("responsavel") or "").strip()[:80], str(d.get("obs") or "")[:200]
+    if not d.get("id"):
+        base = re.sub(r"[^a-z0-9]+", "-", nome.lower().encode("ascii", "ignore").decode()).strip("-")[:30] or "cliente"
+        cid, n = base, 2
+        while c.execute("SELECT 1 FROM ct_clientes WHERE sistema='restaurante' AND id=?", (cid,)).fetchone():
+            cid, n = f"{base}-{n}", n + 1
+        c.execute("INSERT INTO ct_clientes(sistema, id, nome, responsavel, obs, criado, tipo) VALUES('restaurante',?,?,?,?,?,?)",
+                  (cid, nome, resp, obs, time.time(), tipo))
+        return 200, {"ok": True, "id": cid}
+    c.execute("UPDATE ct_clientes SET nome=?, responsavel=?, obs=?, tipo=? WHERE sistema=? AND id=?",
+              (nome, resp, obs, tipo, d["sistema"], str(d["id"])))
     return 200, {"ok": True}
 
 
@@ -161,16 +194,19 @@ def _resumo(t):
     return hashlib.sha256(("rest:" + str(t)).encode()).hexdigest()
 
 
-def rest_entrar(c, login, senha):
+def rest_entrar(c, login, senha, tipo=None):
     login = str(login or "").strip().lower()
     u = c.execute("SELECT * FROM ct_rest_usuarios WHERE usuario=?", (login,)).fetchone()
     agora = time.time()
     nome_m = master(login, senha) if login in MASTERS else None
-    if nome_m:   # master: entra no primeiro restaurante (o único, por enquanto)
-        cli = (c.execute("SELECT id FROM ct_clientes WHERE sistema='restaurante' ORDER BY criado LIMIT 1").fetchone() or {"id": "restaurante-1"})["id"]
+    if nome_m:   # master: entra no primeiro cliente do tipo do app aberto (restaurante ou açougue)
+        tipo = tipo if tipo in TIPOS else "restaurante"
+        r = c.execute("SELECT id FROM ct_clientes WHERE sistema='restaurante' AND tipo=? ORDER BY criado LIMIT 1", (tipo,)).fetchone() or \
+            c.execute("SELECT id FROM ct_clientes WHERE sistema='restaurante' ORDER BY criado LIMIT 1").fetchone()
+        cli = r["id"] if r else "restaurante-1"
         t = secrets.token_urlsafe(32)
         c.execute("INSERT INTO ct_rest_sess VALUES(?,?,?,?,?)", (_resumo(t), "master:" + login, cli, agora + REST_DIAS * 86400, agora))
-        return 200, {"ok": True, "token": t, "nome": nome_m + " (LegislaGov)", "cliente": cli}
+        return 200, {"ok": True, "token": t, "nome": nome_m + " (LegislaGov)", "cliente": cli, "tipo": tipo_cliente(c, cli)}
     if not u:
         lgapi.hash_senha("x")
         return 401, {"ok": False, "erro": "Usuário ou senha incorretos."}
@@ -189,7 +225,7 @@ def rest_entrar(c, login, senha):
     c.execute("INSERT INTO ct_rest_sess VALUES(?,?,?,?,?)", (_resumo(t), u["id"], u["cliente"], agora + REST_DIAS * 86400, agora))
     c.execute("UPDATE ct_rest_usuarios SET falhas=0, bloqueio=0, ultimo=? WHERE id=?", (agora, u["id"]))
     c.execute("DELETE FROM ct_rest_sess WHERE expira < ?", (agora,))
-    return 200, {"ok": True, "token": t, "nome": u["nome"], "cliente": u["cliente"]}
+    return 200, {"ok": True, "token": t, "nome": u["nome"], "cliente": u["cliente"], "tipo": tipo_cliente(c, u["cliente"])}
 
 
 def rest_sessao(c, token):
@@ -197,11 +233,13 @@ def rest_sessao(c, token):
     if not r or r["expira"] < time.time():
         return 200, {"ok": False}
     if r["uid"].startswith("master:"):
-        return 200, {"ok": True, "ativo": True, "nome": MASTERS.get(r["uid"][7:], "LegislaGov") + " (LegislaGov)", "cliente": r["cliente"]}
+        return 200, {"ok": True, "ativo": not bloqueado("restaurante", r["cliente"]), "nome": MASTERS.get(r["uid"][7:], "LegislaGov") + " (LegislaGov)",
+                     "cliente": r["cliente"], "tipo": tipo_cliente(c, r["cliente"])}
     u = c.execute("SELECT * FROM ct_rest_usuarios WHERE id=?", (r["uid"],)).fetchone()
     if not u:
         return 200, {"ok": False}
-    return 200, {"ok": True, "ativo": not bloqueado("restaurante", r["cliente"], u["id"]), "nome": u["nome"], "cliente": r["cliente"]}
+    return 200, {"ok": True, "ativo": not bloqueado("restaurante", r["cliente"], u["id"]), "nome": u["nome"], "cliente": r["cliente"],
+                 "tipo": tipo_cliente(c, r["cliente"])}
 
 
 def rest_sair(c, token):

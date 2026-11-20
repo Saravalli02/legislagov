@@ -2,14 +2,19 @@ const COLS=new Set(['produtos','mesas','vendas','movimentos','fila','estado','co
 const J=(c,b)=>({statusCode:c,headers:{'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(b)});
 const C=process.env.CENTRAL||'https://central.legislagov.com.br/api/central/';
 const post=async(p,b)=>{const r=await fetch(C+p,{method:'POST',headers:{'content-type':'application/json','x-lg':'1'},body:JSON.stringify(b),signal:AbortSignal.timeout(4000)});return{s:r.status,b:await r.json().catch(()=>({}))}};
+// Base única do comércio (restaurante e açougue): cada cliente da Central tem os próprios dados.
+// O primeiro cliente (restaurante-1, Casa Saravalli) continua nas chaves antigas; os outros usam "cliente|coleção/id".
+const LEGADO='restaurante-1',CLI_RE=/^[a-z0-9-]{1,60}$/;
 const SES=new Map();
-const sessao=async t=>{if(!t)return 0;const c=SES.get(t),n=Date.now();if(c&&n-c.t<15000)return c.v;
-  try{const r=await post('rest/sessao',{token:t});const v=r.s!==200?(c?c.v:3):!r.b.ok?0:r.b.ativo?1:2;if(SES.size>500)SES.clear();SES.set(t,{t:n,v});return v}
-  catch(e){return c?c.v:3}};
+const sessao=async t=>{if(!t)return{v:0};const c=SES.get(t),n=Date.now();if(c&&n-c.t<15000)return c.s;
+  try{const r=await post('rest/sessao',{token:t});
+    const s=r.s!==200?(c?c.s:{v:3}):!r.b.ok?{v:0}:{v:r.b.ativo?1:2,cli:CLI_RE.test(r.b.cliente||'')?r.b.cliente:LEGADO,tipo:r.b.tipo==='acougue'?'acougue':'restaurante',nome:r.b.nome||''};
+    if(SES.size>500)SES.clear();SES.set(t,{t:n,s});return s}
+  catch(e){return c?c.s:{v:3}}};
 // ---- cardápio digital (público, sem login): lê só o que o restaurante marcou para o cardápio
-const pub={t:0,v:null},ipM=new Map();
+const pubM=new Map(),ipM=new Map();
 const doc=async(st,c,i)=>{const x=await st.get(c,i);return x&&!x.del?x:null};
-const cardapio=async st=>{if(pub.v&&Date.now()-pub.t<20000)return pub.v;
+const cardapio=async st=>{const pub=pubM.get(st.cli)||{t:0,v:null};if(pub.v&&Date.now()-pub.t<20000)return pub.v;
   const g=await doc(st,'config','geral'),c=(g&&g.data)||{},cd=c.cardapio||{};
   const ids=(cd.ids||[]).slice(0,300);
   const ps=(await Promise.all(ids.map(id=>doc(st,'produtos',id)))).filter(x=>x&&x.data).map(x=>({...x.data,id:x.id}));
@@ -19,11 +24,11 @@ const cardapio=async st=>{if(pub.v&&Date.now()-pub.t<20000)return pub.v;
     tipos:cd.tipos||{retirada:true,local:true,entrega:false},taxa:+cd.taxa||0,pagamentos:cd.pagamentos||['Pix','Crédito','Débito','Dinheiro'],aviso:cd.aviso||'',
     produtos:ps.map(p=>({id:p.id,nome:p.nome,unidade:p.unidade||'',cat:p.cat||'Outros',preco:+p.preco||0,custo:+p.custo||0,desc:p.desc||'',img:p.img||'',
       esgotado:!(p.estoque===''||p.estoque==null)&&+p.estoque<=0}))};
-  pub.t=Date.now();pub.v=v;return v};
+  if(pubM.size>200)pubM.clear();pubM.set(st.cli,{t:Date.now(),v});return v};
 const pedido=async(st,e,b)=>{
   const ip=(e.requestContext.http&&e.requestContext.http.sourceIp)||'?',now=Date.now(),l=(ipM.get(ip)||[]).filter(t=>now-t<600000);
   if(l.length>=6)return J(429,{erro:'Muitos pedidos seguidos deste aparelho. Espere alguns minutos.'});
-  pub.t=0;const v=await cardapio(st);
+  pubM.delete(st.cli);const v=await cardapio(st);
   if(!v.aberto)return J(409,{erro:'O restaurante não está recebendo pedidos agora.'});
   const tipo=['retirada','local','entrega'].includes(b.tipo)&&v.tipos[b.tipo]?b.tipo:'';
   if(!tipo)return J(400,{erro:'Escolha se vai retirar, comer no local ou receber em casa.'});
@@ -50,19 +55,23 @@ const pedido=async(st,e,b)=>{
   l.push(now);ipM.set(ip,l);
   return J(200,{ok:1,num,total:its.reduce((s,i)=>s+i.preco*i.qtd,0),tipo})};
 const corpo=e=>{let b=e.body||'{}';if(e.isBase64Encoded)b=Buffer.from(b,'base64').toString();try{return JSON.parse(b)}catch(x){return{}}};
-const mk=st=>async e=>{
-  const m=e.requestContext.http.method,p=(e.rawPath||'').replace(/^\/api/,''),h=e.headers||{},t=h['x-lg-token'];
+const mk=base=>async e=>{
+  const m=e.requestContext.http.method,p=(e.rawPath||'').replace(/^\/api/,''),h=e.headers||{},t=h['x-lg-token'],q=e.queryStringParameters||{};
   if(p==='/ping')return J(200,{ok:1});
-  if(p==='/cardapio'&&m==='GET'){const v=await cardapio(st);return J(200,{...v,produtos:v.produtos.map(({custo,...x})=>x)})}
-  if(p==='/pedido'&&m==='POST')return pedido(st,e,corpo(e));
+  // cardápio digital público: ?c=cliente (sem c = o primeiro restaurante)
+  const pubSt=()=>base(CLI_RE.test(q.c||'')?q.c:LEGADO);
+  if(p==='/cardapio'&&m==='GET'){const v=await cardapio(pubSt());return J(200,{...v,produtos:v.produtos.map(({custo,...x})=>x)})}
+  if(p==='/pedido'&&m==='POST')return pedido(pubSt(),e,corpo(e));
   if(p==='/entrar'&&m==='POST'){const b=corpo(e);
-    try{const r=await post('rest/entrar',{usuario:b.usuario,senha:b.senha});return J(r.s,r.b)}catch(x){return J(503,{erro:'Sem conexão com a LegislaGov. Tente de novo em instantes.'})}}
+    try{const r=await post('rest/entrar',{usuario:b.usuario,senha:b.senha,tipo:b.tipo==='acougue'?'acougue':'restaurante'});return J(r.s,r.b)}catch(x){return J(503,{erro:'Sem conexão com a LegislaGov. Tente de novo em instantes.'})}}
   if(p==='/sair'&&m==='POST'){if(t){SES.delete(t);try{await post('rest/sair',{token:t})}catch(x){}}return J(200,{ok:1})}
-  const v=await sessao(t);
+  const ss=await sessao(t),v=ss.v;
   if(v===0)return J(401,{erro:'login'});if(v===2)return J(423,{erro:'suspenso'});if(v===3)return J(503,{erro:'central'});
+  const st=base(ss.cli);
+  if(m==='GET'&&p==='/eu')return J(200,{cliente:ss.cli,tipo:ss.tipo,nome:ss.nome});
   if(m==='GET'&&p==='/sync'){
-    const s=+((e.queryStringParameters||{}).since||0),r=await st.since(s,1500);
-    return J(200,{items:r.items,more:r.more,now:Date.now()});
+    const s=+(q.since||0),r=await st.since(s,1500);
+    return J(200,{items:r.items,more:r.more,now:Date.now(),cliente:ss.cli,tipo:ss.tipo});
   }
   const r=p.match(/^\/doc\/([a-z]+)\/([^/]+)$/);
   if(r&&m==='PUT'&&COLS.has(r[1])){
@@ -77,10 +86,11 @@ const mk=st=>async e=>{
 };
 const ddb=()=>{
   const D=require('@aws-sdk/client-dynamodb'),c=new D.DynamoDBClient({}),T=process.env.TABLE;
+  return cli=>{const L=cli===LEGADO,pre=L?'':cli+'|',G=L?'a':'c|'+cli;
   const toIt=x=>({col:x.c.S,id:x.i.S,ver:+x.v.N,ts:+x.t.N,del:!!(x.x&&x.x.BOOL),data:x.d?JSON.parse(x.d.S):null});
   return{
     async put(it,ver){
-      const Item={k:{S:it.col+'/'+it.id},c:{S:it.col},i:{S:it.id},v:{N:''+it.ver},t:{N:''+it.ts},g:{S:'a'},x:{BOOL:it.del}};
+      const Item={k:{S:pre+it.col+'/'+it.id},c:{S:it.col},i:{S:it.id},v:{N:''+it.ver},t:{N:''+it.ts},g:{S:G},x:{BOOL:it.del}};
       if(!it.del)Item.d={S:JSON.stringify(it.data)};
       const q={TableName:T,Item,ConditionExpression:ver?'v = :v':'attribute_not_exists(k)'};
       if(ver)q.ExpressionAttributeValues={':v':{N:''+ver}};
@@ -88,17 +98,17 @@ const ddb=()=>{
       catch(e){if(e.name==='ConditionalCheckFailedException')return false;throw e}
     },
     async get(col,id){
-      const r=await c.send(new D.GetItemCommand({TableName:T,Key:{k:{S:col+'/'+id}},ConsistentRead:true}));
+      const r=await c.send(new D.GetItemCommand({TableName:T,Key:{k:{S:pre+col+'/'+id}},ConsistentRead:true}));
       return r.Item?toIt(r.Item):null;
     },
     async since(ts,lim){
       const items=[];let K;
       do{const r=await c.send(new D.QueryCommand({TableName:T,IndexName:'g-t',KeyConditionExpression:'g = :g and t > :t',
-          ExpressionAttributeValues:{':g':{S:'a'},':t':{N:''+ts}},ExclusiveStartKey:K}));
+          ExpressionAttributeValues:{':g':{S:G},':t':{N:''+ts}},ExclusiveStartKey:K}));
         items.push(...r.Items.map(toIt));K=r.LastEvaluatedKey}while(K&&items.length<lim);
       return{items,more:!!K};
     }
-  };
+  ,cli}};
 };
 exports.mk=mk;
 let h;exports.handler=e=>(h=h||mk(ddb()))(e);

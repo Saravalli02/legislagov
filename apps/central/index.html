@@ -138,6 +138,24 @@ input,select{height:46px;border:1px solid var(--linha);border-radius:10px;paddin
 @media(max-width:640px){.cli-c{grid-template-columns:1fr}.usgrid{grid-template-columns:1fr}}
 @media(max-width:960px){.sist{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.topo-in{padding:10px 14px;gap:8px}.quem,.marca small{display:none}main{padding:22px 14px 50px}h1{font-size:23px}.sist{grid-template-columns:1fr}.demo-l{grid-template-columns:1fr}.demo-l .acoes{grid-row:auto;grid-column:auto;justify-content:flex-start}.rod .btn{flex:1}.tbtn{padding:0 9px}.topo-in{gap:6px}.tema button{padding:0 8px}.marca img{height:26px}}
+
+/* sistemas e clientes: quadros de resumo (um sistema por vez) */
+.sisres{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:16px}
+.sisq{display:flex;gap:12px;align-items:center;text-align:left;background:var(--papel);border:1px solid var(--linha);border-left:5px solid var(--cor);border-radius:14px;padding:12px 14px;cursor:pointer;color:inherit;font:inherit;box-shadow:var(--sombra)}
+.sisq img{width:38px;height:38px;border-radius:10px;flex:none}
+.sisq b{display:block;font-size:14.5px}.sisq small{display:block;color:var(--sub);font-size:12.5px}.sisq small.blq{color:var(--erro);font-weight:700}
+.sisq.act{outline:2px solid var(--cor);background:color-mix(in srgb,var(--cor) 9%,var(--papel))}
+.sisblk>header{border-left:5px solid var(--cor);padding-left:12px}
+.duplo{display:grid;grid-template-columns:1fr 1fr;gap:8px}.duplo .btn{width:100%;justify-content:center}
+.tptag{display:inline-block;font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 9px;margin-left:6px;vertical-align:2px}
+.tptag.restaurante{background:#fde7e7;color:#a11d1d}.tptag.acougue{background:#fff1c2;color:#7a5200}
+.cli-d{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.tpsel{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--linha);border-radius:999px;padding:3px;font-size:13px}
+.tpsel span{padding:0 6px 0 8px;color:var(--sub);font-weight:700}
+.tpsel button{border:0;background:transparent;border-radius:999px;padding:5px 12px;font:inherit;font-weight:700;cursor:pointer;color:inherit}
+.tpsel button.act{background:#1b2433;color:#fff}
+.tpsel button.act[data-tipo=acougue]{background:#d99a00;color:#1b1400}.tpsel button.act[data-tipo=restaurante]{background:#c62828}
+@media(max-width:640px){.cli-d{align-items:flex-start}.duplo{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -177,7 +195,7 @@ async function tela(){
       <div class="cab"><div class="selo"><img src="${esc(x.icone)}" alt=""></div><div><h3 id="t-${esc(x.id)}">${esc(x.nome)}</h3><p>${esc(x.desc)}</p></div></div>
       ${x.id==='rural'?`<button class="btn" data-clientes="rural">Clientes, senhas e acesso</button>`:''}
       ${x.demo?`<button class="btn demo" data-demo="${esc(x.id)}">Criar demonstração</button>`:''}
-      ${x.qr?`<button class="btn" data-qr="${esc(x.qr[1])}" data-qrnome="${esc(x.qr[0])}" data-qrsis="${esc(x.nome)}">QR code do ${esc(x.qr[0].replace(/^App do /,'app do '))}</button>`:''}
+      ${x.qr||x.baixar?`<div class="duplo">${x.qr?`<button class="btn" data-qr="${esc(x.qr[1])}" data-qrnome="${esc(x.qr[0])}" data-qrsis="${esc(x.nome)}">QR code do ${esc(x.qr[0].replace(/^App do /,'app do '))}</button>`:''}${x.baixar?`<button class="btn" data-qr="${esc(x.baixar[1])}" data-qrnome="App do açougue" data-qrsis="LegislaGov Açougue">${esc(x.baixar[0])}</button>`:''}</div>`:''}
       <a class="abrir" href="${esc(x.abrir[1])}" target="_blank" rel="noopener"><span>${esc(x.abrir[0])}</span>${seta}</a>
       ${(x.outros||[]).length?`<div class="outros">${x.outros.map(l=>`<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>`:''}
     </section>`).join('')}</div>
@@ -494,29 +512,49 @@ function editarGasto(id){
 }
 /* ===================== Sistemas e clientes: liga e desliga o acesso ===================== */
 let SIS=null;
-const SISINFO=[['camara','LegislaGov Câmara','em-camara.png','Cada Câmara é um cliente. Cortar a Câmara bloqueia o painel de todos os usuários dela (o site público continua no ar).'],
-  ['rural','LegislaGov Rural','em-rural.png','Cada horta é um cliente. O administrador da horta e os vendedores aparecem embaixo.'],
-  ['restaurante','LegislaGov Restaurante','em-restaurante.png','Quem compra o sistema entra com usuário e senha criados aqui. Cortar o acesso trava a tela do caixa e dos garçons em segundos.'],
-  ['email','Painel de e-mails','em-email.png','Cada órgão é um cliente.']];
+const SISINFO=[['camara','LegislaGov Câmara','em-camara.png','#22b8e6','Cada Câmara é um cliente. Cortar a Câmara bloqueia o painel de todos os usuários dela (o site público continua no ar).'],
+  ['rural','LegislaGov Rural','em-rural.png','#3fae4f','Cada horta é um cliente. O administrador da horta e os vendedores aparecem embaixo.'],
+  ['restaurante','LegislaGov Restaurante / Açougue','em-restaurante.png','#d32f2f','Base única: cada cliente é um restaurante ou um açougue, com os próprios dados. Quem compra entra com usuário e senha criados aqui.'],
+  ['email','Painel de e-mails','em-email.png','#7a4fd6','Cada órgão é um cliente.']];
+const TIPOCOM={restaurante:'Restaurante',acougue:'Açougue'};
+let SISABA=(()=>{try{return localStorage.getItem('lg-central-sis')||'camara'}catch(e){return 'camara'}})();
 const chave=(on,txt,cl)=>`<button type="button" class="sw ${cl||''}" role="switch" aria-checked="${on}"><i></i>${txt||(on?'Ativo':'Bloqueado')}</button>`;
 async function carregarSistemas(){
   try{SIS=await api('admin/sistemas')}catch(e){if(e.message!=='sessao')$('#admc').innerHTML=`<div class="vazio">${esc(e.message)}</div>`;return}
-  $('#admc').innerHTML=`<p class="dica" style="margin-top:16px">Verde: funcionando. Toque para deixar vermelho e cortar o acesso na hora. Os dados ficam guardados; ao ligar de novo, tudo volta como estava.</p><div class="horta" style="margin-top:12px;display:flex;gap:12px;align-items:center"><span class="pt"></span><div><b>Acesso master: usuário <code>ricardo</code></b><small class="dica" style="display:block">Entra em todos os sistemas (Câmara, Central, Rural, Restaurante, E-mails e os próximos) com a mesma senha do painel da Câmara. Trocou a senha lá, muda em todos.</small></div></div>`+
-    SISINFO.map(([k,n,ic,tx])=>{const cl=SIS[k]||[];return `<section class="sisblk"><header><img src="${ic}" alt=""><div><h3>${n}</h3><small>${tx}</small></div></header>
-      ${cl.length?cl.map(x=>cartaoCliente(k,x)).join(''):'<div class="vazio">Nenhum cliente ainda.</div>'}</section>`}).join('');
+  desenharSistemas();
+}
+function desenharSistemas(){
+  if(!SISINFO.some(i=>i[0]===SISABA))SISABA='camara';
+  const conta=k=>{const cl=SIS[k]||[],us=cl.reduce((n,c)=>n+(c.usuarios||[]).length,0),bl=cl.filter(c=>c.bloqueado).length+cl.reduce((n,c)=>n+(c.usuarios||[]).filter(u=>u.bloqueado).length,0);return {cl:cl.length,us,bl}};
+  const [k,n,ic,cor,tx]=SISINFO.find(i=>i[0]===SISABA),cl=SIS[k]||[];
+  $('#admc').innerHTML=`<div class="sisres" role="tablist" aria-label="Sistemas">${SISINFO.map(([kk,nn,ii,cc])=>{const c=conta(kk);return `<button type="button" role="tab" class="sisq ${kk===SISABA?'act':''}" style="--cor:${cc}" data-sis="${kk}" aria-selected="${kk===SISABA}">
+      <img src="${ii}" alt=""><span><b>${nn}</b><small>${c.cl} cliente(s) · ${c.us} usuário(s)</small>${c.bl?`<small class="blq">${c.bl} cortado(s)</small>`:''}</span></button>`}).join('')}</div>
+    <section class="sisblk" style="--cor:${cor}"><header><img src="${ic}" alt=""><div style="flex:1"><h3>${n}</h3><small>${tx}</small></div>${k==='restaurante'?'<button class="btn pri" id="novoCli">+ Novo cliente</button>':''}</header>
+      ${cl.length?cl.map(x=>cartaoCliente(k,x)).join(''):'<div class="vazio">Nenhum cliente ainda.</div>'}</section>
+    <p class="dica" style="margin-top:18px">Verde: funcionando. Toque para deixar vermelho e cortar o acesso na hora. Os dados ficam guardados; ao ligar de novo, tudo volta como estava.</p>
+    <div class="horta" style="margin-top:10px;display:flex;gap:12px;align-items:center"><span class="pt"></span><div><b>Acesso master: usuário <code>ricardo</code></b><small class="dica" style="display:block">Entra em todos os sistemas (Câmara, Central, Rural, Restaurante, Açougue, E-mails e os próximos) com a mesma senha do painel da Câmara. Trocou a senha lá, muda em todos.</small></div></div>`;
+  $('#admc').querySelectorAll('[data-sis]').forEach(b=>b.onclick=()=>{SISABA=b.dataset.sis;try{localStorage.setItem('lg-central-sis',SISABA)}catch(e){}desenharSistemas()});
+  const nc=$('#novoCli');if(nc)nc.onclick=()=>editarCliRest(null);
   $('#admc').querySelectorAll('[data-cli]').forEach(el=>{const [k,id]=el.dataset.cli.split('|');const x=SIS[k].find(c=>c.id===id);
     el.querySelector('.cli-c .sw').onclick=()=>trocarAcesso(k,x,null);
     el.querySelectorAll('[data-u]').forEach(u=>{const us=x.usuarios.find(y=>y.id===u.dataset.u);u.querySelector('.sw').onclick=()=>trocarAcesso(k,x,us);
       const sn=u.querySelector('[data-sn]');if(sn)sn.onclick=()=>senhaRest(us);const ex=u.querySelector('[data-ex]');if(ex)ex.onclick=()=>excluirRest(us)});
+    el.querySelectorAll('[data-tipo]').forEach(b=>b.onclick=()=>trocarTipo(x,b.dataset.tipo));
     const nu=el.querySelector('[data-nu]');if(nu)nu.onclick=()=>novoRest(x);const ed=el.querySelector('[data-ed]');if(ed)ed.onclick=()=>editarCliRest(x)});
 }
 function cartaoCliente(k,x){
-  const on=!x.bloqueado,us=x.usuarios||[];
-  const sub=k==='restaurante'?`Responsável: ${esc(x.responsavel||'—')} · ${us.length} usuário(s)`:`${us.length} usuário(s)`;
-  return `<div class="cli ${on?'':'off'}" data-cli="${k}|${esc(x.id)}"><div class="cli-c"><div><b>${esc(x.nome)}</b><small>${sub}${x.bloqueado&&x.desde?' · cortado em '+quando(x.desde):''}${x.motivo?' · '+esc(x.motivo):''}</small></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${k==='restaurante'?'<button class="btn" data-ed>Editar</button><button class="btn" data-nu>+ Usuário</button>':''}${chave(on,on?'Cliente ativo':'Cliente bloqueado')}</div></div>
+  const on=!x.bloqueado,us=x.usuarios||[],rest=k==='restaurante',tp=x.tipo==='acougue'?'acougue':'restaurante';
+  const sub=rest?`Responsável: ${esc(x.responsavel||'—')} · ${us.length} usuário(s)`:`${us.length} usuário(s)`;
+  return `<div class="cli ${on?'':'off'}" data-cli="${k}|${esc(x.id)}"><div class="cli-c"><div><b>${esc(x.nome)}</b>${rest?` <span class="tptag ${tp}">${TIPOCOM[tp]}</span>`:''}<small>${sub}${x.bloqueado&&x.desde?' · cortado em '+quando(x.desde):''}${x.motivo?' · '+esc(x.motivo):''}</small></div>
+    <div class="cli-d"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">${rest?'<button class="btn" data-ed>Editar</button><button class="btn" data-nu>+ Usuário</button>':''}${chave(on,on?'Cliente ativo':'Cliente bloqueado')}</div>
+    ${rest?`<div class="tpsel" role="group" aria-label="Tipo do comércio"><span>Tipo:</span>${Object.entries(TIPOCOM).map(([t,nm])=>`<button type="button" data-tipo="${t}" class="${tp===t?'act':''}" aria-pressed="${tp===t}">${nm}</button>`).join('')}</div>`:''}</div></div>
     ${us.length?`<div class="usgrid">${us.map(u=>{const uon=!u.bloqueado;return `<div class="usr ${uon&&on?'':'off'}" data-u="${esc(u.id)}"><div><b>${esc(u.nome)}</b><small>${esc(u.cargo||'')}${u.usuario?' · '+esc(u.usuario):''}</small>${u.ativo===false?'<small style="color:var(--erro)">desativado pelo administrador da Câmara</small>':''}${u.bloqueado&&u.motivo?`<small>${esc(u.motivo)}</small>`:''}</div>
-      <div class="ln">${chave(uon,null,'p')}${k==='restaurante'?'<span><button class="lkbtn" data-sn>Senha nova</button><button class="lkbtn" data-ex style="color:var(--erro)">Excluir</button></span>':''}</div></div>`}).join('')}</div>`:k==='restaurante'?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o acesso da dona do restaurante.</p>':''}</div>`;
+      <div class="ln">${chave(uon,null,'p')}${rest?'<span><button class="lkbtn" data-sn>Senha nova</button><button class="lkbtn" data-ex style="color:var(--erro)">Excluir</button></span>':''}</div></div>`}).join('')}</div>`:rest?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o acesso de quem comprou.</p>':''}</div>`;
+}
+async function trocarTipo(x,t){if((x.tipo||'restaurante')===t)return;
+  modal(`<h2>Mudar ${esc(x.nome)} para ${TIPOCOM[t]}?</h2><p class="dica">${t==='acougue'?'O sistema deste cliente passa a abrir como açougue: caixa grande, venda por quilo e grama, sem mesas, cores amarelas.':'O sistema deste cliente passa a abrir como restaurante: mesas, garçons, delivery e cardápio digital.'} Os dados (produtos, vendas, estoque) continuam os mesmos. Quem estiver usando vê a mudança em alguns segundos.</p>
+    <div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok">Mudar para ${TIPOCOM[t]}</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;$('#ok',f).onclick=async()=>{try{await api('admin/cliente',{metodo:'POST',corpo:{sistema:'restaurante',id:x.id,nome:x.nome,responsavel:x.responsavel,obs:x.obs,tipo:t}});fechar();carregarSistemas()}catch(e){if(e.message!=='sessao')alertar(e.message)}}});
 }
 function trocarAcesso(k,x,u){
   const alvo=u||x,ligar=!!alvo.bloqueado;
@@ -538,29 +576,35 @@ function novoRest(x){
     <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Criar usuário</button></div>`,f=>{
     $('#cn',f).onclick=fechar;
     $('#ok',f).onclick=async()=>{const corpo={cliente:x.id,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),senha:$('#ns',f).value.trim()};
-      try{await api('admin/rest/usuario',{metodo:'POST',corpo});mostrarAcessoRest(corpo.nome,corpo.usuario,corpo.senha);carregarSistemas()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
+      try{await api('admin/rest/usuario',{metodo:'POST',corpo});mostrarAcessoRest(corpo.nome,corpo.usuario,corpo.senha,x.tipo);carregarSistemas()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
   });
 }
-function mostrarAcessoRest(nome,login,senha){
-  const link='https://d1xi1g7etepsye.cloudfront.net/';
+function mostrarAcessoRest(nome,login,senha,tipo){
+  const acg=tipo==='acougue',link='https://d1xi1g7etepsye.cloudfront.net/'+(acg?'acougue':'');
   modal(`<h2>Acesso criado</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Endereço<input value="${link}" readonly></label><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(senha)}" readonly style="font-family:ui-monospace,monospace"></label>
-    <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{const t=`LegislaGov Restaurante\n${link}\nUsuário: ${login}\nSenha: ${senha}`;try{await navigator.clipboard.writeText(t)}catch(e){const x=document.createElement('textarea');x.value=t;g.appendChild(x);x.select();document.execCommand('copy');x.remove()}$('#cp',g).textContent='Copiado'}},{travar:true});
+    <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{const t=`LegislaGov ${acg?'Açougue':'Restaurante'}\n${link}\nUsuário: ${login}\nSenha: ${senha}`;try{await navigator.clipboard.writeText(t)}catch(e){const x=document.createElement('textarea');x.value=t;g.appendChild(x);x.select();document.execCommand('copy');x.remove()}$('#cp',g).textContent='Copiado'}},{travar:true});
 }
 function senhaRest(u){
   const s=gerar();
   modal(`<h2>Senha nova · ${esc(u.nome)}</h2><p class="dica">A pessoa sai de todos os aparelhos e entra de novo com a senha nova.</p><label>Senha nova<input id="sn" value="${s}" style="font-family:ui-monospace,monospace"></label><p class="msg" id="sm"></p>
     <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar senha nova</button></div>`,f=>{$('#cn',f).onclick=fechar;
-    $('#ok',f).onclick=async()=>{const nova=$('#sn',f).value.trim();try{await api('admin/rest/senha',{metodo:'POST',corpo:{id:u.id,senha:nova}});mostrarAcessoRest(u.nome,u.usuario,nova);carregarSistemas()}catch(e){if(e.message!=='sessao')$('#sm',f).textContent=e.message}}});
+    $('#ok',f).onclick=async()=>{const nova=$('#sn',f).value.trim();try{await api('admin/rest/senha',{metodo:'POST',corpo:{id:u.id,senha:nova}});mostrarAcessoRest(u.nome,u.usuario,nova,((SIS.restaurante||[]).find(c=>(c.usuarios||[]).some(y=>y.id===u.id))||{}).tipo);carregarSistemas()}catch(e){if(e.message!=='sessao')$('#sm',f).textContent=e.message}}});
 }
 function excluirRest(u){
   modal(`<h2>Excluir o usuário ${esc(u.nome)}?</h2><p class="dica">A pessoa sai de todos os aparelhos e o usuário deixa de existir. Os dados do restaurante continuam guardados. Para só pausar, prefira o botão verde/vermelho.</p><div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok" style="background:var(--erro);border-color:var(--erro);color:#fff">Excluir</button></div>`,f=>{
     $('#cn',f).onclick=fechar;$('#ok',f).onclick=async()=>{try{await api('admin/rest/excluir',{metodo:'POST',corpo:{id:u.id}});fechar();carregarSistemas()}catch(e){}}});
 }
 function editarCliRest(x){
-  modal(`<h2>Cliente do restaurante</h2><label>Nome do restaurante<input id="cn1" maxlength="80" value="${esc(x.nome)}"></label><label>Responsável (quem comprou)<input id="cr1" maxlength="80" value="${esc(x.responsavel)}"></label><label>Observação<input id="co1" maxlength="200" value="${esc(x.obs)}"></label><p class="msg" id="ce1"></p>
-    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar</button></div>`,f=>{$('#cn',f).onclick=fechar;
-    $('#ok',f).onclick=async()=>{try{await api('admin/cliente',{metodo:'POST',corpo:{sistema:'restaurante',id:x.id,nome:$('#cn1',f).value,responsavel:$('#cr1',f).value,obs:$('#co1',f).value}});fechar();carregarSistemas()}catch(e){if(e.message!=='sessao')$('#ce1',f).textContent=e.message}}});
+  const novo=!x;x=x||{id:'',nome:'',responsavel:'',obs:'',tipo:'acougue'};
+  modal(`<h2>${novo?'Novo cliente':'Cliente'} · Restaurante / Açougue</h2><label>Nome do comércio<input id="cn1" maxlength="80" value="${esc(x.nome)}" placeholder="Ex.: Badeda"></label>
+    <label>Tipo<select id="ct1">${Object.entries(TIPOCOM).map(([t,n])=>`<option value="${t}" ${(x.tipo||'restaurante')===t?'selected':''}>${n}</option>`).join('')}</select></label>
+    <label>Responsável (quem comprou)<input id="cr1" maxlength="80" value="${esc(x.responsavel)}"></label><label>Observação<input id="co1" maxlength="200" value="${esc(x.obs)}"></label><p class="msg" id="ce1"></p>
+    ${novo?'<p class="dica">O cliente novo começa vazio, com os dados separados dos outros. Depois toque em “+ Usuário” para criar o acesso.</p>':''}
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">${novo?'Criar cliente':'Salvar'}</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{try{await api('admin/cliente',{metodo:'POST',corpo:{sistema:'restaurante',id:x.id,nome:$('#cn1',f).value,tipo:$('#ct1',f).value,responsavel:$('#cr1',f).value,obs:$('#co1',f).value}});fechar();SISABA='restaurante';carregarSistemas()}catch(e){if(e.message!=='sessao')$('#ce1',f).textContent=e.message}}});
 }
+
 /* ===================== Segurança: endereços bloqueados ===================== */
 async function telaSeguranca(){
   let r;try{r=await api('seguranca/ips')}catch(e){return}

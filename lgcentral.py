@@ -45,11 +45,12 @@ SISTEMAS = [
      "desc": "Rotas, vendedores, troco, trocas, fiado, despesas e rastreio da horta.",
      "abrir": ["Abrir o Rural", "https://rural.legislagov.com.br/"],
      "outros": [["Pelo endereço de teste", "https://teste.legislagov.com.br/rural/"]], "demo": True},
-    {"id": "restaurante", "nome": "LegislaGov Restaurante", "icone": "em-restaurante.png", "cor": "#d32f2f",
-     "desc": "Mesas, caixa, estoque, delivery e app do garçom, em tempo real.",
+    {"id": "restaurante", "nome": "LegislaGov Restaurante / Açougue", "icone": "em-restaurante.png", "cor": "#d32f2f",
+     "desc": "Restaurante: mesas, caixa, estoque, delivery e app do garçom. Açougue: caixa por quilo e grama, cancelar e devolver item.",
      "abrir": ["Abrir o caixa", "https://d1xi1g7etepsye.cloudfront.net/"],
-     "outros": [["App do garçom", "https://d1xi1g7etepsye.cloudfront.net/garcom"]],
-     "qr": ["App do garçom", "https://d1xi1g7etepsye.cloudfront.net/garcom"], "demo": False},
+     "outros": [["App do garçom", "https://d1xi1g7etepsye.cloudfront.net/garcom"], ["Caixa do açougue", "https://d1xi1g7etepsye.cloudfront.net/acougue"]],
+     "qr": ["App do garçom", "https://d1xi1g7etepsye.cloudfront.net/garcom"],
+     "baixar": ["Baixar o app do açougue", "https://d1xi1g7etepsye.cloudfront.net/acougue"], "demo": False},
     {"id": "email", "nome": "Painel de e-mails", "icone": "em-email.png", "cor": "#7a4fd6",
      "desc": "Caixas de e-mail institucionais: criar, trocar senha e mandar avisos.",
      "abrir": ["Abrir o painel de e-mails", "https://email.legislagov.com.br/"],
@@ -348,7 +349,7 @@ def rota(h, metodo):
             with lgapi._trava:
                 rc = lgacesso._db()
                 if acao == "rest/entrar":
-                    return _resp(h, *lgacesso.rest_entrar(rc, corpo.get("usuario"), corpo.get("senha")))
+                    return _resp(h, *lgacesso.rest_entrar(rc, corpo.get("usuario"), corpo.get("senha"), corpo.get("tipo")))
                 if acao == "rest/sessao":
                     return _resp(h, *lgacesso.rest_sessao(rc, str(corpo.get("token") or "")))
                 if acao == "rest/sair":
@@ -417,7 +418,11 @@ def rota(h, metodo):
                              f"{corpo.get('sistema')}/{corpo.get('cliente')}" + (f"/{corpo.get('nome') or corpo.get('usuario')}" if corpo.get("usuario") else ""), ip)
                     return _resp(h, cod, r)
                 if acao == "admin/cliente" and metodo == "POST":
-                    return _resp(h, *lgacesso.salvar_cliente(ac, corpo))
+                    cod, r = lgacesso.salvar_cliente(ac, corpo)
+                    if cod == 200:
+                        _log(c, s["usuario"], "Comércio: cliente " + ("alterado" if corpo.get("id") else "criado"),
+                             f"{corpo.get('nome')} ({lgacesso.TIPOS.get(corpo.get('tipo'), 'Restaurante')})", ip)
+                    return _resp(h, cod, r)
             if acao in ("admin/rest/usuario", "admin/rest/senha", "admin/rest/excluir") and metodo == "POST":
                 import lgacesso
                 ac = lgacesso._db()
