@@ -1,4 +1,4 @@
-const COLS=new Set(['produtos','mesas','vendas','movimentos','fila','estado','config']);
+const COLS=new Set(['produtos','mesas','vendas','movimentos','fila','estado','config','clientes']);
 const J=(c,b)=>({statusCode:c,headers:{'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(b)});
 const C=process.env.CENTRAL||'https://central.legislagov.com.br/api/central/';
 const post=async(p,b)=>{const r=await fetch(C+p,{method:'POST',headers:{'content-type':'application/json','x-lg':'1'},body:JSON.stringify(b),signal:AbortSignal.timeout(4000)});return{s:r.status,b:await r.json().catch(()=>({}))}};
