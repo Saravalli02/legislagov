@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>LegislaGov Rural — instalar no celular</title>
-<meta name="description" content="Instale o LegislaGov Rural no celular: pedidos, saídas, rotas de entrega e fiado da horta. Versão de teste.">
+<title>GR Rural — instalar no celular</title>
+<meta name="description" content="Instale o GR Rural no celular: pedidos, saídas, rotas de entrega e fiado da horta. Versão de teste.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#2f6b3a">
 <link rel="icon" href="app/icone-192.png">
@@ -56,7 +56,7 @@ h2{font-size:21px;margin:30px 0 12px;line-height:1.25}
 <body>
 <header class="topo">
   <div class="cx">
-    <div class="marca"><img src="app/icone-192.png" alt="" width="64" height="64"><div><b>LegislaGov Rural</b><span>Versão de teste</span></div></div>
+    <div class="marca"><img src="app/icone-192.png" alt="" width="64" height="64"><div><b>GR Rural</b><span>Versão de teste</span></div></div>
     <h1>Instale o app da horta no seu celular</h1>
     <p>Saídas, rotas de entrega, pedidos e fiado no celular. O gestor acompanha cada vendedor na hora, com o caminho no mapa.</p>
   </div>
@@ -77,7 +77,7 @@ h2{font-size:21px;margin:30px 0 12px;line-height:1.25}
       <li><div><b>Abra esta página no Chrome</b><small>O navegador que já vem no celular.</small></div></li>
       <li><div><b>Toque em “Abrir o app”</b><small>Se o Chrome perguntar se quer instalar, toque em <b>Instalar</b> e pronto.</small></div></li>
       <li><div><b>Toque nos três pontinhos ⋮ no canto de cima</b><small>Depois em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</small></div></li>
-      <li><div><b>Abra pelo ícone e entre</b><small>O ícone verde do LegislaGov Rural aparece junto com os outros apps. Entre por ele.</small></div></li>
+      <li><div><b>Abra pelo ícone e entre</b><small>O ícone do GR Rural aparece junto com os outros apps. Entre por ele.</small></div></li>
     </ol>
   </div>
   <div class="cartao" role="tabpanel" id="p-ios" aria-labelledby="t-ios" hidden>
@@ -134,7 +134,7 @@ h2{font-size:21px;margin:30px 0 12px;line-height:1.25}
   var q=e?'?e='+e:'';
   var app='https://rural.legislagov.com.br/', reserva='https://teste.legislagov.com.br/rural/';
   var abrir=document.getElementById('abrir');
-  function usar(base){abrir.href=base+q;document.getElementById('zap').href='https://wa.me/?text='+encodeURIComponent('Instale o LegislaGov Rural no seu celular: '+location.origin+location.pathname.replace(/index\.html$/,'')+q)}
+  function usar(base){abrir.href=base+q;document.getElementById('zap').href='https://wa.me/?text='+encodeURIComponent('Instale o GR Rural no seu celular: '+location.origin+location.pathname.replace(/index\.html$/,'')+q)}
   usar(app);
   // enquanto o endereço próprio não estiver no ar, usa o endereço de testes (mesmo servidor)
   fetch(app+'icone-192.png',{mode:'no-cors',cache:'no-store'}).catch(function(){usar(reserva)});
