@@ -134,7 +134,7 @@ body.bloq,html:has(body.bloq){background:#fff}body.bloq nav,body.login nav{displ
 :root{--verde:#23843f;--verde2:#2fa152;--verde-cl:#e6f4ea;--fundo:#f2f4f1;--borda:#e2e7df;--sombra:0 1px 2px #0f1a120a,0 8px 24px #0f1a120f}
 html,body{font-family:"Inter Display","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:-.005em}
 header{background:radial-gradient(420px 120px at 20% -30%,#2fa15255,transparent),linear-gradient(135deg,#0b1210,#13261b);border-bottom:1px solid #ffffff12;box-shadow:0 6px 20px #0b121033}
-header .logo{width:48px;height:38px;background:transparent;box-shadow:none;border-radius:0}header .logo img{height:30px;filter:drop-shadow(0 0 10px #19e3d055)}
+header .logo{width:48px;height:38px;background:transparent;box-shadow:none;border-radius:0}header .logo img{height:30px}
 header h1{font-size:18px;letter-spacing:-.02em}header h1 span{color:#5fdc84}
 header small{opacity:.75}
 #badgeLic{background:#ffffff14!important;border:1px solid #ffffff22!important}
@@ -1666,5 +1666,22 @@ function ligar(){
 
 iniciar();
 </script>
+<script>/* GR: brilho de "dados passando" pelo logo (logo sem fundo) */
+(function(){if(window.grFx)return;var css=document.createElement('style');
+css.textContent='.grfx{position:relative}.grfx-w{display:inline-flex;vertical-align:middle;position:relative;line-height:0}'+
+'.grfx::after,.grfx-w::after{content:"";position:absolute;inset:0;pointer-events:none;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat;'+
+'background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.0) 40%,rgba(210,255,250,.95) 49%,rgba(120,170,255,.9) 52%,transparent 62%) no-repeat;background-size:260% 100%;'+
+'animation:grfx 2.6s cubic-bezier(.45,.05,.3,1) infinite;mix-blend-mode:screen}'+
+'.grfx.lento::after,.grfx-w.lento::after{animation-duration:7s}'+
+'@keyframes grfx{0%{background-position:140% 0}55%,100%{background-position:-40% 0}}'+
+'@media (prefers-reduced-motion:reduce){.grfx::after,.grfx-w::after{animation:none;opacity:0}}';
+(document.head||document.documentElement).appendChild(css);
+var SEL='img.lg-pilar,img[src*="gr-emblema"],img[src*="logo-gr"],img.gr-logo';
+function fx(){document.querySelectorAll(SEL).forEach(function(i){if(!i.src)return;if(i.dataset.grfx){if(i.dataset.grfx!==i.src){i.dataset.grfx=i.src;var w=i.closest('.grfx,.grfx-w');if(w)w.style.setProperty('--m','url("'+i.src+'")')}return}i.dataset.grfx=i.src;var p=i.parentElement,alvo;
+  var lento=!!i.closest('header,nav,.nav,.marca,.brand');
+  if(p&&p.children.length===1&&!/^(A|BUTTON|BODY)$/.test(p.tagName)){alvo=p;p.classList.add('grfx')}else{alvo=document.createElement('span');alvo.className='grfx-w';p.insertBefore(alvo,i);alvo.appendChild(i)}
+  if(lento)alvo.classList.add('lento');alvo.style.setProperty('--m','url("'+i.src+'")')})}
+window.grFx=fx;fx();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fx);
+var ag=0;new MutationObserver(function(){if(!ag){ag=1;requestAnimationFrame(function(){ag=0;fx()})}}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['src']})})();</script>
 </body>
 </html>
