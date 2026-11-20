@@ -57,7 +57,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const brl=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const CLI=(()=>{const c=new URLSearchParams(location.search).get('c');return c&&/^[a-z0-9-]{1,60}$/.test(c)?c:''})(),Q=CLI?'?c='+CLI:'';
-const ICO={Bovinos:'🥩',Suínos:'🐖',Aves:'🍗',Linguiças:'🌭',Miúdos:'🍖',Peixes:'🐟',Temperados:'🧂',Churrasco:'🔥',Mercearia:'🛒',Bebidas:'🥤',Lanches:'🍔',Doces:'🍫',Outros:'🍽️'};
+const ICO={Assados:'♨️',Bovinos:'🥩',Suínos:'🐖',Aves:'🍗',Linguiças:'🌭',Miúdos:'🍖',Peixes:'🐟',Temperados:'🧂',Churrasco:'🔥',Mercearia:'🛒',Bebidas:'🥤',Lanches:'🍔',Doces:'🍫',Outros:'🍽️'};
 let D=null,car={},dados={nome:'',fone:'',retirada:'',obs:''};
 try{Object.assign(dados,JSON.parse(localStorage.getItem('gr-res-dados')||'{}'))}catch(e){}
 async function carregar(){try{const r=await fetch('/api/reserva'+Q,{cache:'no-store'});D=await r.json();

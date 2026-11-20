@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v18">
+<meta name="lg-versao" content="lg-v19">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -743,13 +743,13 @@ const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n
 /* menus (categorias): a lista completa; cada restaurante escolhe quais usa em Ajustes › Menus (config.geral.categorias) */
 /* tipo do comércio (base única): restaurante ou açougue — vem do cadastro do cliente na Central */
 const ACG=!!window.LG_ACG,TIPO=ACG?'acougue':'restaurante';
-const TODAS_CATS=ACG?['Bovinos','Suínos','Aves','Linguiças','Miúdos','Peixes','Temperados','Churrasco','Mercearia','Bebidas','Lanches','Doces','Outros']
+const TODAS_CATS=ACG?['Assados','Bovinos','Suínos','Aves','Linguiças','Miúdos','Peixes','Temperados','Churrasco','Mercearia','Bebidas','Lanches','Doces','Outros']
   :['Bebidas','Pratos','Porções','Oriental','Lanches','Doces','Sobremesas','Outros'];
-const CATS_PADRAO=ACG?['Bovinos','Suínos','Aves','Linguiças','Miúdos','Temperados','Churrasco','Mercearia','Bebidas','Outros']:['Bebidas','Pratos','Porções','Lanches','Sobremesas','Outros'];
+const CATS_PADRAO=ACG?['Assados','Bovinos','Suínos','Aves','Linguiças','Miúdos','Temperados','Churrasco','Mercearia','Bebidas','Outros']:['Bebidas','Pratos','Porções','Lanches','Sobremesas','Outros'];
 const CATIC={Bebidas:'🥤',Pratos:'🍛',Porções:'🍟',Oriental:'🍣',Lanches:'🍔',Doces:'🍫',Sobremesas:'🍨',Outros:'🍽️',
-  Bovinos:'🥩',Suínos:'🐖',Aves:'🍗',Linguiças:'🌭',Miúdos:'🍖',Peixes:'🐟',Temperados:'🧂',Churrasco:'🔥',Mercearia:'🛒'};
+  Bovinos:'🥩',Suínos:'🐖',Aves:'🍗',Linguiças:'🌭',Miúdos:'🍖',Peixes:'🐟',Temperados:'🧂',Churrasco:'🔥',Mercearia:'🛒',Assados:'♨️'};
 let CATS=CATS_PADRAO.slice();
-function catsEscolhidas(){const c=(S.config||{}).categorias;return Array.isArray(c)&&c.length?TODAS_CATS.filter(x=>c.includes(x)):CATS_PADRAO}
+function catsEscolhidas(){const c=(S.config||{}).categorias;return Array.isArray(c)&&c.length?TODAS_CATS.filter(x=>c.includes(x)||(ACG&&x==='Assados'&&!(S.config||{}).semAssados)):CATS_PADRAO}
 /* as escolhidas + qualquer uma que ainda tenha produto (para nenhum produto sumir da tela) */
 function atualizarCats(){const e=catsEscolhidas(),usadas=new Set(Object.values(S.produtos||{}).map(p=>p.cat));CATS=TODAS_CATS.filter(x=>e.includes(x)||usadas.has(x))}
 function trocarCat(c,on){const l=catsEscolhidas().filter(x=>x!==c);if(on)l.push(c);if(!l.length)return toast('Deixe pelo menos um menu');
@@ -1807,11 +1807,13 @@ function vPedidos(){const cfg=resCfg(),ps=Object.values(S.produtos).filter(p=>p&
       <label>Aviso</label><input value="${esc(cfg.aviso)}" maxlength="140" placeholder="Ex.: Assados de fim de semana" onchange="salvarResCfg({aviso:this.value.trim()})">
       <label>Retirada</label><input value="${esc(cfg.retirada)}" maxlength="80" placeholder="Ex.: sábado e domingo, das 10h às 13h" onchange="salvarResCfg({retirada:this.value.trim()})"></div>
     <div class="card" style="margin-top:12px"><h3>🍗 O que vai ter e quantos</h3><p style="color:var(--mut);font-size:.9rem;margin:4px 0 8px">Marque o que entra no pedido e diga quantos vai fazer. Quando acabar, o link mostra "Acabou". Por quilo: sem preço, paga na retirada.</p>
+      ${(()=>{const as=ps.filter(p=>p.cat==='Assados'),fora=as.filter(p=>!sel.has(p.id));return as.length?`<div class="row" style="gap:6px;margin-bottom:8px;flex-wrap:wrap"><button class="btn ${fora.length?'pri':''}" ${fora.length?'':'disabled'} onclick="resAssados(true)">♨️ Colocar todos os Assados (${as.length})</button>${sel.size?`<button class="btn" onclick="resAssados(false)">Tirar todos</button>`:''}</div>`:`<div class="aviso" style="margin-bottom:8px">Dica: cadastre os assados na categoria <b>♨️ Assados</b> em Produtos — eles aparecem aqui primeiro.</div>`})()}
       <input class="lupa" placeholder="Procurar produto" value="${esc(st.pedQ||'')}" oninput="st.pedQ=this.value;render(true);setTimeout(()=>{const i=document.querySelector('.ped-g aside input.lupa');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}},0)">
-      <div class="ped-ps">${ps.filter(p=>sel.has(p.id)||!st.pedQ||p.nome.toLowerCase().includes(st.pedQ.toLowerCase())).sort((a,b)=>sel.has(b.id)-sel.has(a.id)).slice(0,60).map(p=>`<div class="ped-p ${sel.has(p.id)?'on':''}">
+      <div class="ped-ps">${ps.filter(p=>sel.has(p.id)||!st.pedQ||p.nome.toLowerCase().includes(st.pedQ.toLowerCase())).sort((a,b)=>(sel.has(b.id)-sel.has(a.id))||((b.cat==='Assados')-(a.cat==='Assados'))).slice(0,60).map(p=>`<div class="ped-p ${sel.has(p.id)?'on':''}">
         <label class="chk" style="margin:0;flex:1"><input type="checkbox" ${sel.has(p.id)?'checked':''} onchange="resProd('${p.id}',this.checked)"><span>${esc(nomeP(p))}<small style="display:block;color:var(--mut)">${ehKg(p)?'por peso':brl(p.preco)}</small></span></label>
         ${sel.has(p.id)?`<div class="ped-qt"><small>disponíveis</small><input type="number" min="0" max="999" value="${Math.max(0,Math.floor(+p.resQtd||0))}" onchange="resQtd('${p.id}',this.value)"></div>`:''}</div>`).join('')}</div></div>
   </aside></div>`}
+function resAssados(on){const ids=on?[...new Set([...(resCfg().ids||[]),...Object.values(S.produtos).filter(p=>p&&p.nome&&p.cat==='Assados').map(p=>p.id)])]:[];salvarResCfg({ids});toast(on?'♨️ Assados no pedido — agora diga quantos de cada':'Pedido sem produtos')}
 function resProd(id,on){const ids=new Set(resCfg().ids||[]);on?ids.add(id):ids.delete(id);salvarResCfg({ids:[...ids]})}
 function resQtd(id,v){const q=Math.max(0,Math.min(999,Math.floor(num(v))));mutate('produtos',id,p=>p?{...p,resQtd:q}:ABORT);toast(`✅ ${q} disponível(is)`)}
 function cartaoReserva(r){const [rt,cor]=RST[r.status]||RST.nova,aberta=r.status==='nova'||r.status==='separada';
