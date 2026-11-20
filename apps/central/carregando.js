@@ -7,7 +7,7 @@
 (function () {
   if (window.lgCarregando) return;
   var FUNDO = /\/(mudancas|aovivo|posicoes|trajeto|gravar|sync|ping|eventos|inicio|dados|doc)\b|\/api\/central\/(rest|licenca)/;
-  var ultimo = 0, pend = 0, timer = null, vis = false, manual = 0, el = null, saida = null;
+  var falhou = null, ultimo = 0, pend = 0, timer = null, vis = false, manual = 0, el = null, saida = null;
   addEventListener('pointerdown', function () { ultimo = Date.now(); }, true);
   addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || /^F\d+$/.test(e.key)) ultimo = Date.now(); }, true);
 
@@ -48,11 +48,18 @@
     if (Date.now() - ultimo > 1500 || FUNDO.test(url)) return f0.apply(this, arguments);
     pend++;
     if (!timer && !vis) timer = setTimeout(function () { timer = null; if (pend > 0 && !manual) mostrar(); }, 500);
-    function fim(ok) {
+    function fim(ok, msg) {
       pend = Math.max(0, pend - 1);
-      if (pend === 0) { clearTimeout(timer); timer = null; if (vis && !manual) concluir(ok ? null : 'Não foi concluído', !ok); }
+      if (!ok) falhou = msg || falhou || 'Não foi concluído';
+      if (pend === 0) { clearTimeout(timer); timer = null; var f = falhou; falhou = null; if (vis && !manual) concluir(f, !!f); }
     }
-    return f0.apply(this, arguments).then(function (r) { fim(r.status < 500); return r; }, function (e) { fim(false); throw e; });
+    return f0.apply(this, arguments).then(function (r) {
+      /* erro de verdade: 4xx/5xx, ou resposta JSON com ok:false (ex.: usuário ou senha errados) */
+      var login = /login|entrar|senha/i.test(url), msgErr = function (d) { return (d && (d.erro || d.mensagem)) || (login && (r.status === 401 || r.status === 403) ? 'Usuário ou senha incorretos' : 'Não foi concluído'); };
+      var ct = (r.headers && r.headers.get && r.headers.get('content-type')) || '';
+      if (/json/i.test(ct)) r.clone().json().then(function (d) { var bad = !r.ok || (d && d.ok === false); fim(!bad, bad ? msgErr(d) : null); }, function () { fim(r.ok, r.ok ? null : msgErr()); });
+      else fim(r.ok, r.ok ? null : msgErr());
+      return r; }, function (e) { fim(false, 'Sem conexão com o servidor'); throw e; });
   };
 
   window.lgCarregando = function (t, fn, pronto) {
