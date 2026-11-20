@@ -287,5 +287,10 @@ function fSucesso(){const L=D.loja,w=(L.whatsapp||'').replace(/\D/g,''),wn=w?(w.
 addEventListener('keydown',e=>{if(e.key==='Escape'&&folha&&!fim)fechar()});
 carregar();setInterval(()=>{if(!folha)carregar()},60000);
 </script>
+<script>/* telefone no padrão (17) 99999-9999 em todo campo de telefone */
+(function(){function f(v){var d=String(v||'').replace(/\D/g,'');if(d.length>11&&d.slice(0,2)==='55')d=d.slice(2);d=d.slice(0,11);if(!d)return '';
+if(d.length<=2)return '('+d;var a='('+d.slice(0,2)+') ',r=d.slice(2);if(r.length<=4)return a+r;var c=d.length===11?5:4;return a+r.slice(0,c)+'-'+r.slice(c)}
+window.lgFone=f;document.addEventListener('input',function(e){var t=e.target;if(!t||t.tagName!=='INPUT'||!(t.inputMode==='tel'||t.type==='tel'))return;
+if(e.inputType&&e.inputType.indexOf('delete')===0)return;var n=f(t.value);if(n!==t.value){t.value=n;try{t.setSelectionRange(n.length,n.length)}catch(x){}}},true);})();</script>
 </body>
 </html>
