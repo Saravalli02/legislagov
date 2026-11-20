@@ -17,3 +17,10 @@ rural.legislagov.com.br        rural               rural
 email.legislagov.com.br        email               email
 # Central LegislaGov (área restrita dos sócios: sistemas e demonstrações) — pasta apps/central
 central.legislagov.com.br      central             central
+# GR Software (marca da empresa; LegislaGov fica só para as Câmaras). Entram no HTTPS sozinhos
+# quando o grsoftware.com.br estiver comprado e apontado para a zona da Amazon (Route 53 Z05341311I9N96T4GW58S).
+grsoftware.com.br              gr                  gr
+www.grsoftware.com.br          gr                  gr
+central.grsoftware.com.br      central             central
+rural.grsoftware.com.br        rural               rural
+email.grsoftware.com.br        email               email
