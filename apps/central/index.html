@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0b1220">
-<title>LegislaGov Central</title>
+<title>GR Central</title>
 <link rel="apple-touch-icon" href="icone-180.png">
 <link rel="icon" href="icone-192.png">
 <script>(function(){var b=location.pathname.replace(/[^/]*$/,'');var l=document.createElement('link');l.rel='manifest';l.href='/api/central/manifest.json?b='+encodeURIComponent(b);document.head.appendChild(l)})();</script>
@@ -185,7 +185,7 @@ async function tela(){
   const s=P.sessao, nome=(s.nome||'').split(' ')[0];
   const ativas=P.demos.filter(d=>d.ativa), velhas=P.demos.filter(d=>!d.ativa).slice(0,15);
   const seta='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
-  $('#app').innerHTML=`<header class="topo"><div class="topo-in"><a class="marca" href="./" id="inicioBt" title="Voltar para a Central"><img src="em-camara.png" alt=""><span>Legisla<b>Gov</b> Central<small>Área restrita</small></span></a><div class="esp"></div>
+  $('#app').innerHTML=`<header class="topo"><div class="topo-in"><a class="marca" href="./" id="inicioBt" title="Voltar para a Central"><img src="gr-emblema.png" alt=""><span>GR <b>Central</b><small>Área restrita</small></span></a><div class="esp"></div>
     <span class="quem">${esc(s.nome)}</span>${seletorTema()}<button class="tbtn" id="senhaBt">Senha</button><button class="tbtn" id="sairBt">Sair</button></div></header>
   <main>
     <h1>Olá, ${esc(nome)}.</h1>
@@ -195,7 +195,7 @@ async function tela(){
       <div class="cab"><div class="selo"><img src="${esc(x.icone)}" alt=""></div><div><h3 id="t-${esc(x.id)}">${esc(x.nome)}</h3><p>${esc(x.desc)}</p></div></div>
       ${x.id==='rural'?`<button class="btn" data-clientes="rural">Clientes, senhas e acesso</button>`:''}
       ${x.demo?`<button class="btn demo" data-demo="${esc(x.id)}">Criar demonstração</button>`:''}
-      ${x.qr||x.baixar?`<div class="duplo">${x.qr?`<button class="btn" data-qr="${esc(x.qr[1])}" data-qrnome="${esc(x.qr[0])}" data-qrsis="${esc(x.nome)}">QR code do ${esc(x.qr[0].replace(/^App do /,'app do '))}</button>`:''}${x.baixar?`<button class="btn" data-qr="${esc(x.baixar[1])}" data-qrnome="App do açougue" data-qrsis="LegislaGov Açougue">${esc(x.baixar[0])}</button>`:''}</div>`:''}
+      ${x.qr||x.baixar?`<div class="duplo">${x.qr?`<button class="btn" data-qr="${esc(x.qr[1])}" data-qrnome="${esc(x.qr[0])}" data-qrsis="${esc(x.nome)}">QR code do ${esc(x.qr[0].replace(/^App do /,'app do '))}</button>`:''}${x.baixar?`<button class="btn" data-qr="${esc(x.baixar[1])}" data-qrnome="App do açougue" data-qrsis="GR Açougue">${esc(x.baixar[0])}</button>`:''}</div>`:''}
       <a class="abrir" href="${esc(x.abrir[1])}" target="_blank" rel="noopener"><span>${esc(x.abrir[0])}</span>${seta}</a>
       ${(x.outros||[]).length?`<div class="outros">${x.outros.map(l=>`<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>`:''}
     </section>`).join('')}</div>
@@ -348,16 +348,16 @@ function novoUsuarioRural(cod,vendedores){
   let perfil='adm';
   modal(`<h2>Novo usuário</h2>
     <div class="chips" role="group" aria-label="Perfil"><button type="button" class="chip" data-p="adm" aria-pressed="true">Administrador da horta</button><button type="button" class="chip" data-p="padrao" aria-pressed="false">Vendedor</button></div>
-    <p class="dica" id="pd">Vê tudo da horta (como a Sueli) e cadastra os vendedores. Não troca senhas: isso fica com a LegislaGov.</p>
+    <p class="dica" id="pd">Vê tudo da horta (como a Sueli) e cadastra os vendedores. Não troca senhas: isso fica com a GR Software.</p>
     <label>Nome<input id="nn" maxlength="60" placeholder="Ex.: Sueli"></label>
     <label>Usuário (para entrar)<input id="nu" autocapitalize="none" spellcheck="false" placeholder="Ex.: sueli"></label>
     <label id="vl" hidden>Vendedor<select id="nv">${vendedores.map(v=>`<option value="${esc(v.id)}">${esc(v.nome)}</option>`).join('')||'<option value="">Cadastre o vendedor no app primeiro</option>'}</select></label>
     <label>Senha<input id="ns" value="${gerar()}" style="font-family:ui-monospace,monospace"></label><p class="msg" id="nm"></p>
     <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Criar usuário</button></div>`,f=>{
-    f.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{perfil=b.dataset.p;f.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#vl',f).hidden=perfil!=='padrao';$('#pd',f).textContent=perfil==='adm'?'Vê tudo da horta (como a Sueli) e cadastra os vendedores. Não troca senhas: isso fica com a LegislaGov.':'Vê só as rotas, saídas, pedidos e fornecedores do vendedor escolhido.'});
+    f.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{perfil=b.dataset.p;f.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#vl',f).hidden=perfil!=='padrao';$('#pd',f).textContent=perfil==='adm'?'Vê tudo da horta (como a Sueli) e cadastra os vendedores. Não troca senhas: isso fica com a GR Software.':'Vê só as rotas, saídas, pedidos e fornecedores do vendedor escolhido.'});
     $('#cn',f).onclick=fechar;
     $('#ok',f).onclick=async()=>{const corpo={e:cod,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),perfil,vendedor:perfil==='padrao'?$('#nv',f).value:'',senha:$('#ns',f).value.trim()};
-      try{await api('rural/usuario',{metodo:'POST',corpo});modal(`<h2>Usuário criado</h2><p class="dica">Passe para ${esc(corpo.nome||corpo.usuario)}:</p><label>Endereço<input value="${esc(linkHorta(cod))}" readonly></label><label>Usuário<input value="${esc(corpo.usuario)}" readonly></label><label>Senha<input value="${esc(corpo.senha)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('LegislaGov Rural\n'+linkHorta(cod)+'\nUsuário: '+corpo.usuario+'\nSenha: '+corpo.senha);$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true});abrirUsuarios(cod);telaRural()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
+      try{await api('rural/usuario',{metodo:'POST',corpo});modal(`<h2>Usuário criado</h2><p class="dica">Passe para ${esc(corpo.nome||corpo.usuario)}:</p><label>Endereço<input value="${esc(linkHorta(cod))}" readonly></label><label>Usuário<input value="${esc(corpo.usuario)}" readonly></label><label>Senha<input value="${esc(corpo.senha)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('GR Rural\n'+linkHorta(cod)+'\nUsuário: '+corpo.usuario+'\nSenha: '+corpo.senha);$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true});abrirUsuarios(cod);telaRural()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
   });
 }
 function suspender(cod,sim){
@@ -513,8 +513,8 @@ function editarGasto(id){
 /* ===================== Sistemas e clientes: liga e desliga o acesso ===================== */
 let SIS=null;
 const SISINFO=[['camara','LegislaGov Câmara','em-camara.png','#22b8e6','Cada Câmara é um cliente. Cortar a Câmara bloqueia o painel de todos os usuários dela (o site público continua no ar).'],
-  ['rural','LegislaGov Rural','em-rural.png','#3fae4f','Cada horta é um cliente. O administrador da horta e os vendedores aparecem embaixo.'],
-  ['restaurante','LegislaGov Restaurante / Açougue','em-restaurante.png','#d32f2f','Base única: cada cliente é um restaurante ou um açougue, com os próprios dados. Quem compra entra com usuário e senha criados aqui.'],
+  ['rural','GR Rural','em-rural.png','#3fae4f','Cada horta é um cliente. O administrador da horta e os vendedores aparecem embaixo.'],
+  ['restaurante','GR Restaurante / Açougue','em-restaurante.png','#d32f2f','Base única: cada cliente é um restaurante ou um açougue, com os próprios dados. Quem compra entra com usuário e senha criados aqui.'],
   ['email','Painel de e-mails','em-email.png','#7a4fd6','Cada órgão é um cliente.']];
 const TIPOCOM={restaurante:'Restaurante',acougue:'Açougue'};
 let SISABA=(()=>{try{return localStorage.getItem('lg-central-sis')||'camara'}catch(e){return 'camara'}})();
@@ -582,7 +582,7 @@ function novoRest(x){
 function mostrarAcessoRest(nome,login,senha,tipo){
   const acg=tipo==='acougue',link='https://d1xi1g7etepsye.cloudfront.net/'+(acg?'acougue':'');
   modal(`<h2>Acesso criado</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Endereço<input value="${link}" readonly></label><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(senha)}" readonly style="font-family:ui-monospace,monospace"></label>
-    <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{const t=`LegislaGov ${acg?'Açougue':'Restaurante'}\n${link}\nUsuário: ${login}\nSenha: ${senha}`;try{await navigator.clipboard.writeText(t)}catch(e){const x=document.createElement('textarea');x.value=t;g.appendChild(x);x.select();document.execCommand('copy');x.remove()}$('#cp',g).textContent='Copiado'}},{travar:true});
+    <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{const t=`GR ${acg?'Açougue':'Restaurante'}\n${link}\nUsuário: ${login}\nSenha: ${senha}`;try{await navigator.clipboard.writeText(t)}catch(e){const x=document.createElement('textarea');x.value=t;g.appendChild(x);x.select();document.execCommand('copy');x.remove()}$('#cp',g).textContent='Copiado'}},{travar:true});
 }
 function senhaRest(u){
   const s=gerar();
@@ -628,7 +628,7 @@ async function telaSeguranca(){
 function seletorTema(){const t=document.documentElement.dataset.tema;return `<div class="tema" role="group" aria-label="Aparência"><button type="button" data-tema="claro" aria-pressed="${t==='claro'}">Claro</button><button type="button" data-tema="escuro" aria-pressed="${t==='escuro'}">Escuro</button></div>`}
 function ligarTema(){document.querySelectorAll('[data-tema]').forEach(b=>b.onclick=()=>{document.documentElement.dataset.tema=b.dataset.tema;try{localStorage.setItem('lgc_tema',b.dataset.tema)}catch(e){}document.querySelectorAll('[data-tema]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tema===b.dataset.tema));const m=document.querySelector('meta[name=theme-color]');if(m)m.content=b.dataset.tema==='escuro'?'#06080d':'#f4f6f9'})}
 function telaEntrar(){
-  $('#app').innerHTML=`<div class="entrar">${seletorTema()}<form id="fe" autocomplete="on"><span class="marca"><img src="em-camara.png" alt=""><span>Legisla<b>Gov</b> Central</span></span>
+  $('#app').innerHTML=`<div class="entrar">${seletorTema()}<form id="fe" autocomplete="on"><span class="marca"><img src="gr-emblema.png" alt=""><span>GR <b>Central</b></span></span>
     <h1>Área restrita</h1><p class="dica">No primeiro acesso, use o mesmo usuário e senha do painel da Câmara.</p>
     <label>Usuário<input id="eu" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
     <label>Senha<input id="es" type="password" autocomplete="current-password" required></label>

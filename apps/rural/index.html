@@ -8,15 +8,15 @@
 <link rel="apple-touch-icon" href="icone-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="LG Rural">
+<meta name="apple-mobile-web-app-title" content="GR Rural">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="robots" content="noindex">
 <script>/* o app instalado abre já na horta certa (o código vai junto no ícone) */
 (function(){var e=new URLSearchParams(location.search).get('e');try{e=e||localStorage.getItem('lgr_empresa')}catch(x){}
 var b=location.pathname.replace(/[^/]*$/,'');var l=document.createElement('link');l.rel='manifest';
 l.href='/api/rural/manifest.json?b='+encodeURIComponent(b)+(e?'&e='+encodeURIComponent(e):'');document.head.appendChild(l)})();</script>
-<meta name="theme-color" content="#2f6b3a">
-<title>LegislaGov Rural</title>
+<meta name="theme-color" content="#0b1210">
+<title>GR Rural</title>
 <style>
 :root{
   --verde:#2f6b3a;--verde2:#3f8a4c;--verde-cl:#e7f2e8;--fundo:#f4f6f1;--card:#fff;
@@ -129,12 +129,50 @@ body.bloq,html:has(body.bloq){background:#fff}body.bloq nav,body.login nav{displ
 .linha-tempo li:first-child{border-top:0}.linha-tempo time{color:var(--sub);font-variant-numeric:tabular-nums;min-width:44px}
 .offline header{background:#5d6b5a}
 #mapa .leaflet-popup-content{font:14px/1.35 system-ui,sans-serif}
+
+/* ===== GR Rural: visual novo (20/11/2026) — mesmo app, aparência moderna ===== */
+:root{--verde:#23843f;--verde2:#2fa152;--verde-cl:#e6f4ea;--fundo:#f2f4f1;--borda:#e2e7df;--sombra:0 1px 2px #0f1a120a,0 8px 24px #0f1a120f}
+html,body{font-family:"Inter Display","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:-.005em}
+header{background:radial-gradient(420px 120px at 20% -30%,#2fa15255,transparent),linear-gradient(135deg,#0b1210,#13261b);border-bottom:1px solid #ffffff12;box-shadow:0 6px 20px #0b121033}
+header .logo{width:48px;height:38px;background:transparent;box-shadow:none;border-radius:0}header .logo img{height:30px;filter:drop-shadow(0 0 10px #19e3d055)}
+header h1{font-size:18px;letter-spacing:-.02em}header h1 span{color:#5fdc84}
+header small{opacity:.75}
+#badgeLic{background:#ffffff14!important;border:1px solid #ffffff22!important}
+main{padding-top:18px}
+h2{font-size:22px;letter-spacing:-.02em}
+.card,.kpi{border-radius:18px;border-color:var(--borda);box-shadow:var(--sombra)}
+.tile{border-radius:20px;padding:18px 16px;border-color:var(--borda);box-shadow:var(--sombra);transition:transform .15s,box-shadow .15s}
+.tile:active{transform:scale(.98)}
+.tile span{width:48px;height:48px;border-radius:14px;background:var(--verde-cl);display:grid;place-items:center;font-size:25px;margin-bottom:12px}
+.tile b{font-size:16.5px;letter-spacing:-.01em}
+.tile.grande{border-radius:22px;background:radial-gradient(260px 120px at 85% 0,#5fdc8440,transparent),linear-gradient(135deg,#23843f,#155f2c);box-shadow:0 10px 28px #23843f44}
+.tile.grande span{background:#ffffff22;width:56px;height:56px;border-radius:16px;font-size:30px}
+.tile.grande[style*="--azul"]{background:radial-gradient(260px 120px at 85% 0,#5fb8ff40,transparent),linear-gradient(135deg,#1f6fa8,#174b78)!important;box-shadow:0 10px 28px #1f5f8b44}
+.kpi.dest{background:linear-gradient(135deg,#23843f,#155f2c);box-shadow:0 10px 28px #23843f40}
+.btn{border-radius:14px;background:linear-gradient(180deg,#2a9149,#21803d);box-shadow:0 2px 0 #0000000f,0 6px 16px #23843f30}
+.btn.sec{background:var(--verde-cl);box-shadow:none}.btn.perigo{box-shadow:none}
+.fab{border-radius:999px;background:linear-gradient(180deg,#2a9149,#1f7a3a);box-shadow:0 10px 26px #23843f55}
+input,select,textarea{border-radius:12px;background:#f8faf7}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--verde2);background:#fff}
+nav{left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);border:1px solid #ffffffaa;border-radius:24px;padding:6px;background:#ffffffd9;backdrop-filter:saturate(1.6) blur(16px);-webkit-backdrop-filter:saturate(1.6) blur(16px);box-shadow:0 10px 30px #0f1a1226}
+nav button{border-radius:18px;padding:7px 2px;font-weight:600}
+nav button span{font-size:20px}
+nav button.on{background:var(--verde-cl)}
+main{padding-bottom:calc(env(safe-area-inset-bottom) + 104px)}
+.seg{background:#e7ece4;border-radius:14px}.seg button{border-radius:11px}
+.modal{border-radius:26px 26px 0 0}
+.mes button,.qtd button,.mini{border-radius:12px}
+.aviso{border-radius:14px}
+.tag{border-radius:999px}
+.vazio b{font-size:38px}
+.toast{border-radius:999px;background:#0b1210;bottom:calc(env(safe-area-inset-bottom) + 96px)}
+.offline header{background:linear-gradient(135deg,#3a4238,#4d574a)}
 </style>
 </head>
 <body>
 <header>
   <div class="logo"><img src="logo-rural.png" alt=""></div>
-  <div style="min-width:0"><h1 id="nomeApp">LegislaGov Rural</h1><small id="quem">Gestão da horta</small></div>
+  <div style="min-width:0"><h1 id="nomeApp">GR <span>Rural</span></h1><small id="quem">Gestão da horta</small></div>
   <div style="margin-left:auto;text-align:right"><button id="badgeLic" style="border:0;background:#ffffff26;color:#fff;border-radius:20px;padding:5px 10px;font-weight:700;font-size:13px">🔑 …</button><div class="sync" id="sync" style="margin-top:3px">carregando…</div></div>
 </header>
 <main id="app"></main>
@@ -325,14 +363,14 @@ function acessoSuspenso(){
   try{Object.keys(localStorage).filter(k=>/^lgr(_token|_sessao|ural:)/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
   try{if(GEO.watch!=null){navigator.geolocation.clearWatch(GEO.watch);GEO.watch=null}}catch(e){}
   document.body.className='';document.body.style.cssText='margin:0;background:#fff';
-  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><img src="logo-rural.png" alt="" style="height:64px;width:auto"><h1 style="font-size:22px;margin:14px 0 6px">Acesso suspenso</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O acesso a este sistema está suspenso no momento. Para voltar a usar, fale com a LegislaGov.</p><button onclick="location.reload()" style="margin-top:18px;font:700 15px system-ui,Arial;padding:12px 18px;border-radius:12px;border:1px solid #c9d6cc;background:#fff;color:#1d2a20">Tentar de novo</button></div>';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><img src="logo-rural.png" alt="" style="height:64px;width:auto"><h1 style="font-size:22px;margin:14px 0 6px">Acesso suspenso</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O acesso a este sistema está suspenso no momento. Para voltar a usar, fale com a GR Software.</p><button onclick="location.reload()" style="margin-top:18px;font:700 15px system-ui,Arial;padding:12px 18px;border-radius:12px;border:1px solid #c9d6cc;background:#fff;color:#1d2a20">Tentar de novo</button></div>';
 }
 function demoEncerrada(){
   if(ENCERRADA)return;ENCERRADA=true;TOKEN='';ui.sess=null;
   try{Object.keys(localStorage).filter(k=>/^lgr/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
   try{caches&&caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)))}catch(e){}
   document.body.className='';document.body.style.cssText='margin:0;background:#fff';
-  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><img src="logo-rural.png" alt="" style="height:64px;width:auto"><h1 style="font-size:22px;margin:12px 0 6px">Demonstração encerrada</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O prazo desta demonstração do LegislaGov Rural terminou e os dados de exemplo foram apagados deste aparelho.</p><p style="max-width:34ch;color:#5b6b5e;line-height:1.5">Para usar na sua horta, fale com a LegislaGov.</p><a href="https://legislagov.com.br" style="color:#2e7d32;font-weight:700">legislagov.com.br</a></div>';
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:system-ui,Arial,sans-serif;color:#1d2a20"><img src="logo-rural.png" alt="" style="height:64px;width:auto"><h1 style="font-size:22px;margin:12px 0 6px">Demonstração encerrada</h1><p style="max-width:34ch;color:#5b6b5e;line-height:1.5;margin:0">O prazo desta demonstração do GR Rural terminou e os dados de exemplo foram apagados deste aparelho.</p><p style="max-width:34ch;color:#5b6b5e;line-height:1.5">Para usar na sua horta, fale com a GR Software.</p><a href="https://legislagov.com.br" style="color:#2e7d32;font-weight:700">legislagov.com.br</a></div>';
 }
 async function entrarDemo(){
   const ps=new URLSearchParams(location.search),dm=(ps.get('demo')||'').trim().toLowerCase();if(!dm)return;
@@ -398,7 +436,7 @@ function render(){
   bl.onclick=()=>{if(ativa){ui.tab='licenca';render();scrollTo(0,0)}};
   if(!ativa){document.body.classList.add('bloq');$('#app').innerHTML=vLicenca(true);ligarLicenca();return}
   document.body.classList.remove('bloq');
-  $('#nomeApp').textContent=(S.config&&S.config.nomeHorta)||(entradaInfo&&entradaInfo.nome)||'LegislaGov Rural';
+  $('#nomeApp').textContent=(S.config&&S.config.nomeHorta)||(entradaInfo&&entradaInfo.nome)||'GR Rural';
   if(!sessaoValida()){ui.sess=null;document.body.classList.add('login');$('#quem').textContent='Gestão da horta';$('#app').innerHTML=vLogin();ligarLogin();marcar('');return}
   document.body.classList.remove('login');
   const g=ehGestor();
@@ -449,7 +487,7 @@ function vLogin(){
     <p style="color:var(--sub);margin-top:0">Crie o <b>administrador</b> da horta. Ele tem acesso a tudo e cria os outros usuários.</p></div>
     <div class="card">${campo('pNome','Nome','text','name')}${campo('pUsu','Usuário (para entrar)','text','username')}${campo('pS1','Senha (mínimo 8 caracteres)','password','new-password')}${campo('pS2','Repita a senha','password','new-password')}
     <button class="btn" id="criarAdm" style="margin-top:14px">Criar e entrar</button><div id="logMsg" class="neg" style="margin-top:8px;font-size:14px"></div></div>${botaoBaixar()}`;
-  return `<div style="text-align:center;padding:20px 6px 4px"><div><img src="logo-rural.png" alt="LegislaGov Rural" style="height:72px;width:auto"></div><h2 style="margin-bottom:4px">Entrar</h2><p style="color:var(--sub);margin-top:0">Use o usuário e a senha que você recebeu.</p></div>
+  return `<div style="text-align:center;padding:20px 6px 4px"><div><img src="logo-rural.png" alt="GR Rural" style="height:72px;width:auto"></div><h2 style="margin-bottom:4px">Entrar</h2><p style="color:var(--sub);margin-top:0">Use o usuário e a senha que você recebeu.</p></div>
     ${entradaInfo.erro?`<div class="aviso">${esc(entradaInfo.erro)}</div>`:''}
     <form class="card" id="fLogin" onsubmit="return false">${campo('lUsu','Usuário','text','username')}${campo('lSen','Senha','password','current-password')}
     <button class="btn" id="entrarBt" type="submit" style="margin-top:14px">Entrar</button><div id="logMsg" class="neg" style="margin-top:8px;font-size:14px"></div></form>${botaoBaixar()}`;
@@ -500,7 +538,7 @@ async function baixarApp(){
   modal(`<h2>📲 Baixar o app</h2>
     ${ios?`<b>iPhone</b>${passosIos}`:android?`<b>Android</b>${passosAnd}`:`<b>Android</b>${passosAnd}<b>iPhone</b>${passosIos}`}
     <div class="ajuda" style="margin:10px 0 0">No iPhone, entre só depois de instalar: o app instalado pede a senha de novo.</div>
-    <a class="btn" style="margin-top:12px;background:#25a244" href="https://wa.me/?text=${encodeURIComponent('Baixe o app LegislaGov Rural: '+link)}" target="_blank" rel="noopener">💬 Mandar o link pelo WhatsApp</a>
+    <a class="btn" style="margin-top:12px;background:#25a244" href="https://wa.me/?text=${encodeURIComponent('Baixe o app GR Rural: '+link)}" target="_blank" rel="noopener">💬 Mandar o link pelo WhatsApp</a>
     <div class="acoes"><button class="btn sec" id="bxf">Fechar</button></div>`,f=>f.querySelector('#bxf').onclick=fecharModal);
 }
 /* ===================== USUÁRIOS (administrador) ===================== */
@@ -520,7 +558,7 @@ function modalUsuario(u){
   modal(`<h2>${u?'Editar usuário':'Novo usuário'}</h2>
     <label>Nome</label><input id="un" value="${esc(u?.nome||'')}" placeholder="Ex.: Maria">
     <label>Usuário (para entrar)</label><input id="uu" autocapitalize="none" spellcheck="false" autocomplete="off" value="${esc(u?.usuario||'')}" placeholder="Ex.: maria">
-    ${u?'<div class="ajuda" style="margin:8px 0">🔐 Para trocar a senha deste usuário, fale com a LegislaGov.</div><input id="us1" type="hidden" value=""><input id="us2" type="hidden" value="">':'<label>Senha (mínimo 8 caracteres)</label><input id="us1" type="password" autocomplete="new-password"><label>Repita a senha</label><input id="us2" type="password" autocomplete="new-password">'}
+    ${u?'<div class="ajuda" style="margin:8px 0">🔐 Para trocar a senha deste usuário, fale com a GR Software.</div><input id="us1" type="hidden" value=""><input id="us2" type="hidden" value="">':'<label>Senha (mínimo 8 caracteres)</label><input id="us1" type="password" autocomplete="new-password"><label>Repita a senha</label><input id="us2" type="password" autocomplete="new-password">'}
     <label>Perfil</label>
     <div class="seg"><button type="button" data-perf="padrao">🧑‍🌾 Padrão</button><button type="button" data-perf="adm">👑 Administrador</button></div>
     <div id="uvBox"><label>Vendedor (ele vê só as rotas deste vendedor)</label><select id="uv"><option value="">— escolher —</option>${livres.map(v=>`<option value="${v.id}" ${u?.vendedor===v.id?'selected':''}>${esc(v.nome)}</option>`).join('')}<option value="__novo">+ Cadastrar vendedor com este nome</option></select></div>
@@ -1076,7 +1114,7 @@ function verImagem(src,titulo){modal(`<h2>${esc(titulo)}</h2><img src="${src}" s
 function zapComprovante(s,v){const p=ponto(v.pontoId);if(!p?.telefone)return null;const c=comp(v.id);
   const linhas=v.itens.map(i=>{const it=s.itens.find(x=>x.produtoId===i.produtoId)||{};return `• ${i.qtd?i.qtd+' '+(it.nome||'')+' x '+R(i.preco):(it.nome||'')}${i.troca?' (+'+i.troca+' troca)':''}`}).join('\n');
   const tot=v.itens.reduce((a,i)=>a+i.qtd*i.preco,0);
-  return linkZap(p.telefone,`Comprovante de entrega – Legislagov Rural\n${p.nome} · ${dataBR(s.data)} ${v.hora?v.hora.slice(11,16):''}\n${linhas}\nTotal: ${R(tot)}${v.fiadoId?' (fiado)':''}\nRecebido por: ${c?.nome||'-'}\nSe algo não confere, responda esta mensagem.`)}
+  return linkZap(p.telefone,`Comprovante de entrega – GR Rural\n${p.nome} · ${dataBR(s.data)} ${v.hora?v.hora.slice(11,16):''}\n${linhas}\nTotal: ${R(tot)}${v.fiadoId?' (fiado)':''}\nRecebido por: ${c?.nome||'-'}\nSe algo não confere, responda esta mensagem.`)}
 
 /* ===================== ENTREGA (venda + troca) ===================== */
 function modalEntrega(s,venda,pontoIdIni){
@@ -1192,14 +1230,14 @@ async function verificarLicenca(){
 function diasRestantes(){if(!LICENCA_OBRIGATORIA)return 9999;return LIC.estado==='ok'?diasEntre(hojeSeguro(),LIC.expira):0}
 function licencaAtiva(){if(!LICENCA_OBRIGATORIA)return true;return LIC.estado==='ok'&&diasRestantes()>0}
 function marcarDia(){if(!S.licenca)return;const h=hoje();if(!S.licenca.ultimoDia||h>S.licenca.ultimoDia){S.licenca.ultimoDia=h;salvar()}}
-function zapPedido(){return 'https://wa.me/?text='+encodeURIComponent(`Olá! Quero ativar/renovar o Legislagov Rural. Meu código de cliente é: ${S.clienteId}`)}
+function zapPedido(){return 'https://wa.me/?text='+encodeURIComponent(`Olá! Quero ativar/renovar o GR Rural. Meu código de cliente é: ${S.clienteId}`)}
 function vLicenca(bloqueado){
   const d=diasRestantes();
   const st=LIC.estado;
   let topo;
   if(bloqueado){
     topo=`<div style="text-align:center;padding:30px 10px 10px"><div style="font-size:56px">🔒</div>
-    <h2 style="margin:8px 0">${st==='sem'?'Ative o Legislagov Rural':'Sistema bloqueado'}</h2>
+    <h2 style="margin:8px 0">${st==='sem'?'Ative o GR Rural':'Sistema bloqueado'}</h2>
     <p style="color:var(--sub);margin:0">${st==='ok'?`A licença venceu em ${dataBR(LIC.expira)}.`:st==='outro'?'Esta chave é de outro cliente.':st==='invalida'?'A chave salva não é válida.':'Coloque a chave de ativação que você recebeu.'}<br>Seus dados estão guardados e voltam assim que colocar a nova chave.</p></div>`;
   }else{
     topo=`<button class="voltar" id="voltaLic">‹ Voltar</button><h2>Chave de ativação</h2>
@@ -1280,7 +1318,7 @@ function vFiado(){
   return `<h2>Fiado</h2>${seg}
   <div class="kpi dest" style="margin-bottom:10px"><div class="l">Total a receber</div><div class="n" style="font-size:26px">${R(tot)}</div></div>
   ${ord.length?ord.map(g=>{const p=g.p||{nome:'(fornecedor removido)'};
-    const msg=`Olá${p.contato?' '+p.contato:''}! Aqui é da horta (Legislagov Rural). Consta em aberto ${R(g.tot)} referente a: ${g.l.map(f=>`${dataBR(f.data)} – ${R(f.valor)}`).join('; ')}. Podemos combinar o pagamento? Obrigado!`;
+    const msg=`Olá${p.contato?' '+p.contato:''}! Aqui é da horta (GR Rural). Consta em aberto ${R(g.tot)} referente a: ${g.l.map(f=>`${dataBR(f.data)} – ${R(f.valor)}`).join('; ')}. Podemos combinar o pagamento? Obrigado!`;
     const zap=linkZap(p.telefone,msg);
     return `<div class="card" style="${g.atr>0?'border-color:#f3c2bd':''}">
     <div class="item"><div style="font-size:24px">${g.atr>0?'⚠️':'🏪'}</div><div class="info"><div class="t">${esc(p.nome)}</div><div class="s">devendo há ${statusFiado(g.l[0]).dias} dia(s)</div></div><div class="v ${g.atr>0?'neg':''}">${R(g.tot)}</div></div>
@@ -1355,7 +1393,7 @@ function vMais(){
   <button class="tile" data-ir="equipe"><span>📍</span><b>Vendedores</b><small>acompanhar no mapa</small></button>
   <button class="tile" id="maisNome"><span>🏡</span><b>Nome da horta</b><small>${esc(S.config.nomeHorta||'não definido')}</small></button>
   <button class="tile" data-ir="usuarios"><span>👥</span><b>Usuários e senhas</b><small>quem entra no app</small></button>
-  <button class="tile" id="maisSenha"><span>🔐</span><b>Minha senha</b><small>pedir à LegislaGov</small></button>
+  <button class="tile" id="maisSenha"><span>🔐</span><b>Minha senha</b><small>pedir à GR Software</small></button>
   <button class="tile" id="maisSair"><span>🚪</span><b>Sair</b><small>trocar de usuário</small></button>
   </div>`;
 }
@@ -1599,7 +1637,7 @@ function ligar(){
   on('#maisLic',()=>{ui.tab='licenca';render();scrollTo(0,0)});
   on('#maisSair',()=>confirmarSair());
   on('#maisNome',()=>modal(`<h2>Nome da horta</h2><label>Aparece no topo do app e na tela de entrada</label><input id="nh" value="${esc(S.config.nomeHorta||'')}" placeholder="Ex.: Horta Boa Vista"><div class="acoes"><button class="btn sec" id="nhc">Cancelar</button><button class="btn" id="nhs">Salvar</button></div>`,f=>{f.querySelector('#nhc').onclick=fecharModal;f.querySelector('#nhs').onclick=()=>{S.config.nomeHorta=f.querySelector('#nh').value.trim();salvar();fecharModal();render();toast('Nome salvo')}}));
-  on('#maisSenha',()=>modal(`<h2>Trocar a senha</h2><p>Por segurança, a troca de senha é feita pela LegislaGov. Mande uma mensagem pedindo a senha nova.</p><div class="acoes"><button class="btn" id="okS">Entendi</button></div>`,f=>f.querySelector('#okS').onclick=fecharModal));
+  on('#maisSenha',()=>modal(`<h2>Trocar a senha</h2><p>Por segurança, a troca de senha é feita pela GR Software. Mande uma mensagem pedindo a senha nova.</p><div class="acoes"><button class="btn" id="okS">Entendi</button></div>`,f=>f.querySelector('#okS').onclick=fecharModal));
   on('#novoUsu',()=>modalUsuario());
   on('[data-usu]',e=>modalUsuario(USUARIOS.find(u=>u.id===e.dataset.usu)));
   on('[data-vendhoje]',e=>{ui.tab='equipe';ui.vendId=e.dataset.vendhoje;ui.equipeDia=hoje();ui.mapaVista=null;render();scrollTo(0,0)});

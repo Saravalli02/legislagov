@@ -769,10 +769,10 @@ def manifest(empresa, base="/"):
     base = base if re.fullmatch(r"/([a-z0-9-]+/)?", base or "") else "/"
     inicio = base + ("?e=" + e if e else "")
     return {
-        "name": "LegislaGov Rural", "short_name": "LG Rural",
+        "name": "GR Rural", "short_name": "GR Rural",
         "description": "Gestão da horta: saídas, rotas de entrega, pedidos, fiado e acompanhamento dos vendedores.",
         "lang": "pt-BR", "id": inicio, "start_url": inicio, "scope": base, "display": "standalone", "orientation": "portrait",
-        "background_color": "#f4f6f1", "theme_color": "#2f6b3a",
+        "background_color": "#0b1210", "theme_color": "#0b1210",
         "icons": [{"src": base + "icone-192.png", "sizes": "192x192", "type": "image/png"},
                   {"src": base + "icone-512.png", "sizes": "512x512", "type": "image/png"},
                   {"src": base + "icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],

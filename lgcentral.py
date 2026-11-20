@@ -41,11 +41,11 @@ SISTEMAS = [
      "desc": "Matérias, protocolo, sessões, Portal do Vereador e Transparência.",
      "abrir": ["Abrir o painel de Neves Paulista", "https://neves.legislagov.com.br/painel/"],
      "outros": [["Site da Câmara", "https://neves.legislagov.com.br/"], ["Ambiente de teste", "https://teste.legislagov.com.br/painel/"]], "demo": False},
-    {"id": "rural", "nome": "LegislaGov Rural", "icone": "em-rural.png", "cor": "#3fae4f",
+    {"id": "rural", "nome": "GR Rural", "icone": "em-rural.png", "cor": "#3fae4f",
      "desc": "Rotas, vendedores, troco, trocas, fiado, despesas e rastreio da horta.",
      "abrir": ["Abrir o Rural", "https://rural.legislagov.com.br/"],
      "outros": [["Pelo endereço de teste", "https://teste.legislagov.com.br/rural/"]], "demo": True},
-    {"id": "restaurante", "nome": "LegislaGov Restaurante / Açougue", "icone": "em-restaurante.png", "cor": "#d32f2f",
+    {"id": "restaurante", "nome": "GR Restaurante / Açougue", "icone": "em-restaurante.png", "cor": "#d32f2f",
      "desc": "Restaurante: mesas, caixa, estoque, delivery e app do garçom. Açougue: caixa por quilo e grama, cancelar e devolver item.",
      "abrir": ["Abrir o caixa", "https://d1xi1g7etepsye.cloudfront.net/"],
      "outros": [["App do garçom", "https://d1xi1g7etepsye.cloudfront.net/garcom"], ["Caixa do açougue", "https://d1xi1g7etepsye.cloudfront.net/acougue"]],
@@ -58,7 +58,10 @@ SISTEMAS = [
     {"id": "atendimento", "nome": "Atendimento WhatsApp", "icone": "em-atendimento.png", "cor": "#1fa86a",
      "desc": "Conversas do WhatsApp da Câmara e da Prefeitura, com atendentes.",
      "abrir": ["Abrir o atendimento", "https://teste.legislagov.com.br/cliente/"], "outros": [], "demo": False},
-    {"id": "site", "nome": "Site LegislaGov", "icone": "em-site.png", "cor": "#7b8796",
+    {"id": "site-gr", "nome": "Site GR Software", "icone": "gr-emblema.png", "cor": "#19e3d0",
+     "desc": "Portal da empresa: seu sistema, do seu jeito. Modelos prontos e personalização.",
+     "abrir": ["Abrir o site da GR", "https://teste.legislagov.com.br/gr/"], "outros": [["grsoftware.com.br (quando comprar)", "https://grsoftware.com.br/"]], "demo": False},
+    {"id": "site", "nome": "Site LegislaGov (Câmaras)", "icone": "em-site.png", "cor": "#7b8796",
      "desc": "Página da empresa, produtos e planos.",
      "abrir": ["Abrir o site", "https://legislagov.com.br/"], "outros": [], "demo": False},
 ]
@@ -308,7 +311,7 @@ def _ip(h):
 
 def manifest(base):
     base = base if re.fullmatch(r"/([a-z0-9-]+/)?", base or "") else "/"
-    return {"name": "LegislaGov Central", "short_name": "LG Central", "description": "Área restrita da LegislaGov: sistemas e demonstrações.",
+    return {"name": "GR Central", "short_name": "GR Central", "description": "Área restrita da GR Software: sistemas e demonstrações.",
             "lang": "pt-BR", "id": base, "start_url": base, "scope": base, "display": "standalone", "background_color": "#f3f5f8", "theme_color": "#10233d",
             "icons": [{"src": base + "icone-192.png", "sizes": "192x192", "type": "image/png"},
                       {"src": base + "icone-512.png", "sizes": "512x512", "type": "image/png"}]}

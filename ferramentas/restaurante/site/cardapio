@@ -103,7 +103,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   nav.cats button.act{background:#eef0f3;color:#0b0c0f}.opc button.act{border-color:#eef0f3;box-shadow:inset 0 0 0 1px #eef0f3}.lg{background:#fff}}
 </style>
 <script>
-/* LegislaGov — aviso de "Carregando…" e "Concluído" em todos os sistemas.
+/* GR Software — aviso de "Carregando…" e "Concluído" em todos os sistemas.
    1) Automático: quando a pessoa clica em algo e o servidor demora mais de meio segundo para responder,
       aparece "Carregando…"; quando termina, "Concluído" (ou "Não foi concluído") e some sozinho.
       Atualizações em segundo plano (sincronia, GPS, conferências periódicas) não mostram nada.
@@ -244,7 +244,7 @@ function tela(){if(!D)return;const L=D.loja,cats=[...new Set(D.produtos.map(p=>p
   <button class="carro ${n?'cheio':''}" onclick="abrir()" aria-label="Abrir o carrinho, ${n} itens"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h3l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.3a1.6 1.6 0 0 0 1.6-1.2l1.6-7.3H6.2"/></svg><span class="tx">Carrinho</span>${n?`<span class="ct">${n}</span>`:''}</button></div>
   ${cat&&!umSo&&!b?`<nav class="cats"><button class="mn" onclick="irMenus()">☰ Menus</button>${cats.map((c,i)=>`<button class="${cat===c?'act':''}" onclick="irCat(CATS_[${i}])">${ICONE[c]||''} ${esc(c)}</button>`).join('')}</nav>`:''}</div>
   ${corpo}
-  <p class="rod">Cardápio digital · LegislaGov Restaurante</p></div>
+  <p class="rod">Cardápio digital · GR Restaurante</p></div>
   ${n&&D.aberto?`<div class="barra"><button onclick="abrir()"><span><span class="n">${n}</span>Ver carrinho</span><span>${brl(subtotal())}</span></button></div>`:''}${folha?folha():''}`}
 function abrir(){fim=null;folha=fFolha;tela()}
 function fechar(){folha=null;tela()}
