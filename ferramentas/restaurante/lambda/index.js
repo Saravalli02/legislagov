@@ -1,4 +1,4 @@
-const COLS=new Set(['produtos','mesas','vendas','movimentos','fila','estado','config','clientes']);
+const COLS=new Set(['produtos','mesas','vendas','movimentos','fila','estado','config','clientes','reservas']);
 const J=(c,b)=>({statusCode:c,headers:{'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(b)});
 const C=process.env.CENTRAL||'https://central.legislagov.com.br/api/central/';
 const post=async(p,b)=>{const r=await fetch(C+p,{method:'POST',headers:{'content-type':'application/json','x-lg':'1'},body:JSON.stringify(b),signal:AbortSignal.timeout(4000)});return{s:r.status,b:await r.json().catch(()=>({}))}};
@@ -54,6 +54,41 @@ const pedido=async(st,e,b)=>{
   await st.put({col:'fila',id:'f'+id,ver:1,ts:Date.now()+1,del:false,data:{tipo:'pedido',rotulo:'Pedido nº '+num+' (cardápio)',por:'Cardápio digital',ped:{...ped,id},ts:Date.now()}},0);
   l.push(now);ipM.set(ip,l);
   return J(200,{ok:1,num,total:its.reduce((s,i)=>s+i.preco*i.qtd,0),tipo})};
+// ---- pedido digital do açougue (reserva sem pagamento: paga na retirada; produtos por peso sem preço)
+const reservaInfo=async st=>{
+  const g=await doc(st,'config','geral'),c=(g&&g.data)||{},rv=c.reserva||{};
+  const ids=(rv.ids||[]).slice(0,120);
+  const ps=(await Promise.all(ids.map(id=>doc(st,'produtos',id)))).filter(x=>x&&x.data).map(x=>({...x.data,id:x.id}));
+  return{loja:{nome:c.razao||'Açougue',logo:c.logo||'',fone:c.fone||'',endereco:c.endereco||''},ativo:rv.ativo!==false&&ids.length>0,
+    titulo:rv.titulo||'Faça seu pedido',aviso:rv.aviso||'',retirada:rv.retirada||'',
+    produtos:ps.map(p=>({id:p.id,nome:p.nome,unidade:p.unidade||'',cat:p.cat||'Outros',porKg:!!p.porKg,preco:p.porKg?0:(+p.preco||0),img:p.img||'',
+      resta:Math.max(0,Math.floor(+p.resQtd||0))}))}};
+const reservar=async(st,e,b)=>{
+  const ip=(e.requestContext.http&&e.requestContext.http.sourceIp)||'?',now=Date.now(),l=(ipM.get(ip)||[]).filter(t=>now-t<600000);
+  if(l.length>=6)return J(429,{erro:'Muitos pedidos seguidos deste aparelho. Espere alguns minutos.'});
+  const v=await reservaInfo(st);if(!v.ativo)return J(409,{erro:'Os pedidos estão fechados agora.'});
+  const nome=String(b.nome||'').trim().slice(0,60),fone=String(b.fone||'').replace(/\D/g,'').slice(0,13);
+  if(nome.length<2)return J(400,{erro:'Escreva seu nome.'});if(fone.length<10)return J(400,{erro:'Escreva seu WhatsApp com DDD.'});
+  const mp=new Map(v.produtos.map(p=>[p.id,p])),its=[];
+  for(const x of (Array.isArray(b.itens)?b.itens:[]).slice(0,40)){const p=mp.get(String(x.id)),q=Math.floor(+x.qtd);
+    if(!p||!(q>=1&&q<=50))return J(400,{erro:'Algum item saiu da lista. Atualize a página e tente de novo.'});
+    const it=its.find(i=>i.pid===p.id);if(it)it.qtd+=q;else its.push({pid:p.id,nome:p.nome+(p.unidade?' '+p.unidade:''),porKg:p.porKg,preco:p.preco,qtd:q})}
+  if(!its.length)return J(400,{erro:'Escolha pelo menos um item.'});
+  // baixa a quantidade disponível de cada produto (com controle de versão); se faltar, devolve o que já baixou
+  const feitos=[];
+  const mudar=async(pid,dq)=>{for(let k=0;k<6;k++){const x=await st.get('produtos',pid);if(!x||x.del||!x.data)return false;const r=Math.floor(+x.data.resQtd||0);if(dq<0&&r+dq<0)return false;
+    if(await st.put({col:'produtos',id:pid,ver:x.ver+1,ts:Date.now(),del:false,data:{...x.data,resQtd:r+dq}},x.ver))return true}return false};
+  for(const it of its){if(await mudar(it.pid,-it.qtd))feitos.push(it);else{for(const f of feitos)await mudar(f.pid,f.qtd);
+    return J(409,{erro:`Acabou: ${it.nome}. Diminua a quantidade ou escolha outro.`,acabou:it.pid})}}
+  let num=0;
+  for(let k=0;k<6&&!num;k++){const x=await st.get('estado','atual'),ed=(x&&!x.del&&x.data)||{},nd={...ed,seq:(+ed.seq||0)+1};
+    if(await st.put({col:'estado',id:'atual',ver:(x?x.ver:0)+1,ts:Date.now(),del:false,data:nd},x?x.ver:0))num=nd.seq}
+  const id='r-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const rs={num,nome,fone,retirada:String(b.retirada||'').trim().slice(0,80),obs:String(b.obs||'').trim().slice(0,200),itens:its,
+    totalFixo:its.reduce((s,i)=>s+(i.porKg?0:i.preco*i.qtd),0),status:'nova',criado:new Date().toISOString()};
+  await st.put({col:'reservas',id,ver:1,ts:Date.now(),del:false,data:rs},0);
+  l.push(now);ipM.set(ip,l);
+  return J(200,{ok:1,num,totalFixo:rs.totalFixo,temPeso:its.some(i=>i.porKg)})};
 const corpo=e=>{let b=e.body||'{}';if(e.isBase64Encoded)b=Buffer.from(b,'base64').toString();try{return JSON.parse(b)}catch(x){return{}}};
 const mk=base=>async e=>{
   const m=e.requestContext.http.method,p=(e.rawPath||'').replace(/^\/api/,''),h=e.headers||{},t=h['x-lg-token'],q=e.queryStringParameters||{};
@@ -62,6 +97,8 @@ const mk=base=>async e=>{
   const pubSt=()=>base(CLI_RE.test(q.c||'')?q.c:LEGADO);
   if(p==='/cardapio'&&m==='GET'){const v=await cardapio(pubSt());return J(200,{...v,produtos:v.produtos.map(({custo,...x})=>x)})}
   if(p==='/pedido'&&m==='POST')return pedido(pubSt(),e,corpo(e));
+  if(p==='/reserva'&&m==='GET'){const v=await reservaInfo(pubSt());return J(200,v)}
+  if(p==='/reserva'&&m==='POST')return reservar(pubSt(),e,corpo(e));
   if(p==='/entrar'&&m==='POST'){const b=corpo(e);
     try{const r=await post('rest/entrar',{usuario:b.usuario,senha:b.senha,tipo:b.tipo==='acougue'?'acougue':'restaurante'});return J(r.s,r.b)}catch(x){return J(503,{erro:'Sem conexão com a LegislaGov. Tente de novo em instantes.'})}}
   if(p==='/sair'&&m==='POST'){if(t){SES.delete(t);try{await post('rest/sair',{token:t})}catch(x){}}return J(200,{ok:1})}

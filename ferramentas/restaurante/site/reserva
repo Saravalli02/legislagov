@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Faça seu pedido</title>
+<meta name="theme-color" content="#1b2433">
+<link rel="icon" href="https://central.legislagov.com.br/restaurante/acougue-192.png">
+<link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/acougue-180.png">
+<style>
+:root{--bg:#f5f3ee;--card:#fff;--txt:#1b1f27;--mut:#6b7280;--lin:#e7e2d6;--am:#f0b000;--am2:#d99a00;--esc:#1b2433;--ok:#1f8a4c;--bad:#c0392b}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--txt);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:110px}
+button{font:inherit;cursor:pointer}
+.topo{background:radial-gradient(500px 160px at 15% -20%,#f0b00055,transparent),linear-gradient(135deg,#141a26,#232c3d);color:#fff;padding:22px 18px 26px}
+.loja{display:flex;align-items:center;gap:12px}
+.loja .lg{width:52px;height:52px;border-radius:14px;background:#ffffff14;display:grid;place-items:center;font-size:28px;overflow:hidden;flex:none}
+.loja .lg img{width:100%;height:100%;object-fit:cover}
+.loja b{font-size:19px;display:block}.loja small{opacity:.75}
+.topo h1{font-size:28px;letter-spacing:-.02em;margin-top:18px}
+.topo p{opacity:.85;margin-top:6px;line-height:1.45}
+.ret{display:inline-flex;gap:8px;align-items:center;margin-top:12px;background:#ffffff14;border:1px solid #ffffff22;border-radius:999px;padding:7px 12px;font-size:14px}
+main{max-width:640px;margin:0 auto;padding:16px}
+.it{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--lin);border-radius:18px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px #0000000a}
+.it.off{opacity:.55}
+.ft{width:66px;height:66px;border-radius:14px;background:#fff4d1;display:grid;place-items:center;font-size:34px;flex:none;overflow:hidden}.ft img{width:100%;height:100%;object-fit:cover}
+.tx{flex:1;min-width:0}.tx b{display:block;font-size:16.5px}
+.pr{font-weight:800;margin-top:3px}.pr.peso{font-weight:600;color:var(--mut);font-size:14px}
+.rs{font-size:12.5px;color:var(--mut);margin-top:3px}.rs.pouco{color:#b26a00;font-weight:700}.rs.acabou{color:var(--bad);font-weight:800}
+.qt{display:flex;align-items:center;gap:6px}
+.qt button{width:38px;height:38px;border-radius:12px;border:1px solid var(--lin);background:#fff;font-size:20px;font-weight:700}
+.qt button.mais{background:var(--am);border-color:var(--am);color:#1b1400}
+.qt span{min-width:22px;text-align:center;font-weight:800;font-size:17px}
+.barra{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);max-width:616px;margin:0 auto;display:flex;align-items:center;gap:12px;background:var(--esc);color:#fff;border-radius:20px;padding:12px 12px 12px 18px;box-shadow:0 12px 30px #0003}
+.barra .q{flex:1}.barra small{display:block;opacity:.75;font-size:12.5px}
+.bt{border:0;border-radius:14px;background:var(--am);color:#1b1400;font-weight:800;padding:14px 18px;font-size:16px}
+.bt:disabled{opacity:.45}
+.vazio{text-align:center;color:var(--mut);padding:60px 20px;line-height:1.6}
+.folha{position:fixed;inset:0;background:#0008;display:none;align-items:flex-end;justify-content:center;z-index:5}
+.folha.on{display:flex}
+.fc{background:var(--card);width:100%;max-width:640px;border-radius:24px 24px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px);max-height:92vh;overflow:auto}
+.fc h2{font-size:22px;margin-bottom:6px}
+label{display:block;font-weight:700;font-size:14px;margin:12px 0 6px}
+input,textarea{width:100%;border:1px solid var(--lin);border-radius:12px;padding:13px;font:inherit;font-size:16px;background:#fbfaf7}
+input:focus,textarea:focus{outline:2px solid var(--am);background:#fff}
+.res{border:1px dashed var(--lin);border-radius:14px;padding:12px;margin-top:10px;font-size:14.5px;line-height:1.6}
+.erro{color:var(--bad);font-weight:700;margin-top:10px}
+.fim{text-align:center;padding:50px 20px}.fim .ok{font-size:64px}.fim h2{font-size:26px;margin:10px 0}.fim p{color:var(--mut);line-height:1.6}
+.rod{text-align:center;color:var(--mut);font-size:12.5px;margin:26px 0 0}
+</style>
+</head>
+<body>
+<div id="app"><div class="vazio">Carregando…</div></div>
+<div class="folha" id="folha"><div class="fc" id="fc"></div></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const CLI=(()=>{const c=new URLSearchParams(location.search).get('c');return c&&/^[a-z0-9-]{1,60}$/.test(c)?c:''})(),Q=CLI?'?c='+CLI:'';
+const ICO={Bovinos:'🥩',Suínos:'🐖',Aves:'🍗',Linguiças:'🌭',Miúdos:'🍖',Peixes:'🐟',Temperados:'🧂',Churrasco:'🔥',Mercearia:'🛒',Bebidas:'🥤',Lanches:'🍔',Doces:'🍫',Outros:'🍽️'};
+let D=null,car={},dados={nome:'',fone:'',retirada:'',obs:''};
+try{Object.assign(dados,JSON.parse(localStorage.getItem('gr-res-dados')||'{}'))}catch(e){}
+async function carregar(){try{const r=await fetch('/api/reserva'+Q,{cache:'no-store'});D=await r.json();
+  for(const k in car){const p=D.produtos.find(x=>x.id===k);if(!p||p.resta<=0)delete car[k];else car[k]=Math.min(car[k],p.resta)}
+  document.title=(D.loja.nome||'Pedido')+' · Faça seu pedido';tela()}catch(e){$('#app').innerHTML='<div class="vazio">Não deu para abrir os pedidos. Confira a internet e recarregue a página.</div>'}}
+const nItens=()=>Object.values(car).reduce((s,q)=>s+q,0);
+const fixo=()=>D.produtos.reduce((s,p)=>s+(p.porKg?0:p.preco*(car[p.id]||0)),0);
+const temPeso=()=>D.produtos.some(p=>p.porKg&&car[p.id]);
+function mudar(id,d){const p=D.produtos.find(x=>x.id===id);if(!p)return;const q=Math.max(0,Math.min(p.resta,(car[id]||0)+d));if(q)car[id]=q;else delete car[id];tela()}
+function tela(){const L=D.loja;
+  $('#app').innerHTML=`<header class="topo"><div class="loja"><div class="lg">${L.logo?`<img src="${esc(L.logo)}" alt="">`:'🥩'}</div><div><b>${esc(L.nome)}</b>${L.endereco?`<small>${esc(L.endereco)}</small>`:''}</div></div>
+    <h1>${esc(D.titulo)}</h1>${D.aviso?`<p>${esc(D.aviso)}</p>`:'<p>Escolha, reserve e pague quando for retirar.</p>'}
+    ${D.retirada?`<div class="ret">🕑 Retirada: <b>${esc(D.retirada)}</b></div>`:''}</header>
+  <main>${!D.ativo?'<div class="vazio"><b>Os pedidos estão fechados agora.</b><br>Volte mais tarde ou fale com a gente.</div>':
+    D.produtos.map(p=>{const q=car[p.id]||0,ac=p.resta<=0;return `<div class="it ${ac?'off':''}"><div class="ft">${p.img?`<img src="${esc(p.img)}" alt="">`:(ICO[p.cat]||'🍖')}</div>
+      <div class="tx"><b>${esc(p.nome)}${p.unidade?' <small style="font-weight:500;color:var(--mut)">'+esc(p.unidade)+'</small>':''}</b>
+      ${p.porKg?'<div class="pr peso">Por peso · paga na retirada</div>':`<div class="pr">${brl(p.preco)}</div>`}
+      <div class="rs ${ac?'acabou':p.resta<=3?'pouco':''}">${ac?'Acabou':p.resta<=3?`Só restam ${p.resta}`:`Disponíveis: ${p.resta}`}</div></div>
+      ${ac?'':`<div class="qt">${q?`<button onclick="mudar('${p.id}',-1)" aria-label="Menos">−</button><span>${q}</span>`:''}<button class="mais" onclick="mudar('${p.id}',1)" aria-label="Mais" ${q>=p.resta?'disabled':''}>+</button></div>`}</div>`}).join('')}
+    <p class="rod">Pedido digital · GR Açougue</p></main>
+  ${D.ativo&&nItens()?`<div class="barra"><div class="q"><b>${nItens()} item(ns)</b><small>${fixo()?brl(fixo())+(temPeso()?' + itens por peso':''):'Itens por peso: paga na retirada'}</small></div><button class="bt" onclick="abrirForm()">Reservar →</button></div>`:''}`}
+function resumo(){return D.produtos.filter(p=>car[p.id]).map(p=>`${car[p.id]}× ${esc(p.nome)} ${p.porKg?'<small style="color:var(--mut)">(por peso)</small>':'— '+brl(p.preco*car[p.id])}`).join('<br>')}
+function abrirForm(){$('#fc').innerHTML=`<h2>Confirmar reserva</h2><div class="res">${resumo()}${fixo()?`<br><b>Valor fixo: ${brl(fixo())}</b>`:''}${temPeso()?'<br><small>Os itens por peso são pesados e cobrados na retirada.</small>':''}</div>
+  <label for="fn">Seu nome</label><input id="fn" autocomplete="name" value="${esc(dados.nome)}">
+  <label for="ff">WhatsApp com DDD</label><input id="ff" inputmode="tel" autocomplete="tel" value="${esc(dados.fone)}" placeholder="(17) 99999-9999">
+  <label for="fr">Quando vai retirar</label><input id="fr" value="${esc(dados.retirada)}" placeholder="${esc(D.retirada||'Ex.: sábado às 11h')}">
+  <label for="fo">Observação (opcional)</label><textarea id="fo" rows="2" placeholder="Ex.: costela bem passada">${esc(dados.obs)}</textarea>
+  <div class="erro" id="fe"></div>
+  <div style="display:flex;gap:10px;margin-top:16px"><button class="bt" style="background:#eee;color:#333;flex:1" onclick="$('#folha').classList.remove('on')">Voltar</button><button class="bt" style="flex:2" id="fb" onclick="enviar()">✅ Reservar</button></div>
+  <p style="color:var(--mut);font-size:13px;margin-top:10px;text-align:center">Você paga na hora de retirar.</p>`;$('#folha').classList.add('on')}
+async function enviar(){dados={nome:$('#fn').value.trim(),fone:$('#ff').value.trim(),retirada:$('#fr').value.trim(),obs:$('#fo').value.trim()};
+  try{localStorage.setItem('gr-res-dados',JSON.stringify({nome:dados.nome,fone:dados.fone}))}catch(e){}
+  const b=$('#fb');b.disabled=true;b.textContent='Enviando…';$('#fe').textContent='';
+  try{const r=await fetch('/api/reserva'+Q,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...dados,itens:Object.entries(car).map(([id,qtd])=>({id,qtd}))})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){$('#fe').textContent=j.erro||'Não deu para reservar. Tente de novo.';b.disabled=false;b.textContent='✅ Reservar';if(r.status===409)carregar();return}
+    car={};$('#folha').classList.remove('on');
+    $('#app').innerHTML=`<div class="fim"><div class="ok">✅</div><h2>Reserva nº ${j.num} feita!</h2><p>Obrigado, ${esc(dados.nome)}.<br>${j.temPeso?'Os itens por peso são pesados na retirada.<br>':''}${j.totalFixo?'Valor fixo: <b>'+brl(j.totalFixo)+'</b><br>':''}Você paga quando for retirar${dados.retirada?' ('+esc(dados.retirada)+')':''}.</p>
+      ${D.loja.fone?`<p style="margin-top:14px">Dúvidas: <b>${esc(D.loja.fone)}</b></p>`:''}<p style="margin-top:22px"><button class="bt" onclick="carregar()">Fazer outro pedido</button></p></div>`}
+  catch(e){$('#fe').textContent='Sem internet. Confira e tente de novo.';b.disabled=false;b.textContent='✅ Reservar'}}
+carregar();setInterval(()=>{if(!$('#folha').classList.contains('on')&&D&&$('.topo'))carregar()},30000);
+</script>
+</body>
+</html>
