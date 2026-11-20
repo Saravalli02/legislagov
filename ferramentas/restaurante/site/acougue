@@ -583,7 +583,7 @@ header .logo img.lg-pilar{position:static!important;inset:auto!important;width:1
 .descv{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 12px}.descv .row{display:flex!important;flex-wrap:nowrap!important;align-items:center}.descv input{font-size:1.05rem;width:auto!important;flex:1;min-width:0}.descv .btn{flex:none}
 </style>
 <script>/* LegislaGov Açougue: mesmo sistema, cores amarelas (troca os vermelhos do tema) */
-(function(){var a=/^\/acougue/i.test(location.pathname)||/[#?&]acougue\b/i.test(location.href),t=null;
+(function(){var a=/^\/acougue/i.test(location.pathname)||/^acougue\./i.test(location.hostname)||/[#?&]acougue\b/i.test(location.href),t=null;
 try{if(localStorage.getItem('lg-tok'))t=localStorage.getItem('lg-tipo')}catch(e){}
 var acg=t==='acougue'||t==='restaurante'?t==='acougue':a;window.LG_ACG=acg;if(!acg)return;document.documentElement.classList.add('acg');
 var M={'d32f2f':'d99a00','e53935':'f0b000','c62828':'c98a00','b71c1c':'a87200','9b1717':'8a5d00','8e1414':'7a5200','d62828':'d99a00','ff8a80':'ffd54f','ff8f8a':'ffd54f',
@@ -790,6 +790,7 @@ async function apiSync(){if(syncing||!apiKey)return;syncing=true;
   try{let since=Math.max(0,lastTs-5000),r;
     do{r=await apiFetch('/sync?since='+since);
       if(r.status===401){pedirChave();return}if(r.status!==200)throw 0;
+      if(r.body.cliente)lsSet('lg-cli',r.body.cliente);
       if(r.body.tipo&&r.body.tipo!==TIPO){lsSet('lg-tipo',r.body.tipo);location.reload();return}
       for(const it of r.body.items){apiApply(it);if(it.ts>lastTs)lastTs=it.ts}
       since=lastTs-1}while(r.body.more);
@@ -818,7 +819,7 @@ async function entrarRest(){const b=$('#lgb'),u=$('#lgu').value.trim(),sn=$('#lg
       if(t!==TIPO){location.reload();return}$('#lgLogin').remove();apiSync();return}
     $('#lge').textContent=d.erro||'Não foi possível entrar.';$('#lgs').value='';$('#lgs').focus()}catch(e){$('#lge').textContent='Sem internet. Tente de novo quando conectar.'}
   b.disabled=false}
-function sairRest(){fetch('/api/sair',{method:'POST',headers:{'x-lg-token':apiKey}}).catch(()=>{});apiKey='';lsSet('lg-tok','');lsSet('lg-tipo','');location.reload()}
+function sairRest(){fetch('/api/sair',{method:'POST',headers:{'x-lg-token':apiKey}}).catch(()=>{});apiKey='';lsSet('lg-tok','');lsSet('lg-tipo','');lsSet('lg-cli','');location.reload()}
 /* --- gravação única para os 3 modos --- */
 function mutate(col,id,fn){
   if(SINGLE[col])id=SINGLE[col];
@@ -1879,7 +1880,8 @@ function fotoGenerica(nome,cat){const n=String(nome||'').toLowerCase().normalize
   return 'data:image/svg+xml,'+encodeURIComponent(svg)}
 
 const cdp=()=>({ativo:true,genericas:true,tipos:{retirada:true,local:true,entrega:false},taxa:0,pagamentos:['Pix','Crédito','Débito','Dinheiro'],whatsapp:'',aviso:'',ids:[],...((S.config||{}).cardapio||{})});
-const linkCardapio=()=>location.origin+'/cardapio';
+const linkCardapio=()=>{const c=lsGet('lg-cli','');if(/grsoftware\.com\.br$/.test(location.hostname)&&(!c||c==='restaurante-1'))return 'https://casasaravalli.grsoftware.com.br/';
+  return location.origin+'/cardapio'+(c&&c!=='restaurante-1'?'?c='+encodeURIComponent(c):'')};
 function salvarCdp(m){return mutate('config','geral',c=>({...(c||{}),cardapio:{...cdp(),...((c&&c.cardapio)||{}),...m}}))}
 function cdpTem(id){return cdp().ids.includes(id)}
 function cdpFoto(id){const i=document.createElement('input');i.type='file';i.accept='image/*';

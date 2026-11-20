@@ -189,7 +189,8 @@ addEventListener('popstate',()=>{if(folha&&!fim){folha=null}cat=(history.state&&
 /* foto do menu: a primeira foto de verdade de um produto do menu; se não tiver, a ilustração */
 const fotoMenu=c=>{const p=D.produtos.find(x=>x.cat===c&&x.img);return p?p.img:(D.genericas!==false?fotoGenerica('',c):'')};
 const TIPOS={retirada:['Retirar no local','Busco quando ficar pronto'],local:['Comer no local','Já deixa pronto pra mim'],entrega:['Entrega','Receber em casa']};
-async function carregar(){try{const r=await fetch('/api/cardapio',{cache:'no-store'});D=await r.json();
+const CLI_Q=(()=>{const c=new URLSearchParams(location.search).get('c');return c&&/^[a-z0-9-]{1,60}$/.test(c)?'?c='+c:''})();
+async function carregar(){try{const r=await fetch('/api/cardapio'+CLI_Q,{cache:'no-store'});D=await r.json();
   const ids=new Set(D.produtos.map(p=>p.id));for(const k in carro)if(!ids.has(k))delete carro[k];
   document.title=(D.loja.nome||'Cardápio')+' · Cardápio';tela()}
   catch(e){$('#app').innerHTML='<div class="vazio" style="padding-top:80px">Não deu para abrir o cardápio. Confira a internet e recarregue a página.</div>'}}
@@ -270,7 +271,7 @@ async function enviar(){const e=$('#err'),bt=$('#env');e.textContent='';
   if(PED.tipo==='entrega'&&PED.endereco.trim().length<5)return e.textContent='Escreva o endereço de entrega.';
   if(!PED.pagamento)return e.textContent='Escolha a forma de pagamento.';
   bt.disabled=true;bt.textContent='Enviando…';salvar();
-  try{const r=await fetch('/api/pedido',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...PED,itens:itens().map(x=>({id:x.p.id,qtd:x.q}))})});
+  try{const r=await fetch('/api/pedido'+CLI_Q,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...PED,itens:itens().map(x=>({id:x.p.id,qtd:x.q}))})});
     const d=await r.json().catch(()=>({}));
     if(r.ok&&d.num){fim={...d,itens:itens().map(x=>x.q+'x '+x.p.nome),tipo:PED.tipo,pagamento:PED.pagamento};carro={};salvar();PED.obs='';tela();return}
     e.textContent=d.erro||'Não foi possível enviar o pedido. Tente de novo.';if(r.status===409||r.status===400)carregar()}
