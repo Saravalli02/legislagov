@@ -23,6 +23,11 @@ def main():
         if nome.endswith(".png"):   # cópia em texto (hex), para a cópia entre regiões feita pela ferramenta da Amazon
             s3.put_object(Bucket=ce.BUCKET, Key="restaurante-site/" + nome + ".hex", Body=dados.hex().encode(), ContentType="text/plain")
         enviados.append(nome)
+    # código do servidor do restaurante (Lambda), para a atualização pela ferramenta da Amazon
+    lam = os.path.join(PASTA, "..", "lambda", "index.js")
+    if os.path.isfile(lam):
+        with open(lam, "rb") as f:
+            s3.put_object(Bucket=ce.BUCKET, Key="restaurante-lambda/index.js", Body=f.read(), ContentType="text/plain; charset=utf-8")
     s3.put_object(Bucket=ce.BUCKET, Key="restaurante-site/_ok.json", ContentType="application/json",
                   Body=json.dumps({"quando": time.strftime("%Y-%m-%dT%H:%M:%S"), "arquivos": enviados}).encode())
     print("enviados:", enviados)
