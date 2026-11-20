@@ -35,6 +35,10 @@ def _db():
             c.execute("UPDATE ct_clientes SET nome='Casa Saravalli' WHERE sistema='restaurante' AND id='restaurante-1'")
         except Exception:
             pass
+        c.execute("CREATE TABLE IF NOT EXISTS ct_migr(id TEXT PRIMARY KEY, quando REAL)")
+        if not c.execute("SELECT 1 FROM ct_migr WHERE id='pedro-garcom'").fetchone():
+            c.execute("UPDATE ct_rest_usuarios SET perfil='garcom' WHERE cliente='restaurante-1' AND (lower(nome) LIKE 'pedro%' OR lower(usuario) LIKE 'pedro%')")
+            c.execute("INSERT INTO ct_migr VALUES('pedro-garcom', ?)", (time.time(),))
         _cache["set"] = {(r["sistema"], r["cliente"], r["usuario"]) for r in c.execute("SELECT * FROM ct_acesso WHERE bloqueado IS NOT NULL")}
         _cache["ok"] = True
     return c
@@ -104,7 +108,9 @@ def painel(c):
             if u.get("pendente"):
                 continue
             us.append({"id": u["id"], "nome": u.get("nome") or u["usuario"], "usuario": u["usuario"],
-                       "cargo": u.get("cargo") or u.get("perfil") or "", "ativo": u.get("ativo") is not False, **_info(c, "camara", cam, u["id"])})
+                       "cargo": " · ".join(x for x in (("Administrador" if u.get("perfil") == "admin" or u.get("orgao") == "ambos" else ""),
+                                                        (u.get("cargo") or ("" if u.get("perfil") == "admin" else u.get("perfil")) or "")) if x),
+                       "cargoId": u.get("cargoId") or "", "admin": u.get("perfil") == "admin" or u.get("orgao") == "ambos", "ativo": u.get("ativo") is not False, **_info(c, "camara", cam, u["id"])})
         us.sort(key=lambda x: x["nome"].lower())
         camaras.append({"id": cam, "nome": NOMES_CAMARA.get(cam, cam), "usuarios": us, **_info(c, "camara", cam)})
     out["camara"] = camaras
@@ -137,7 +143,8 @@ def painel(c):
     # Restaurante (cada instalação é um cliente; o servidor do restaurante consulta /api/central/licenca)
     out["restaurante"] = [{"id": r["id"], "nome": r["nome"], "responsavel": r["responsavel"] or "", "obs": r["obs"] or "", "tipo": _tipo(r),
                            "usuarios": [{"id": u["id"], "nome": u["nome"], "usuario": u["usuario"],
-                                         "cargo": "Administradora" if u["perfil"] == "adm" else "Caixa", "ativo": True, "ultimo": u["ultimo"],
+                                         "cargo": PERFIS_REST.get(u["perfil"], "Administrador"), "perfil": u["perfil"] if u["perfil"] in PERFIS_REST else "adm",
+                                         "ativo": True, "ultimo": u["ultimo"],
                                          **_info(c, "restaurante", r["id"], u["id"])}
                                         for u in c.execute("SELECT * FROM ct_rest_usuarios WHERE cliente=? ORDER BY nome", (r["id"],))],
                            **_info(c, "restaurante", r["id"])} for r in c.execute("SELECT * FROM ct_clientes WHERE sistema='restaurante' ORDER BY nome")]
@@ -229,7 +236,7 @@ def rest_entrar(c, login, senha, tipo=None, dev=None, ip='', ua=''):
     c.execute("INSERT INTO ct_rest_sess VALUES(?,?,?,?,?)", (_resumo(t), u["id"], u["cliente"], agora + REST_DIAS * 86400, agora))
     c.execute("UPDATE ct_rest_usuarios SET falhas=0, bloqueio=0, ultimo=? WHERE id=?", (agora, u["id"]))
     c.execute("DELETE FROM ct_rest_sess WHERE expira < ?", (agora,))
-    return 200, {"ok": True, "token": t, "nome": u["nome"], "cliente": u["cliente"], "tipo": tipo_cliente(c, u["cliente"])}
+    return 200, {"ok": True, "token": t, "nome": u["nome"], "cliente": u["cliente"], "tipo": tipo_cliente(c, u["cliente"]), "perfil": u["perfil"]}
 
 
 def rest_sessao(c, token):
@@ -243,7 +250,7 @@ def rest_sessao(c, token):
     if not u:
         return 200, {"ok": False}
     return 200, {"ok": True, "ativo": not bloqueado("restaurante", r["cliente"], u["id"]), "nome": u["nome"], "cliente": r["cliente"],
-                 "tipo": tipo_cliente(c, r["cliente"])}
+                 "tipo": tipo_cliente(c, r["cliente"]), "perfil": u["perfil"]}
 
 
 def rest_sair(c, token):
@@ -262,10 +269,24 @@ def rest_criar(c, d):
         return 400, {"ok": False, "erro": f"A senha precisa ter pelo menos {SENHA_MIN} caracteres."}
     if c.execute("SELECT 1 FROM ct_rest_usuarios WHERE usuario=?", (login,)).fetchone():
         return 409, {"ok": False, "erro": "Este usuário já existe. Escolha outro."}
-    perfil = "adm" if d.get("perfil") != "caixa" else "caixa"
+    perfil = d.get("perfil") if d.get("perfil") in PERFIS_REST else "adm"
     c.execute("INSERT INTO ct_rest_usuarios(id, cliente, usuario, nome, perfil, senha, criado) VALUES(?,?,?,?,?,?,?)",
               ("r" + uuid.uuid4().hex[:10], cli, login, nome, perfil, lgapi.hash_senha(senha), time.time()))
     return 200, {"ok": True}
+
+
+PERFIS_REST = {"adm": "Administrador", "caixa": "Caixa", "garcom": "Garçom"}
+
+
+def rest_perfil(c, uid, perfil):
+    if perfil not in PERFIS_REST:
+        return 400, {"ok": False, "erro": "Função inválida."}
+    u = c.execute("SELECT * FROM ct_rest_usuarios WHERE id=?", (str(uid),)).fetchone()
+    if not u:
+        return 404, {"ok": False, "erro": "Usuário não encontrado."}
+    c.execute("UPDATE ct_rest_usuarios SET perfil=? WHERE id=?", (perfil, u["id"]))
+    c.execute("DELETE FROM ct_rest_sess WHERE uid=?", (u["id"],))   # entra de novo já com a função nova
+    return 200, {"ok": True, "nome": u["nome"], "perfil": PERFIS_REST[perfil]}
 
 
 def rest_senha(c, uid, senha):
@@ -479,3 +500,87 @@ def porta_login(c, h, sistema, cod, r, ip, rotulo_fn, resumo_fn):
         c.execute(f"DELETE FROM {tabela} WHERE {col}=?", (resumo_fn(r["token"]),))
         return barra
     return cod, r
+
+
+# ------------------------------------------------------------------ usuários da Câmara criados pela Central (20/11/2026)
+CARGOS_CAMARA = [  # mesmos cargos do painel (painel/lgcg-cargos.js)
+    {"id": "vereador", "nome": "Vereador(a)", "perfil": "usuario", "setor": "Gabinete", "unico": False},
+    {"id": "procurador", "nome": "Procurador(a) Legislativo", "perfil": "procurador", "setor": "Procuradoria Legislativa", "unico": True},
+    {"id": "diretora", "nome": "Diretor(a) de Secretaria", "perfil": "secretaria", "setor": "Secretaria Legislativa", "unico": True},
+    {"id": "contabil", "nome": "Técnico(a) Contábil", "perfil": "financeiro", "setor": "Contabilidade", "unico": True},
+    {"id": "tesoureira", "nome": "Tesoureiro(a)", "perfil": "financeiro", "setor": "Tesouraria", "unico": True},
+    {"id": "servidor", "nome": "Servidor(a)", "perfil": "servidor", "setor": "", "unico": False},
+]
+
+
+def _cargo(cid):
+    return next((x for x in CARGOS_CAMARA if x["id"] == cid), None)
+
+
+def _cargo_ocupado(camara, cid, menos=None):
+    if not (_cargo(cid) or {}).get("unico"):
+        return False
+    return any(u.get("cargoId") == cid and u["id"] != menos and (u.get("ativo") is not False or u.get("pendente")) for u in lgapi.usuarios(camara))
+
+
+def camara_criar(c, d, por):
+    cam, nome, login = str(d.get("camara") or ""), str(d.get("nome") or "").strip()[:120], str(d.get("usuario") or "").strip()
+    senha, cg, adm = str(d.get("senha") or ""), _cargo(str(d.get("cargoId") or "")), bool(d.get("admin"))
+    if not c.execute("SELECT 1 FROM usuarios WHERE camara=? LIMIT 1", (cam,)).fetchone():
+        return 404, {"ok": False, "erro": "Câmara não encontrada."}
+    if not nome or not re.fullmatch(r"[\w.\-]{3,30}", login):
+        return 400, {"ok": False, "erro": "Preencha o nome e um usuário de 3 a 30 letras ou números, sem espaços."}
+    if len(senha) < SENHA_MIN:
+        return 400, {"ok": False, "erro": f"A senha precisa ter pelo menos {SENHA_MIN} caracteres."}
+    if not cg:
+        return 400, {"ok": False, "erro": "Escolha o cargo."}
+    if c.execute("SELECT 1 FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (cam, login)).fetchone():
+        return 409, {"ok": False, "erro": "Este usuário já existe nesta Câmara."}
+    if _cargo_ocupado(cam, cg["id"]):
+        return 409, {"ok": False, "erro": f"Já existe um usuário ativo no cargo {cg['nome']} (é um cargo único)."}
+    dados = {"usuario": login, "nome": nome, "cargoId": cg["id"], "cargo": cg["nome"], "setor": cg["setor"],
+             "perfil": "admin" if adm else cg["perfil"], "orgao": "cam", "municipio": "Neves Paulista — SP",
+             "ativo": True, "pendente": False, "criadoEm": lgapi.agora(), "trocarSenha": True}
+    lgapi._criar_usuario(cam, dados, senha)
+    lgapi.registrar(cam, por, "Usuário criado pela GR Central", f"{login} · {cg['nome']}{' · administrador' if adm else ''}")
+    return 200, {"ok": True}
+
+
+def camara_editar(c, d, por):
+    uid, cam = str(d.get("id") or ""), str(d.get("camara") or "")
+    u = next((x for x in lgapi.usuarios(cam) if x["id"] == uid), None)
+    if not u:
+        return 404, {"ok": False, "erro": "Usuário não encontrado."}
+    cg = _cargo(str(d.get("cargoId") or u.get("cargoId") or ""))
+    adm = bool(d.get("admin"))
+    if cg and cg["id"] != u.get("cargoId") and _cargo_ocupado(cam, cg["id"], uid):
+        return 409, {"ok": False, "erro": f"Já existe um usuário ativo no cargo {cg['nome']} (é um cargo único)."}
+
+    def muda(x):
+        if cg:
+            x.update({"cargoId": cg["id"], "cargo": cg["nome"], "setor": x.get("setor") or cg["setor"]})
+        x["perfil"] = "admin" if adm else ((cg or {}).get("perfil") or ("usuario" if x.get("perfil") == "admin" else x.get("perfil") or "usuario"))
+    lgapi._gravar_dados_usuario(uid, muda)
+    lgapi._marcar_usuarios(cam)
+    c.execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))   # entra de novo já com o cargo novo
+    lgapi.registrar(cam, por, "Cargo alterado pela GR Central", f"{u['usuario']} · {(cg or {}).get('nome', '')}{' · administrador' if adm else ''}")
+    return 200, {"ok": True}
+
+
+def camara_senha(c, d, por):
+    uid, cam, senha = str(d.get("id") or ""), str(d.get("camara") or ""), str(d.get("senha") or "")
+    if len(senha) < SENHA_MIN:
+        return 400, {"ok": False, "erro": f"A senha precisa ter pelo menos {SENHA_MIN} caracteres."}
+    u = next((x for x in lgapi.usuarios(cam) if x["id"] == uid), None)
+    if not u:
+        return 404, {"ok": False, "erro": "Usuário não encontrado."}
+    c.execute("UPDATE usuarios SET senha=? WHERE id=?", (lgapi.hash_senha(senha), uid))
+
+    def muda(x):
+        x["trocarSenha"] = True
+        x.pop("bloqueada", None)
+        x.pop("falhasSenha", None)
+    lgapi._gravar_dados_usuario(uid, muda)
+    c.execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))
+    lgapi.registrar(cam, por, "Senha nova dada pela GR Central", u["usuario"])
+    return 200, {"ok": True, "usuario": u["usuario"]}

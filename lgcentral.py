@@ -447,6 +447,21 @@ def rota(h, metodo):
                         _log(c, s["usuario"], "Comércio: cliente " + ("alterado" if corpo.get("id") else "criado"),
                              f"{corpo.get('nome')} ({lgacesso.TIPOS.get(corpo.get('tipo'), 'Restaurante')})", ip)
                     return _resp(h, cod, r)
+            if acao in ("admin/camara/usuario", "admin/camara/editar", "admin/camara/senha", "admin/rest/perfil") and metodo == "POST":
+                import lgacesso
+                ac = lgacesso._db()
+                if acao == "admin/rest/perfil":
+                    cod, r = lgacesso.rest_perfil(ac, corpo.get("id"), corpo.get("perfil"))
+                    if cod == 200:
+                        _log(c, s["usuario"], "Restaurante: função alterada", f"{r['nome']} → {r['perfil']}", ip)
+                    return _resp(h, cod, r)
+                f = {"admin/camara/usuario": lgacesso.camara_criar, "admin/camara/editar": lgacesso.camara_editar,
+                     "admin/camara/senha": lgacesso.camara_senha}[acao]
+                cod, r = f(ac, corpo, s["usuario"])
+                if cod == 200:
+                    _log(c, s["usuario"], {"admin/camara/usuario": "Câmara: usuário criado", "admin/camara/editar": "Câmara: cargo alterado",
+                                           "admin/camara/senha": "Câmara: senha nova"}[acao], str(corpo.get("usuario") or corpo.get("id")), ip)
+                return _resp(h, cod, r)
             if acao in ("admin/rest/usuario", "admin/rest/senha", "admin/rest/excluir") and metodo == "POST":
                 import lgacesso
                 ac = lgacesso._db()
