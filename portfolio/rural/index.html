@@ -64,7 +64,7 @@ h2{font-size:21px;margin:30px 0 12px;line-height:1.25}
 
 <main class="cx">
   <div class="acao">
-    <a class="btn pri" id="abrir" href="https://rural.legislagov.com.br/">Abrir o app</a>
+    <a class="btn pri" id="abrir" href="https://rural.grsoftware.com.br/">Abrir o app</a>
   </div>
 
   <h2 id="como">Como deixar o ícone na tela do celular</h2>
@@ -132,7 +132,7 @@ h2{font-size:21px;margin:30px 0 12px;line-height:1.25}
   // o código da horta vem no link (?e=...) e vai junto para o app
   var e=(new URLSearchParams(location.search).get('e')||'').replace(/[^a-z0-9-]/gi,'').toLowerCase();
   var q=e?'?e='+e:'';
-  var app='https://rural.legislagov.com.br/', reserva='https://teste.legislagov.com.br/rural/';
+  var app='https://rural.grsoftware.com.br/', reserva='https://teste.legislagov.com.br/rural/';
   var abrir=document.getElementById('abrir');
   function usar(base){abrir.href=base+q;document.getElementById('zap').href='https://wa.me/?text='+encodeURIComponent('Instale o GR Rural no seu celular: '+location.origin+location.pathname.replace(/index\.html$/,'')+q)}
   usar(app);

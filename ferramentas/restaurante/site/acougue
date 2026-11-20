@@ -529,7 +529,7 @@ main{width:calc(100% - 48px)}
 #loading .logo img.lg-pilar{inset:0!important;width:100%!important;height:100%!important}
 .lgl-ic{border:0!important;background:transparent!important}
 /* ---- caixa do açougue ---- */
-.pdv{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.pdv{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
 @media(max-width:900px){.pdv{grid-template-columns:1fr}}
 .pdv-main{padding:16px;min-height:62vh;display:flex;flex-direction:column}
 .pdv-busca{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:12px}
@@ -539,12 +539,12 @@ main{width:calc(100% - 48px)}
 #pdq{padding-left:46px!important}
 .pdv .bal-sug{margin-top:8px}
 .pdv-tab{flex:1;margin-top:12px;overflow:auto}
-.pdv-tab table{width:100%;border-collapse:collapse;font-size:1.08rem}
+.pdv-tab table{width:100%;border-collapse:collapse;font-size:1rem}
 .pdv-tab th{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);text-align:left;padding:8px 10px;border-bottom:2px solid var(--line)}
 .pdv-tab td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
 .pdv-tab td small{display:block;color:var(--mut);font-size:.8rem}
 .pdv-tab .n{text-align:right;white-space:nowrap}
-.pdv-tab td.tot{font-weight:800;font-size:1.18rem}
+.pdv-tab td.tot{font-weight:800;font-size:1.05rem}
 .pdv-tab td.acs{white-space:nowrap;text-align:right;width:1%}
 .pdv-tab td.acs .btn{padding:8px 10px;margin-left:4px}
 .pdv-tab tr.novo td{background:#fff8dc}
@@ -552,10 +552,10 @@ main{width:calc(100% - 48px)}
 .pdv-tab tr.pdv-desc td{color:var(--ok);font-weight:700}
 .pdv-vazio{text-align:center;color:var(--mut);padding:48px 16px}.pdv-vazio b{font-size:1.3rem;color:var(--txt)}.pdv-vazio p{line-height:1.7}
 .pdv-lado{padding:16px;display:flex;flex-direction:column;gap:10px;position:sticky;top:12px}
-.pdv-total{border-radius:16px;padding:18px;background:#1b2433;color:#fff;text-align:right}
-.pdv-total small{display:block;text-transform:uppercase;letter-spacing:.08em;font-size:.78rem;opacity:.8;text-align:left}
-.pdv-total b{display:block;font-size:2.7rem;line-height:1.15;color:#ffc61a;font-variant-numeric:tabular-nums}
-.pdv-total span{font-size:.85rem;opacity:.8}
+.pdv-total{border-radius:16px;padding:20px 20px 18px;background:#1b2433;color:#fff;text-align:left}
+.pdv-total small{display:block;text-transform:uppercase;letter-spacing:.08em;font-size:.85rem;opacity:.8}
+.pdv-total b{display:block;font-size:3.7rem;line-height:1.1;margin:6px 0 4px;color:#ffc61a;font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap}
+.pdv-total span{font-size:.95rem;opacity:.85}
 .pdv-bt{font-size:1.35rem!important;padding:18px!important;width:100%}
 .pdv-g{display:grid;gap:8px}.pdv-g .btn{width:100%;justify-content:space-between;text-align:left;display:flex;align-items:center;gap:8px}
 .pdv-ult{font-size:.9rem;color:var(--mut);border-top:1px solid var(--line);padding-top:10px}.pdv-ult small{display:block;text-transform:uppercase;font-size:.72rem;letter-spacing:.06em}

@@ -174,7 +174,7 @@ async function api(acao,{metodo='GET',corpo=null}={}){
 }
 const quando=t=>{const d=new Date(t*1000);return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' às '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
 function linkDemo(d){
-  const base=location.hostname==='central.legislagov.com.br'?'https://rural.legislagov.com.br/':location.origin+'/rural/';
+  const base=/^central\.(legislagov|grsoftware)\.com\.br$/.test(location.hostname)?'https://rural.grsoftware.com.br/':location.origin+'/rural/';
   return base+'?demo='+d.codigo;
 }
 function nomeSist(id){return (P&&P.sistemas.find(s=>s.id===id)||{nome:id}).nome}
@@ -299,7 +299,7 @@ function trocarSenha(){
 function alertar(t){modal(`<h2>${esc(t)}</h2><div class="rod"><button class="btn pri" id="ok">Ok</button></div>`,f=>$('#ok',f).onclick=fechar)}
 /* ===================== LegislaGov Rural: clientes, senhas e acesso ===================== */
 const gerar=()=>{const a='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',v=new Uint32Array(10);crypto.getRandomValues(v);return [...v].map(x=>a[x%a.length]).join('')};
-const linkHorta=c=>(location.hostname==='central.legislagov.com.br'?'https://rural.legislagov.com.br/':location.origin+'/rural/')+'?e='+encodeURIComponent(c);
+const linkHorta=c=>(/^central\.(legislagov|grsoftware)\.com\.br$/.test(location.hostname)?'https://rural.grsoftware.com.br/':location.origin+'/rural/')+'?e='+encodeURIComponent(c);
 let RURAL={hortas:[],aberta:''};
 async function telaRural(){
   try{RURAL.hortas=(await api('rural/hortas')).hortas}catch(e){if(e.message!=='sessao')alertar(e.message);return}
@@ -580,7 +580,7 @@ function novoRest(x){
   });
 }
 function mostrarAcessoRest(nome,login,senha,tipo){
-  const acg=tipo==='acougue',link='https://d1xi1g7etepsye.cloudfront.net/'+(acg?'acougue':'');
+  const acg=tipo==='acougue',link=acg?'https://acougue.grsoftware.com.br/':'https://restaurante.grsoftware.com.br/';
   modal(`<h2>Acesso criado</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Endereço<input value="${link}" readonly></label><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(senha)}" readonly style="font-family:ui-monospace,monospace"></label>
     <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{const t=`GR ${acg?'Açougue':'Restaurante'}\n${link}\nUsuário: ${login}\nSenha: ${senha}`;try{await navigator.clipboard.writeText(t)}catch(e){const x=document.createElement('textarea');x.value=t;g.appendChild(x);x.select();document.execCommand('copy');x.remove()}$('#cp',g).textContent='Copiado'}},{travar:true});
 }

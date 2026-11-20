@@ -1,5 +1,5 @@
 """
-LegislaGov Central — área restrita da empresa (central.legislagov.com.br).
+GR Central — área restrita da empresa (central.grsoftware.com.br; também central.legislagov.com.br).
 
 Quem entra: os sócios (Ricardo e Geraldo). No primeiro acesso a senha é a MESMA do painel da Câmara de
 Neves Paulista (o resumo PBKDF2 é copiado de lá; nenhuma senha fica no código). Depois cada um pode
@@ -43,14 +43,14 @@ SISTEMAS = [
      "outros": [["Site da Câmara", "https://neves.legislagov.com.br/"], ["Ambiente de teste", "https://teste.legislagov.com.br/painel/"]], "demo": False},
     {"id": "rural", "nome": "GR Rural", "icone": "em-rural.png", "cor": "#3fae4f",
      "desc": "Rotas, vendedores, troco, trocas, fiado, despesas e rastreio da horta.",
-     "abrir": ["Abrir o Rural", "https://rural.legislagov.com.br/"],
+     "abrir": ["Abrir o Rural", "https://rural.grsoftware.com.br/"],
      "outros": [["Pelo endereço de teste", "https://teste.legislagov.com.br/rural/"]], "demo": True},
     {"id": "restaurante", "nome": "GR Restaurante / Açougue", "icone": "em-restaurante.png", "cor": "#d32f2f",
      "desc": "Restaurante: mesas, caixa, estoque, delivery e app do garçom. Açougue: caixa por quilo e grama, cancelar e devolver item.",
-     "abrir": ["Abrir o caixa", "https://d1xi1g7etepsye.cloudfront.net/"],
-     "outros": [["App do garçom", "https://d1xi1g7etepsye.cloudfront.net/garcom"], ["Caixa do açougue", "https://d1xi1g7etepsye.cloudfront.net/acougue"]],
-     "qr": ["App do garçom", "https://d1xi1g7etepsye.cloudfront.net/garcom"],
-     "baixar": ["Baixar o app do açougue", "https://d1xi1g7etepsye.cloudfront.net/acougue"], "demo": False},
+     "abrir": ["Abrir o caixa", "https://restaurante.grsoftware.com.br/"],
+     "outros": [["App do garçom", "https://restaurante.grsoftware.com.br/garcom"], ["Caixa do açougue", "https://acougue.grsoftware.com.br/"], ["Cardápio da Casa Saravalli", "https://casasaravalli.grsoftware.com.br/"]],
+     "qr": ["App do garçom", "https://restaurante.grsoftware.com.br/garcom"],
+     "baixar": ["Baixar o app do açougue", "https://acougue.grsoftware.com.br/"], "demo": False},
     {"id": "email", "nome": "Painel de e-mails", "icone": "em-email.png", "cor": "#7a4fd6",
      "desc": "Caixas de e-mail institucionais: criar, trocar senha e mandar avisos.",
      "abrir": ["Abrir o painel de e-mails", "https://email.legislagov.com.br/"],
@@ -60,7 +60,7 @@ SISTEMAS = [
      "abrir": ["Abrir o atendimento", "https://teste.legislagov.com.br/cliente/"], "outros": [], "demo": False},
     {"id": "site-gr", "nome": "Site GR Software", "icone": "gr-emblema.webp", "cor": "#19e3d0",
      "desc": "Portal da empresa: seu sistema, do seu jeito. Modelos prontos e personalização.",
-     "abrir": ["Abrir o site da GR", "https://teste.legislagov.com.br/gr/"], "outros": [["grsoftware.com.br (quando comprar)", "https://grsoftware.com.br/"]], "demo": False},
+     "abrir": ["Abrir o site da GR", "https://grsoftware.com.br/"], "demo": False},
     {"id": "site", "nome": "Site LegislaGov (Câmaras)", "icone": "em-site.png", "cor": "#7b8796",
      "desc": "Página da empresa, produtos e planos.",
      "abrir": ["Abrir o site", "https://legislagov.com.br/"], "outros": [], "demo": False},

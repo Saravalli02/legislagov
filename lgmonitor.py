@@ -12,10 +12,11 @@ import lgapi
 PASTA = os.path.dirname(os.path.abspath(__file__))
 COPIAS = os.environ.get("LG_COPIAS", "/var/lib/legislagov/copias")
 INTERVALO = 600
-DOMINIOS = ["neves.legislagov.com.br", "teste.legislagov.com.br", "rural.legislagov.com.br", "email.legislagov.com.br", "central.legislagov.com.br"]
+DOMINIOS = ["neves.legislagov.com.br", "teste.legislagov.com.br", "rural.legislagov.com.br", "email.legislagov.com.br", "central.legislagov.com.br",
+            "grsoftware.com.br", "central.grsoftware.com.br", "rural.grsoftware.com.br"]
 SITES = [("Câmara de Neves Paulista", "https://neves.legislagov.com.br/"), ("Ambiente de teste", "https://teste.legislagov.com.br/"),
-         ("GR Rural", "https://rural.legislagov.com.br/"), ("Painel de e-mails", "https://email.legislagov.com.br/"),
-         ("GR Restaurante / Açougue", "https://d1xi1g7etepsye.cloudfront.net/api/ping"), ("Site da empresa", "https://legislagov.com.br/")]
+         ("GR Rural", "https://rural.grsoftware.com.br/"), ("Painel de e-mails", "https://email.legislagov.com.br/"),
+         ("GR Restaurante / Açougue", "https://restaurante.grsoftware.com.br/api/ping"), ("Site GR Software", "https://grsoftware.com.br/"), ("Site LegislaGov (Câmaras)", "https://legislagov.com.br/")]
 
 _pronto = {"ok": False}
 
