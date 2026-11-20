@@ -100,7 +100,7 @@ const mk=base=>async e=>{
   if(p==='/reserva'&&m==='GET'){const v=await reservaInfo(pubSt());return J(200,v)}
   if(p==='/reserva'&&m==='POST')return reservar(pubSt(),e,corpo(e));
   if(p==='/entrar'&&m==='POST'){const b=corpo(e);
-    try{const r=await post('rest/entrar',{usuario:b.usuario,senha:b.senha,tipo:b.tipo==='acougue'?'acougue':'restaurante'});return J(r.s,r.b)}catch(x){return J(503,{erro:'Sem conexão com a LegislaGov. Tente de novo em instantes.'})}}
+    try{const r=await post('rest/entrar',{usuario:b.usuario,senha:b.senha,tipo:b.tipo==='acougue'?'acougue':'restaurante',dev:String(b.dev||'').slice(0,64),ip:String((e.headers||{})['x-forwarded-for']||'').split(',')[0].trim()||(e.requestContext.http&&e.requestContext.http.sourceIp)||'',ua:String(b.ua||(e.headers||{})['user-agent']||'').slice(0,300)});return J(r.s,r.b)}catch(x){return J(503,{erro:'Sem conexão com a LegislaGov. Tente de novo em instantes.'})}}
   if(p==='/sair'&&m==='POST'){if(t){SES.delete(t);try{await post('rest/sair',{token:t})}catch(x){}}return J(200,{ok:1})}
   const ss=await sessao(t),v=ss.v;
   if(v===0)return J(401,{erro:'login'});if(v===2)return J(423,{erro:'suspenso'});if(v===3)return J(503,{erro:'central'});

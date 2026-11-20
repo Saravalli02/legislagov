@@ -194,7 +194,7 @@ def _resumo(t):
     return hashlib.sha256(("rest:" + str(t)).encode()).hexdigest()
 
 
-def rest_entrar(c, login, senha, tipo=None):
+def rest_entrar(c, login, senha, tipo=None, dev=None, ip='', ua=''):
     login = str(login or "").strip().lower()
     u = c.execute("SELECT * FROM ct_rest_usuarios WHERE usuario=?", (login,)).fetchone()
     agora = time.time()
@@ -221,6 +221,10 @@ def rest_entrar(c, login, senha, tipo=None):
                (401, {"ok": False, "erro": "Usuário ou senha incorretos."})
     if bloqueado("restaurante", u["cliente"], u["id"]):
         return 423, {"ok": False, "erro": MSG}
+    cl = c.execute("SELECT nome FROM ct_clientes WHERE sistema='restaurante' AND id=?", (u["cliente"],)).fetchone()
+    barra = porta(c, "restaurante", "restaurante:" + u["id"], f"{u['nome']} ({u['usuario']}) · {cl['nome'] if cl else u['cliente']}", dev, ip, ua)
+    if barra:
+        return barra
     t = secrets.token_urlsafe(32)
     c.execute("INSERT INTO ct_rest_sess VALUES(?,?,?,?,?)", (_resumo(t), u["id"], u["cliente"], agora + REST_DIAS * 86400, agora))
     c.execute("UPDATE ct_rest_usuarios SET falhas=0, bloqueio=0, ultimo=? WHERE id=?", (agora, u["id"]))
@@ -315,3 +319,163 @@ def master(login, senha):
 def master_hash(login):
     r = lgapi._db().execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=?", (CAMARA_MASTER, str(login).lower())).fetchone()
     return r["senha"] if r else None
+
+
+# ------------------------------------------------------------------ aparelhos autorizados (pedido de 20/11/2026)
+# Cada computador/celular recebe uma marca (cookie lg_dev ou id do app) na primeira vez. Cada usuário pode ter
+# até LIMITE_APARELHOS liberados; os primeiros entram sozinhos, o seguinte fica "pendente" esperando a GR liberar
+# na Central (Segurança › Aparelhos). Todo acesso fica registrado com IP, aparelho e horário.
+# O usuário master (Ricardo) não tem limite.
+LIMITE_APARELHOS = 3
+_ap = {"ok": False}
+
+
+def _apdb(c):
+    if not _ap["ok"]:
+        c.executescript("""
+        CREATE TABLE IF NOT EXISTS ct_aparelhos(sistema TEXT NOT NULL, conta TEXT NOT NULL, dev TEXT NOT NULL, rotulo TEXT, nome TEXT, ip TEXT, ua TEXT,
+            primeiro REAL, ultimo REAL, status TEXT NOT NULL DEFAULT 'ok', PRIMARY KEY(sistema, conta, dev));
+        CREATE TABLE IF NOT EXISTS ct_acessos(id INTEGER PRIMARY KEY AUTOINCREMENT, sistema TEXT, conta TEXT, rotulo TEXT, dev TEXT, nome TEXT,
+            ip TEXT, quando REAL, resultado TEXT);
+        """)
+        _ap["ok"] = True
+    return c
+
+
+def nome_aparelho(ua):
+    ua = str(ua or "")
+    so = ("iPhone" if "iPhone" in ua else "iPad" if "iPad" in ua else "Celular Android" if "Android" in ua and "Mobile" in ua
+          else "Tablet Android" if "Android" in ua else "Computador Windows" if "Windows" in ua else "Mac" if "Macintosh" in ua
+          else "Linux" if "Linux" in ua else "Aparelho")
+    nav = ("Edge" if "Edg/" in ua else "Opera" if "OPR/" in ua else "Samsung Internet" if "SamsungBrowser" in ua else "Chrome" if "Chrome/" in ua
+           else "Firefox" if "Firefox/" in ua else "Safari" if "Safari/" in ua else "")
+    return so + (" · " + nav if nav else "")
+
+
+def dev_valido(dev):
+    dev = str(dev or "")
+    return dev if re.fullmatch(r"[A-Za-z0-9_-]{16,64}", dev) else ""
+
+
+def porta(c, sistema, conta, rotulo, dev, ip, ua):
+    """Confere o aparelho no login. Devolve None se pode entrar, ou (código, resposta) se não pode."""
+    _apdb(c)
+    agora, dev = time.time(), dev_valido(dev)
+    nome = nome_aparelho(ua)
+    if not dev:   # app antigo sem marca: registra o acesso, não barra (o app novo sempre manda)
+        c.execute("INSERT INTO ct_acessos(sistema, conta, rotulo, dev, nome, ip, quando, resultado) VALUES(?,?,?,?,?,?,?,?)",
+                  (sistema, conta, rotulo, "", nome, ip, agora, "entrou (app antigo, sem marca)"))
+        return None
+    r = c.execute("SELECT * FROM ct_aparelhos WHERE sistema=? AND conta=? AND dev=?", (sistema, conta, dev)).fetchone()
+    res, bloq = "entrou", None
+    if r and r["status"] == "ok":
+        c.execute("UPDATE ct_aparelhos SET ultimo=?, ip=?, ua=?, nome=?, rotulo=? WHERE sistema=? AND conta=? AND dev=?",
+                  (agora, ip, str(ua)[:300], nome, rotulo, sistema, conta, dev))
+    elif r and r["status"] == "recusado":
+        res, bloq = "recusado", "Este aparelho foi recusado para este usuário. Fale com a GR Software."
+        c.execute("UPDATE ct_aparelhos SET ultimo=?, ip=? WHERE sistema=? AND conta=? AND dev=?", (agora, ip, sistema, conta, dev))
+    else:
+        n = c.execute("SELECT COUNT(*) FROM ct_aparelhos WHERE sistema=? AND conta=? AND status='ok'", (sistema, conta)).fetchone()[0]
+        if n < LIMITE_APARELHOS and not r:
+            c.execute("INSERT INTO ct_aparelhos VALUES(?,?,?,?,?,?,?,?,?,'ok')", (sistema, conta, dev, rotulo, nome, ip, str(ua)[:300], agora, agora))
+            res = f"entrou (aparelho novo liberado, {n + 1} de {LIMITE_APARELHOS})"
+        else:
+            if r:
+                c.execute("UPDATE ct_aparelhos SET ultimo=?, ip=?, ua=?, nome=?, rotulo=? WHERE sistema=? AND conta=? AND dev=?",
+                          (agora, ip, str(ua)[:300], nome, rotulo, sistema, conta, dev))
+            else:
+                c.execute("INSERT INTO ct_aparelhos VALUES(?,?,?,?,?,?,?,?,?,'pendente')", (sistema, conta, dev, rotulo, nome, ip, str(ua)[:300], agora, agora))
+            res = "barrado (aparelho novo esperando liberação)"
+            bloq = (f"Este aparelho ainda não está liberado. Seu usuário já tem {LIMITE_APARELHOS} aparelhos liberados. "
+                    "Peça para a GR Software liberar este aparelho e tente de novo.")
+    c.execute("INSERT INTO ct_acessos(sistema, conta, rotulo, dev, nome, ip, quando, resultado) VALUES(?,?,?,?,?,?,?,?)",
+              (sistema, conta, rotulo, dev, nome, ip, agora, res))
+    c.execute("DELETE FROM ct_acessos WHERE quando < ?", (agora - 120 * 86400,))
+    if bloq:
+        return 403, {"ok": False, "aparelho": True, "erro": bloq}
+    return None
+
+
+def aparelho_ok(c, sistema, conta, dev):
+    """Para conferir sessões já abertas: o aparelho continua liberado?"""
+    _apdb(c)
+    dev = dev_valido(dev)
+    if not dev:
+        return True
+    r = c.execute("SELECT status FROM ct_aparelhos WHERE sistema=? AND conta=? AND dev=?", (sistema, conta, dev)).fetchone()
+    return not r or r["status"] == "ok"
+
+
+def aparelhos_lista(c):
+    _apdb(c)
+    ap = [dict(r) for r in c.execute("SELECT sistema, conta, dev, rotulo, nome, ip, primeiro, ultimo, status FROM ct_aparelhos ORDER BY ultimo DESC")]
+    ac = [dict(r) for r in c.execute("SELECT sistema, conta, rotulo, dev, nome, ip, quando, resultado FROM ct_acessos ORDER BY id DESC LIMIT 300")]
+    return {"ok": True, "limite": LIMITE_APARELHOS, "aparelhos": ap, "acessos": ac,
+            "pendentes": sum(1 for a in ap if a["status"] == "pendente")}
+
+
+def aparelhos_pendentes(c):
+    try:
+        _apdb(c)
+        return c.execute("SELECT COUNT(*) FROM ct_aparelhos WHERE status='pendente'").fetchone()[0]
+    except Exception:
+        return 0
+
+
+def _matar_sessoes(c, sistema, conta):
+    uid = conta.split(":", 1)[1] if ":" in conta else conta
+    try:
+        if sistema == "restaurante":
+            c.execute("DELETE FROM ct_rest_sess WHERE uid=?", (uid,))
+        elif sistema == "rural":
+            c.execute("DELETE FROM rural_sess WHERE usuario_id=?", (uid,))
+        elif sistema == "email":
+            c.execute("DELETE FROM em_sess WHERE usuario_id=?", (uid,))
+    except Exception as e:
+        print("aparelhos: encerrar sessões", sistema, repr(e), flush=True)
+
+
+def aparelho_acao(c, d):
+    _apdb(c)
+    sis, conta, dev, acao = str(d.get("sistema") or ""), str(d.get("conta") or ""), str(d.get("dev") or ""), d.get("acao")
+    r = c.execute("SELECT * FROM ct_aparelhos WHERE sistema=? AND conta=? AND dev=?", (sis, conta, dev)).fetchone()
+    if not r:
+        return 404, {"ok": False, "erro": "Aparelho não encontrado."}
+    if acao == "liberar":
+        c.execute("UPDATE ct_aparelhos SET status='ok' WHERE sistema=? AND conta=? AND dev=?", (sis, conta, dev))
+    elif acao == "recusar":
+        c.execute("UPDATE ct_aparelhos SET status='recusado' WHERE sistema=? AND conta=? AND dev=?", (sis, conta, dev))
+        _matar_sessoes(c, sis, conta)
+    elif acao == "remover":   # tira da lista: se voltar, conta como aparelho novo
+        c.execute("DELETE FROM ct_aparelhos WHERE sistema=? AND conta=? AND dev=?", (sis, conta, dev))
+        _matar_sessoes(c, sis, conta)
+    else:
+        return 400, {"ok": False, "erro": "Ação inválida."}
+    return 200, {"ok": True, "rotulo": r["rotulo"], "nome": r["nome"]}
+
+
+def dev_do_pedido(h):
+    """Marca do aparelho pelo cookie lg_dev (sistemas no nosso servidor). Cria uma nova se não houver."""
+    ck = h.headers.get("Cookie", "") or ""
+    m = re.search(r"(?:^|;\s*)lg_dev=([A-Za-z0-9_-]{16,64})", ck)
+    if m:
+        return m.group(1)
+    d = secrets.token_urlsafe(24)
+    h._lg_cookie = f"lg_dev={d}; Path=/; Max-Age=157680000; HttpOnly; Secure; SameSite=Lax"
+    return d
+
+
+def porta_login(c, h, sistema, cod, r, ip, rotulo_fn, resumo_fn):
+    """Chamado depois de um login 200: confere o aparelho; se não puder, desfaz a sessão e devolve o recusa."""
+    if cod != 200 or not r.get("token"):
+        return cod, r
+    s = r.get("sessao") or {}
+    uid = s.get("uid") or s.get("id")
+    if not uid or str(uid).startswith("master:") or str(s.get("usuario", "")) in MASTERS:
+        return cod, r
+    barra = porta(c, sistema, f"{sistema}:{uid}", rotulo_fn(s), dev_do_pedido(h), ip, h.headers.get("User-Agent", ""))
+    if barra:
+        tabela, col = {"rural": ("rural_sess", "token"), "email": ("em_sess", "token")}[sistema]
+        c.execute(f"DELETE FROM {tabela} WHERE {col}=?", (resumo_fn(r["token"]),))
+        return barra
+    return cod, r

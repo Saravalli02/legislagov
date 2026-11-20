@@ -290,7 +290,16 @@ def painel(c, s):
         print("central: resumo da administração", repr(e), flush=True)
         adm = None
     return {"ok": True, "bloqueados": bloq, "sessao": {k: v for k, v in s.items() if not k.startswith("_")}, "sistemas": SISTEMAS,
-            "prazos": [{"horas": h, "nome": n} for h, n in PRAZOS.items()], "demos": demos, "admin": adm}
+            "prazos": [{"horas": h, "nome": n} for h, n in PRAZOS.items()], "demos": demos, "admin": adm,
+            "aparelhosPend": _ap_pend()}
+
+
+def _ap_pend():
+    try:
+        import lgacesso
+        return lgacesso.aparelhos_pendentes(lgacesso._db())
+    except Exception:
+        return 0
 
 
 # ---------------------------------------------------------------- HTTP
@@ -352,7 +361,8 @@ def rota(h, metodo):
             with lgapi._trava:
                 rc = lgacesso._db()
                 if acao == "rest/entrar":
-                    return _resp(h, *lgacesso.rest_entrar(rc, corpo.get("usuario"), corpo.get("senha"), corpo.get("tipo")))
+                    return _resp(h, *lgacesso.rest_entrar(rc, corpo.get("usuario"), corpo.get("senha"), corpo.get("tipo"),
+                                                          corpo.get("dev"), str(corpo.get("ip") or "")[:64], str(corpo.get("ua") or "")[:300]))
                 if acao == "rest/sessao":
                     return _resp(h, *lgacesso.rest_sessao(rc, str(corpo.get("token") or "")))
                 if acao == "rest/sair":
@@ -386,6 +396,17 @@ def rota(h, metodo):
                 return _resp(h, *criar_demo(c, s, corpo, ip))
             if acao == "demos/encerrar" and metodo == "POST":
                 return _resp(h, *encerrar_demo(c, s, corpo.get("id"), ip))
+            # ---- aparelhos autorizados por usuário (até 3) e registro de acessos com IP
+            if acao == "seguranca/aparelhos" and metodo == "GET":
+                import lgacesso
+                return _resp(h, 200, lgacesso.aparelhos_lista(lgacesso._db()))
+            if acao == "seguranca/aparelho" and metodo == "POST":
+                import lgacesso
+                cod, r = lgacesso.aparelho_acao(lgacesso._db(), corpo)
+                if cod == 200:
+                    _log(c, s["usuario"], "Aparelho " + {"liberar": "liberado", "recusar": "recusado", "remover": "removido"}.get(corpo.get("acao"), "?"),
+                         f"{r['rotulo']} · {r['nome']}", ip)
+                return _resp(h, cod, r)
             # ---- endereços (IP) bloqueados no servidor
             if acao == "seguranca/ips" and metodo == "GET":
                 return _resp(h, 200, {"ok": True, "ips": lgapi.ip_lista(), "voce": ip})

@@ -546,6 +546,9 @@ def _resp(h, cod, d):
     h.send_header("Content-Type", "application/json; charset=utf-8")
     h.send_header("Content-Length", str(len(corpo)))
     h.send_header("Cache-Control", "no-store")
+    if getattr(h, "_lg_cookie", None):
+        h.send_header("Set-Cookie", h._lg_cookie)
+        h._lg_cookie = None
     h.end_headers()
     h.wfile.write(corpo)
     return True
@@ -601,6 +604,8 @@ def rota(h, metodo):
                 return _resp(h, cod, r)
             if acao == "entrar" and metodo == "POST":
                 cod, r = entrar(c, corpo.get("usuario"), corpo.get("senha"))
+                import lgacesso
+                cod, r = lgacesso.porta_login(c, h, "email", cod, r, ip, lambda s: f"{s.get('nome')} ({s.get('usuario')}) · e-mails {s.get('org') or ''}", _resumo)
                 lgapi.registrar("email", str(corpo.get("usuario"))[:40], "E-mail: entrou" if cod == 200 else "E-mail: senha errada", "", ip)
                 if cod in (401, 429):
                     lgapi._falha_ip(ip, None, "E-mails")

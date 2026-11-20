@@ -206,12 +206,15 @@ async function tela(){
     <div class="${ativas.length?'demos':''}">${ativas.length?ativas.map(linhaDemo).join(''):'<div class="vazio">Nenhuma demonstração ativa. Use “Criar demonstração” no sistema que quer mostrar.</div>'}</div>
     ${velhas.length?`<h2>Encerradas</h2><div class="demos">${velhas.map(linhaDemo).join('')}</div>`:''}
     <h2>Segurança</h2>
+    <section class="horta" style="margin-bottom:12px"><div class="hl"><div><b>Aparelhos dos usuários e acessos (IP)</b><span class="st ${P.aparelhosPend?'off susp':'on'}">${P.aparelhosPend?P.aparelhosPend+' aparelho(s) esperando liberação':'nenhum esperando'}</span>
+      <small>Cada usuário dos sistemas (Restaurante, Açougue, Rural, E-mails) pode entrar em até 3 aparelhos. Os 3 primeiros entram sozinhos; um aparelho novo fica esperando você liberar aqui. Cada acesso fica registrado com IP, aparelho e horário.</small></div>
+      <div class="acoes"><button class="btn ${P.aparelhosPend?'demo':''}" id="apBt">Ver aparelhos e acessos</button></div></div></section>
     <section class="horta"><div class="hl"><div><b>Endereços (IP) bloqueados</b><span class="st ${P.bloqueados?'off susp':'on'}">${P.bloqueados?P.bloqueados+' bloqueado(s) agora':'nenhum agora'}</span>
       <small>O servidor bloqueia sozinho quem erra senha muitas vezes ou faz acessos demais: 1 hora na 1ª vez, 24 horas na 2ª e 7 dias da 3ª em diante. Aqui você vê, desbloqueia ou bloqueia para sempre.</small></div>
       <div class="acoes"><button class="btn" id="segBt">Ver e gerenciar</button></div></div></section>
     <p class="fim">LegislaGov · CNPJ 70.200.706/0001-82 · este site não é governamental.</p>
   </main>`;
-  ligarTema();$('#segBt').onclick=telaSeguranca;
+  ligarTema();$('#segBt').onclick=telaSeguranca;$('#apBt').onclick=()=>telaAparelhos();
   $('#inicioBt').onclick=e=>{e.preventDefault();fechar();tela().then(()=>scrollTo(0,0))};
   document.querySelectorAll('[data-adm]').forEach(b=>b.onclick=()=>telaAdmin(b.dataset.adm));
   if(/^#(sistemas|admin)/.test(location.hash)){const ab=location.hash.slice(1)==='admin'?'avisos':'sistemas';history.replaceState(null,'',location.pathname);telaAdmin(ab);return}
@@ -607,6 +610,31 @@ function editarCliRest(x){
 }
 
 /* ===================== Segurança: endereços bloqueados ===================== */
+const SISN={restaurante:'Restaurante / Açougue',rural:'Rural',email:'E-mails'};
+async function telaAparelhos(){
+  let r;try{r=await api('seguranca/aparelhos')}catch(e){return}
+  const voltar='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+  const contas={};r.aparelhos.forEach(a=>{const k=a.sistema+'|'+a.conta;(contas[k]=contas[k]||{sistema:a.sistema,conta:a.conta,rotulo:a.rotulo,lista:[]}).lista.push(a)});
+  const pend=r.aparelhos.filter(a=>a.status==='pendente');
+  const st={ok:['on','Liberado'],pendente:['off susp','Esperando'],recusado:['off','Recusado']};
+  const bts=a=>{const d=`data-s="${esc(a.sistema)}" data-c="${esc(a.conta)}" data-d="${esc(a.dev)}"`;
+    return `${a.status!=='ok'?`<button class="btn demo" ${d} data-a="liberar">Liberar</button>`:''}${a.status!=='recusado'?`<button class="btn" ${d} data-a="recusar">Recusar</button>`:''}<button class="btn perigo" ${d} data-a="remover">Remover</button>`};
+  const linha=a=>`<tr><td><b>${esc(a.nome||'Aparelho')}</b><br><small class="dica">desde ${quando(a.primeiro)}</small></td><td><code>${esc(a.ip||'—')}</code></td><td>${quando(a.ultimo)}</td><td><span class="st ${st[a.status][0]}">${st[a.status][1]}</span></td><td class="dir">${bts(a)}</td></tr>`;
+  const grupo=g=>{const ok=g.lista.filter(a=>a.status==='ok').length;return `<div class="horta" style="margin-bottom:12px"><div class="hl" style="margin-bottom:8px"><div><b>${esc(g.rotulo||g.conta)}</b><small>${esc(SISN[g.sistema]||g.sistema)} · ${ok} de ${r.limite} aparelhos liberados</small></div></div>
+    <table class="tab"><thead><tr><th>Aparelho</th><th>Último IP</th><th>Último acesso</th><th>Situação</th><th></th></tr></thead><tbody>${g.lista.map(linha).join('')}</tbody></table></div>`};
+  $('main').innerHTML=`<button class="tbtn" id="volta" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:18px">${voltar}Sistemas</button>
+    <h1>Aparelhos e acessos</h1><p class="sub">Cada usuário pode ter até <b>${r.limite}</b> aparelhos liberados (ex.: celular, notebook e o computador do caixa). Os primeiros entram sozinhos; o seguinte fica esperando aqui. <b>Recusar</b> ou <b>Remover</b> tira o usuário de todos os aparelhos na hora (os liberados é só entrar de novo). Removido, o aparelho conta como novo se voltar.</p>
+    ${pend.length?`<h2>Esperando liberação (${pend.length})</h2><div class="horta" style="border-color:#f0b000"><table class="tab"><thead><tr><th>Usuário</th><th>Aparelho</th><th>IP</th><th>Quando tentou</th><th></th></tr></thead><tbody>${pend.map(a=>`<tr><td><b>${esc(a.rotulo||a.conta)}</b><br><small class="dica">${esc(SISN[a.sistema]||a.sistema)}</small></td><td>${esc(a.nome||'')}</td><td><code>${esc(a.ip||'')}</code></td><td>${quando(a.ultimo)}</td><td class="dir">${bts(a)}</td></tr>`).join('')}</tbody></table></div>`:''}
+    <h2>Aparelhos por usuário</h2>
+    ${Object.keys(contas).length?Object.values(contas).map(grupo).join(''):'<div class="vazio">Ainda ninguém entrou com a versão nova. Os aparelhos aparecem aqui a partir do próximo login de cada usuário.</div>'}
+    <h2>Últimos acessos</h2>
+    ${r.acessos.length?`<div class="horta"><table class="tab"><thead><tr><th>Quando</th><th>Usuário</th><th>Aparelho</th><th>IP</th><th>Resultado</th></tr></thead><tbody>${r.acessos.slice(0,150).map(x=>`<tr><td>${quando(x.quando)}</td><td>${esc(x.rotulo||x.conta)}</td><td>${esc(x.nome||'')}</td><td><code>${esc(x.ip||'')}</code></td><td>${/barrado|recusado/.test(x.resultado)?`<b style="color:#c0392b">${esc(x.resultado)}</b>`:esc(x.resultado)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="vazio">Nenhum acesso registrado ainda.</div>'}`;
+  $('#volta').onclick=()=>tela();
+  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const a=b.dataset.a;
+    if(a!=='liberar'&&!confirm(a==='recusar'?'Recusar este aparelho? O usuário sai de todos os aparelhos agora e este não entra mais.':'Remover este aparelho? O usuário sai de todos os aparelhos agora; se este voltar, conta como novo.'))return;
+    try{await api('seguranca/aparelho',{metodo:'POST',corpo:{sistema:b.dataset.s,conta:b.dataset.c,dev:b.dataset.d,acao:a}});telaAparelhos()}catch(e){if(e.message!=='sessao')alertar(e.message)}});
+  scrollTo(0,0);
+}
 async function telaSeguranca(){
   let r;try{r=await api('seguranca/ips')}catch(e){return}
   const voltar='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';

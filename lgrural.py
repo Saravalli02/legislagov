@@ -791,6 +791,9 @@ def _resp(h, cod, dados_):
     h.send_header("Content-Type", "application/json; charset=utf-8")
     h.send_header("Content-Length", str(len(corpo)))
     h.send_header("Cache-Control", "no-store")
+    if getattr(h, "_lg_cookie", None):
+        h.send_header("Set-Cookie", h._lg_cookie)
+        h._lg_cookie = None
     try:
         h.end_headers()
         h.wfile.write(corpo)
@@ -846,7 +849,10 @@ def rota(h, metodo):
                 c = _db()
                 if acao == "entrar" and metodo == "POST":   # o usuário já diz de qual horta é
                     cod, r = entrar(c, empresa, corpo.get("usuario"), corpo.get("senha"))
-                    lgapi.registrar("rural:" + (r.get("empresa") or empresa or "?"), str(corpo.get("usuario"))[:40], "Rural: entrou" if cod == 200 else "Rural: senha errada", "", _ip(h))
+                    import lgacesso
+                    cod, r = lgacesso.porta_login(c, h, "rural", cod, r, _ip(h),
+                                                  lambda s: f"{s.get('nome')} ({s.get('usuario')}) · horta {r.get('empresa') or empresa}", _resumo)
+                    lgapi.registrar("rural:" + (r.get("empresa") or empresa or "?"), str(corpo.get("usuario"))[:40], "Rural: entrou" if cod == 200 else "Rural: aparelho não liberado" if cod == 403 else "Rural: senha errada", "", _ip(h))
                     if cod in (401, 429):
                         lgapi._falha_ip(_ip(h), None, "Rural")
                     return _resp(h, cod, r)
