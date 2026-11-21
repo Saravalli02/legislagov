@@ -169,12 +169,15 @@ main{padding-bottom:calc(env(safe-area-inset-bottom) + 104px)}
 .offline header{background:linear-gradient(135deg,#3a4238,#4d574a)}
 </style>
 <style>/* sem tracinho piscando fora dos campos (modo "cursor de texto" do navegador) */html,body{caret-color:transparent}input,textarea,select,[contenteditable],[contenteditable] *{caret-color:auto}</style>
+<style>.sair-bt{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 13px;margin-left:10px;border-radius:12px;border:1px solid #c4261d;background:#c4261d;color:#fff;font-weight:800;font-size:14px;cursor:pointer;flex:none}
+.sair-bt:hover{background:#a51f17}@media (max-width:420px){.sair-bt span{display:none}.sair-bt{padding:0 10px}}body.sem-sessao .sair-bt{display:none}</style>
 </head>
 <body>
 <header>
   <div class="logo"><img src="logo-gr.webp" alt=""></div>
   <div style="min-width:0"><h1 id="nomeApp">GR <span>Rural</span></h1><small id="quem">Gestão da horta</small></div>
   <div style="margin-left:auto;text-align:right"><button id="badgeLic" style="border:0;background:#ffffff26;color:#fff;border-radius:20px;padding:5px 10px;font-weight:700;font-size:13px">🔑 …</button><div class="sync" id="sync" style="margin-top:3px">carregando…</div></div>
+  <button class="sair-bt" id="sairTopo" onclick="confirmarSair()" title="Sair do sistema" aria-label="Sair do sistema"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>Sair</span></button>
 </header>
 <main id="app"></main>
 <nav id="nav">
@@ -427,6 +430,7 @@ function confirmar(msg,ok,rotulo){
 }
 
 function render(){
+  document.body.classList.toggle('sem-sessao',!TOKEN);
   if(ENCERRADA)return;
   try{faixaDemo()}catch(e){}
   if(ENCERRADA)return;
