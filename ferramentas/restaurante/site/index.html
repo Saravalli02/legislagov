@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v37">
+<meta name="lg-versao" content="lg-v38">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -1454,6 +1454,24 @@ async function imprimirDireto(html,perguntar){
   try{await impEnviar(htmlParaEscpos(html));toast('🖨️ Impresso');return true}
   catch(e){toast('A impressora não respondeu. Confira se está ligada e conecte de novo em Ajustes.');IMP.porta=null;IMP.bleCar=null;return false}}
 /* sempre abre a lista do navegador para escolher OUTRA impressora (esquece a escolhida antes) */
+/* Atalho "Caixa GR (imprime direto)": abre o caixa num Chrome/Edge próprio com --kiosk-printing,
+   que imprime na IMPRESSORA PADRÃO do Windows sem abrir janela nenhuma (serve para impressora USB comum). */
+if(new URLSearchParams(location.search).get('kiosk')==='1'){try{localStorage.setItem('lg-kiosk','1');localStorage.setItem('lg-impmodo','janela');localStorage.setItem('lg-autoprint','1')}catch(e){}}
+const impKiosk=()=>lsGet('lg-kiosk','')==='1';
+function baixarAtalho(){
+  const url=location.origin+location.pathname.replace(/\/(garcom)$/,'/')+'?kiosk=1',nome=ACG?'Caixa GR Acougue (imprime direto)':'Caixa GR Restaurante (imprime direto)',pasta=ACG?'GRAcougueCaixa':'GRCaixa';
+  const bat=['@echo off','title Criando o atalho do caixa GR','set "B="',
+    'if exist "%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe" set "B=%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe"',
+    'if not defined B if exist "%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe" set "B=%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe"',
+    'if not defined B if exist "%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe" set "B=%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe"',
+    'if not defined B if exist "%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe" set "B=%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe"',
+    'if not defined B if exist "%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe" set "B=%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe"',
+    'if not defined B (echo Nao encontrei o Google Chrome nem o Edge neste computador. & pause & exit /b)',
+    `powershell -NoProfile -ExecutionPolicy Bypass -Command "$w=New-Object -ComObject WScript.Shell; $d=[Environment]::GetFolderPath('Desktop'); $s=$w.CreateShortcut($d+'\\${nome}.lnk'); $s.TargetPath=$env:B; $s.Arguments='--kiosk-printing --user-data-dir='+[char]34+$env:LOCALAPPDATA+'\\${pasta}'+[char]34+' --app=${url}'; $s.IconLocation=$env:B+',0'; $s.Save()"`,
+    'echo.','echo Pronto! O atalho "'+nome+'" foi criado na Area de Trabalho.','echo Abra o caixa sempre por ele: tudo sai direto na impressora padrao do Windows.','echo.',
+    'start "" "%B%" --kiosk-printing --user-data-dir="%LOCALAPPDATA%\\'+pasta+'" --app='+url,'timeout /t 6 >nul'].join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([bat],{type:'application/octet-stream'}));a.download='criar-atalho-caixa-gr.bat';document.body.appendChild(a);a.click();a.remove();
+  abrirModal(`<h2>⬇️ Atalho baixado</h2><ol style="line-height:1.6;padding-left:18px"><li>Abra o arquivo <b>criar-atalho-caixa-gr.bat</b> que baixou (se o Windows avisar, toque em <b>Mais informações › Executar assim mesmo</b>).</li><li>Ele cria na Área de Trabalho o atalho <b>“${nome}”</b> e já abre o caixa por ele.</li><li>Entre com seu usuário e senha <b>uma vez</b> nessa janela nova.</li><li>Pronto: daqui pra frente, abra o caixa <b>sempre por esse atalho</b>. Todo “Imprimir” sai direto na <b>impressora padrão</b> (a Mini impressora), sem janela.</li></ol><button class="btn pri big" style="width:100%" onclick="fecharModal()">Entendi</button>`)}
 async function impEscolher(){
   try{if(IMP.porta){try{if(IMP.porta.writable)await IMP.porta.close()}catch(e){}try{if(IMP.porta.forget)await IMP.porta.forget()}catch(e){}}
     if('serial' in navigator&&impModo()==='serial')for(const p of await navigator.serial.getPorts()){try{if(p.writable)await p.close()}catch(e){}try{if(p.forget)await p.forget()}catch(e){}}
@@ -1477,7 +1495,8 @@ function cartaoImpDireta(){const m=impModo(),s=('serial' in navigator),b=('bluet
   return `<div class="card"><h3>🔌 Impressora direta (sem a janela do Windows)</h3>
   <p style="color:var(--mut);margin-top:0">Escolha uma vez e pronto: todo “Imprimir” sai direto na impressora de cupom, já no formato da bobina. Fica guardado neste computador/celular.</p>
   <div class="seg imp-seg">${[['serial','🔌 Cabo USB ou Bluetooth pareado (computador)'],['ble','📶 Bluetooth do celular/tablet'],['janela','🪟 Janela do Windows (como antes)']].map(([k,t])=>`<button class="${m===k?'act':''}" onclick="lsSet('lg-impmodo','${k}');IMP.porta=null;IMP.ble=null;render(true)">${t}</button>`).join('')}</div>
-  ${m==='janela'?`<div class="calc" style="margin-top:10px;font-size:.86rem;font-weight:500;line-height:1.5"><b>Para escolher a impressora certa na janela:</b><br>1. Toque em <b>Imprimir teste da bobina</b> (ao lado).<br>2. Em <b>Destino</b>, toque em <b>Ver mais…</b> e escolha a <b>Mini impressora</b> (não a ZDesigner, que é de etiqueta).<br>3. Em <b>Mais definições</b>: Margens = <b>Nenhuma</b> e desmarque <b>Cabeçalhos e rodapés</b>.<br>O Chrome lembra essa impressora nas próximas vezes.<br><br><b>Para ela virar a padrão do Windows:</b> Configurações › Bluetooth e dispositivos › Impressoras e scanners › desligue <b>“Permitir que o Windows gerencie minha impressora padrão”</b> › toque na <b>Mini impressora</b> › <b>Definir como padrão</b>.</div>`:`<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn pri" onclick="impEscolher()">🔎 ${IMP.porta||(IMP.ble&&IMP.bleCar)?'Trocar impressora':'Escolher / conectar impressora'}</button><button class="btn" onclick="impTeste()">🖨️ Imprimir teste</button>${m==='serial'?'<button class="btn" onclick="impTestarVelocidades()">🔁 Não saiu? Testar velocidades</button>':''}</div>
+  ${m==='janela'?`<div class="calc" style="margin-top:10px;background:#e9f7ef;border:1.5px solid #1f9d55"><b>🖨️ Impressora USB do Windows (ex.: Mini impressora) imprimindo direto, sem janela:</b><br><span style="font-weight:500;font-size:.88rem">Deixe a Mini impressora como <b>padrão</b> do Windows e crie o atalho abaixo. Abrindo o caixa por ele, tudo sai direto nela.</span><br>${impKiosk()?'<p style="margin:8px 0 0;font-weight:800;color:#14532d">✅ Este caixa foi aberto pelo atalho: a impressão já sai direto.</p>':''}<button class="btn ok" style="margin-top:8px" onclick="baixarAtalho()">⬇️ Criar atalho “Caixa GR (imprime direto)”</button></div>
+  <div class="calc" style="margin-top:10px;font-size:.86rem;font-weight:500;line-height:1.5"><b>Para escolher a impressora certa na janela:</b><br>1. Toque em <b>Imprimir teste da bobina</b> (ao lado).<br>2. Em <b>Destino</b>, toque em <b>Ver mais…</b> e escolha a <b>Mini impressora</b> (não a ZDesigner, que é de etiqueta).<br>3. Em <b>Mais definições</b>: Margens = <b>Nenhuma</b> e desmarque <b>Cabeçalhos e rodapés</b>.<br>O Chrome lembra essa impressora nas próximas vezes.<br><br><b>Para ela virar a padrão do Windows:</b> Configurações › Bluetooth e dispositivos › Impressoras e scanners › desligue <b>“Permitir que o Windows gerencie minha impressora padrão”</b> › toque na <b>Mini impressora</b> › <b>Definir como padrão</b>.</div>`:`<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn pri" onclick="impEscolher()">🔎 ${IMP.porta||(IMP.ble&&IMP.bleCar)?'Trocar impressora':'Escolher / conectar impressora'}</button><button class="btn" onclick="impTeste()">🖨️ Imprimir teste</button>${m==='serial'?'<button class="btn" onclick="impTestarVelocidades()">🔁 Não saiu? Testar velocidades</button>':''}</div>
   <p style="margin:8px 0 0;font-weight:700">${IMP.porta||(IMP.ble&&IMP.bleCar)?'🟢 Conectada: '+esc(IMP.nome):'⚪ Ainda não conectada nesta abertura (conecta sozinha ao imprimir, se já foi escolhida antes)'}</p>
   ${m==='serial'?`<div class="grid2" style="margin-top:8px"><div><label>Velocidade da porta</label><select onchange="lsSet('lg-impbaud',this.value);IMP.porta=null">${['9600','19200','38400','57600','115200'].map(v=>`<option ${lsGet('lg-impbaud','9600')===v?'selected':''}>${v}</option>`).join('')}</select></div>
     <div><label>Papel depois de imprimir</label><select onchange="lsSet('lg-impavanco',this.value)">${[['2','Pouco'],['4','Normal'],['6','Bastante']].map(([v,t])=>`<option value="${v}" ${lsGet('lg-impavanco','4')===v?'selected':''}>${t}</option>`).join('')}</select></div></div>
@@ -1486,6 +1505,7 @@ function cartaoImpDireta(){const m=impModo(),s=('serial' in navigator),b=('bluet
   </div>`}
 
 function imprimir(html,nome,back){printHtml=html;printNome=nome;
+  if(!impDireta()&&impKiosk()){doPrintJanela();return}
   if(impDireta()){imprimirDireto(html).then(ok=>{if(!ok)imprimirJanela(back)});return}
   imprimirJanela(back)}
 function imprimirJanela(back){const html=printHtml;
