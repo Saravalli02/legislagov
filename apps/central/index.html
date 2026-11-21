@@ -353,7 +353,7 @@ function senhaRural(id,nome,login,cod){
     <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar senha nova</button></div>`,f=>{
     $('#cn',f).onclick=fechar;
     $('#ok',f).onclick=async()=>{const nova=$('#sn',f).value.trim();try{await api('rural/senha',{metodo:'POST',corpo:{id,senha:nova}});
-      modal(`<h2>Senha trocada</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(nova)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar usuário e senha</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=()=>{fechar();abrirUsuarios(cod)};$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('Usuário: '+login+'\nSenha: '+nova+'\n'+linkHorta(cod));$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true})}
+      modal(`<h2>Senha trocada</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(nova)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar link do app</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=()=>{fechar();abrirUsuarios(cod)};$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText(linkHorta(cod));$('#cp',g).textContent='Link copiado'}catch(e){}}},{travar:true})}
       catch(e){if(e.message!=='sessao')$('#sm',f).textContent=e.message}};
   });
 }
@@ -370,7 +370,7 @@ function novoUsuarioRural(cod,vendedores){
     f.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{perfil=b.dataset.p;f.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#vl',f).hidden=perfil!=='padrao';$('#pd',f).textContent=perfil==='adm'?'Vê tudo da horta (como a Sueli) e cadastra os vendedores. Não troca senhas: isso fica com a GR Software.':'Vê só as rotas, saídas, pedidos e fornecedores do vendedor escolhido.'});
     $('#cn',f).onclick=fechar;
     $('#ok',f).onclick=async()=>{const corpo={e:cod,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),perfil,vendedor:perfil==='padrao'?$('#nv',f).value:'',senha:$('#ns',f).value.trim()};
-      try{await api('rural/usuario',{metodo:'POST',corpo});modal(`<h2>Usuário criado</h2><p class="dica">Passe para ${esc(corpo.nome||corpo.usuario)}:</p><label>Endereço<input value="${esc(linkHorta(cod))}" readonly></label><label>Usuário<input value="${esc(corpo.usuario)}" readonly></label><label>Senha<input value="${esc(corpo.senha)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('GR Rural\n'+linkHorta(cod)+'\nUsuário: '+corpo.usuario+'\nSenha: '+corpo.senha);$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true});abrirUsuarios(cod);telaRural()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
+      try{await api('rural/usuario',{metodo:'POST',corpo});modal(`<h2>Usuário criado</h2><p class="dica">Passe para ${esc(corpo.nome||corpo.usuario)}:</p><label>Endereço<input value="${esc(linkHorta(cod))}" readonly></label><label>Usuário<input value="${esc(corpo.usuario)}" readonly></label><label>Senha<input value="${esc(corpo.senha)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar link do app</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText(linkHorta(cod));$('#cp',g).textContent='Link copiado'}catch(e){}}},{travar:true});abrirUsuarios(cod);telaRural()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
   });
 }
 function suspender(cod,sim){
@@ -585,7 +585,7 @@ async function usuarioRuralS(x,u){
       if(novo){corpo.senha=$('#ns',f).value.trim();corpo.email=$('#eml',f).value.trim()}else corpo.id=u.id;
       try{await api('rural/usuario',{metodo:'POST',corpo});carregarSistemas();
         if(!novo)return fechar();
-        modal(`<h2>Usuário criado</h2><p class="dica">Passe para ${esc(corpo.nome||corpo.usuario)}:</p><label>Endereço<input value="${esc(linkHorta(x.id))}" readonly></label><label>Usuário<input value="${esc(corpo.usuario)}" readonly></label><label>Senha<input value="${esc(corpo.senha)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('GR Rural\n'+linkHorta(x.id)+'\nUsuário: '+corpo.usuario+'\nSenha: '+corpo.senha);$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true})}
+        modal(`<h2>Usuário criado</h2><p class="dica">Passe para ${esc(corpo.nome||corpo.usuario)}:</p><label>Endereço<input value="${esc(linkHorta(x.id))}" readonly></label><label>Usuário<input value="${esc(corpo.usuario)}" readonly></label><label>Senha<input value="${esc(corpo.senha)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar link do app</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText(linkHorta(x.id));$('#cp',g).textContent='Link copiado'}catch(e){}}},{travar:true})}
       catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
   });
 }
@@ -595,7 +595,7 @@ function senhaRuralS(x,u){
     <label>Usuário<input value="${esc(u.usuario)}" readonly></label><label>Senha nova<input id="sn" value="${s}" style="font-family:ui-monospace,monospace"></label><p class="msg" id="sm"></p>
     <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar senha nova</button></div>`,f=>{$('#cn',f).onclick=fechar;
     $('#ok',f).onclick=async()=>{const nova=$('#sn',f).value.trim();try{await api('rural/senha',{metodo:'POST',corpo:{id:u.id,senha:nova}});
-      modal(`<h2>Senha trocada</h2><p class="dica">Passe para ${esc(u.nome)}:</p><label>Usuário<input value="${esc(u.usuario)}" readonly></label><label>Senha<input value="${esc(nova)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar usuário e senha</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=()=>{fechar();carregarSistemas()};$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('Usuário: '+u.usuario+'\nSenha: '+nova+'\n'+linkHorta(x.id));$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true})}
+      modal(`<h2>Senha trocada</h2><p class="dica">Passe para ${esc(u.nome)}:</p><label>Usuário<input value="${esc(u.usuario)}" readonly></label><label>Senha<input value="${esc(nova)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar link do app</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=()=>{fechar();carregarSistemas()};$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText(linkHorta(x.id));$('#cp',g).textContent='Link copiado'}catch(e){}}},{travar:true})}
       catch(e){if(e.message!=='sessao')$('#sm',f).textContent=e.message}}});
 }
 function excluirRuralS(x,u){
@@ -680,7 +680,7 @@ function usuarioCamara(x,u){
 function mostrarAcessoCamara(nome,login,senha){
   const link='https://neves.legislagov.com.br/painel/';
   modal(`<h2>Acesso criado</h2><p class="dica">Passe para ${esc(nome)}. No primeiro acesso o sistema pede para trocar a senha.</p><label>Endereço<input value="${link}" readonly></label><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha provisória<input value="${esc(senha)}" readonly style="font-family:ui-monospace,monospace"></label>
-    <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{const t=`LegislaGov · Câmara\n${link}\nUsuário: ${login}\nSenha provisória: ${senha}`;try{await navigator.clipboard.writeText(t)}catch(e){}$('#cp',g).textContent='Copiado'}},{travar:true});
+    <div class="rod"><button class="btn" id="cp">Copiar link do app</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText(link)}catch(e){}$('#cp',g).textContent='Link copiado'}},{travar:true});
 }
 function senhaCamara(x,u){
   const s=gerar();
@@ -691,7 +691,7 @@ function senhaCamara(x,u){
 function mostrarAcessoRest(nome,login,senha,tipo){
   const acg=tipo==='acougue',link=acg?'https://acougue.grsoftware.com.br/':'https://restaurante.grsoftware.com.br/';
   modal(`<h2>Acesso criado</h2><p class="dica">Passe para ${esc(nome)}:</p><label>Endereço<input value="${link}" readonly></label><label>Usuário<input value="${esc(login)}" readonly></label><label>Senha<input value="${esc(senha)}" readonly style="font-family:ui-monospace,monospace"></label>
-    <div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{const t=`GR ${acg?'Açougue':'Restaurante'}\n${link}\nUsuário: ${login}\nSenha: ${senha}`;try{await navigator.clipboard.writeText(t)}catch(e){const x=document.createElement('textarea');x.value=t;g.appendChild(x);x.select();document.execCommand('copy');x.remove()}$('#cp',g).textContent='Copiado'}},{travar:true});
+    <div class="rod"><button class="btn" id="cp">Copiar link do app</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{g.classList.add('travado');$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText(link)}catch(e){const x=document.createElement('textarea');x.value=t;g.appendChild(x);x.select();document.execCommand('copy');x.remove()}$('#cp',g).textContent='Link copiado'}},{travar:true});
 }
 function senhaRest(u){
   const s=gerar();
