@@ -210,7 +210,7 @@ def central_hortas(c):
 def central_usuarios(c, emp):
     vend = {v.get("id"): v.get("nome") for v in _docs(c, emp, "vendedores")}
     agora = time.time()
-    return [{"id": u["id"], "nome": u["nome"], "usuario": u["usuario"], "perfil": u["perfil"], "vendedor": vend.get(u["vendedor"], ""),
+    return [{"id": u["id"], "nome": u["nome"], "usuario": u["usuario"], "perfil": u["perfil"], "vendedor": vend.get(u["vendedor"], ""), "vendedorId": u["vendedor"] or "",
              "bloqueado": u["bloqueio"] > agora, "criado": u["criado"]} for u in _usuarios(c, emp)], \
            [{"id": k, "nome": v} for k, v in vend.items()]
 
@@ -231,6 +231,36 @@ def central_criar_usuario(c, emp, d):
     if emp not in empresas():
         return 404, {"ok": False, "erro": "Horta não encontrada."}
     return salvar_usuario(c, {"empresa": emp, "_token": ""}, {k: d.get(k) for k in ("nome", "usuario", "perfil", "vendedor", "senha")})
+
+
+def central_editar_usuario(c, emp, d):
+    """Central altera nome, usuário, perfil e vendedor (a senha muda só pelo “Senha nova”)."""
+    if emp not in empresas():
+        return 404, {"ok": False, "erro": "Horta não encontrada."}
+    return salvar_usuario(c, {"empresa": emp, "_token": ""}, {k: d.get(k) for k in ("id", "nome", "usuario", "perfil", "vendedor")})
+
+
+def central_excluir_usuario(c, emp, uid):
+    if emp not in empresas():
+        return 404, {"ok": False, "erro": "Horta não encontrada."}
+    return remover_usuario(c, {"empresa": emp}, str(uid or ""))
+
+
+def central_renomear_horta(c, emp, nome, por):
+    nome = str(nome or "").strip()[:60]
+    if emp not in empresas():
+        return 404, {"ok": False, "erro": "Horta não encontrada."}
+    if not nome:
+        return 400, {"ok": False, "erro": "Escreva o nome da horta."}
+    if not c.execute("SELECT 1 FROM rural_empresas WHERE codigo=?", (emp,)).fetchone():
+        c.execute("INSERT INTO rural_empresas(codigo, nome, criado, por) VALUES(?,?,?,?)", (emp, nome, time.time(), por))
+    c.execute("UPDATE rural_empresas SET nome=? WHERE codigo=?", (nome, emp))
+    cfg = next(iter(_docs(c, emp, "config")), None) or {"id": "geral"}
+    cfg = {**cfg, "nomeHorta": nome}
+    _doc(c, emp, "config", cfg)
+    esquecer_cadastros()
+    _avisar()
+    return 200, {"ok": True}
 
 
 def central_suspender(c, emp, suspender, motivo, por):

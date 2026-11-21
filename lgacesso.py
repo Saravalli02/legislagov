@@ -124,6 +124,7 @@ def painel(c):
             hortas.append({"id": h["codigo"], "nome": h["nome"], "bloqueado": h["suspensa"], "desde": h["suspensaEm"], "motivo": h["motivo"],
                            "usuarios": [{"id": u["id"], "nome": u["nome"], "usuario": u["usuario"],
                                          "cargo": "Administrador da horta" if u["perfil"] == "adm" else "Vendedor" + (" · " + u["vendedor"] if u["vendedor"] else ""),
+                                         "perfil": u["perfil"], "vendedorId": u["vendedorId"],
                                          "ativo": True, **_info(c, "rural", h["codigo"], u["id"])} for u in us]})
         out["rural"] = hortas
     except Exception as e:

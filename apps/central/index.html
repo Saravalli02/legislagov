@@ -541,12 +541,12 @@ function desenharSistemas(){
   const [k,n,ic,cor,tx]=SISINFO.find(i=>i[0]===SISABA),cl=SIS[k]||[];
   $('#admc').innerHTML=`<div class="sisres" role="tablist" aria-label="Sistemas">${SISINFO.map(([kk,nn,ii,cc])=>{const c=conta(kk);return `<button type="button" role="tab" class="sisq ${kk===SISABA?'act':''}" style="--cor:${cc}" data-sis="${kk}" aria-selected="${kk===SISABA}">
       <img src="${ii}" alt=""><span><b>${nn}</b><small>${c.cl} cliente(s) · ${c.us} usuário(s)</small>${c.bl?`<small class="blq">${c.bl} cortado(s)</small>`:''}</span></button>`}).join('')}</div>
-    <section class="sisblk" style="--cor:${cor}"><header><img src="${ic}" alt=""><div style="flex:1"><h3>${n}</h3><small>${tx}</small></div>${k==='restaurante'?'<button class="btn pri" id="novoCli">+ Novo cliente</button>':''}</header>
+    <section class="sisblk" style="--cor:${cor}"><header><img src="${ic}" alt=""><div style="flex:1"><h3>${n}</h3><small>${tx}</small></div>${k==='restaurante'?'<button class="btn pri" id="novoCli">+ Novo cliente</button>':''}${k==='rural'?'<button class="btn pri" id="novaHortaS">+ Nova horta</button>':''}</header>
       ${cl.length?cl.map(x=>cartaoCliente(k,x)).join(''):'<div class="vazio">Nenhum cliente ainda.</div>'}</section>
     <p class="dica" style="margin-top:18px">Verde: funcionando. Toque para deixar vermelho e cortar o acesso na hora. Os dados ficam guardados; ao ligar de novo, tudo volta como estava.</p>
     <div class="horta" style="margin-top:10px;display:flex;gap:12px;align-items:center"><span class="pt"></span><div><b>Acesso master: usuário <code>ricardo</code></b><small class="dica" style="display:block">Entra em todos os sistemas (Câmara, Central, Rural, Restaurante, Açougue, E-mails e os próximos) com a mesma senha do painel da Câmara. Trocou a senha lá, muda em todos.</small></div></div>`;
   $('#admc').querySelectorAll('[data-sis]').forEach(b=>b.onclick=()=>{SISABA=b.dataset.sis;try{localStorage.setItem('lg-central-sis',SISABA)}catch(e){}desenharSistemas()});
-  const nc=$('#novoCli');if(nc)nc.onclick=()=>editarCliRest(null);
+  const nc=$('#novoCli');if(nc)nc.onclick=()=>editarCliRest(null);const nh=$('#novaHortaS');if(nh)nh.onclick=()=>hortaS(null);
   $('#admc').querySelectorAll('[data-cli]').forEach(el=>{const [k,id]=el.dataset.cli.split('|');const x=SIS[k].find(c=>c.id===id);
     el.querySelector('.cli-c .sw').onclick=()=>trocarAcesso(k,x,null);
     el.querySelectorAll('[data-u]').forEach(u=>{const us=x.usuarios.find(y=>y.id===u.dataset.u);u.querySelector('.sw').onclick=()=>trocarAcesso(k,x,us);
@@ -554,17 +554,61 @@ function desenharSistemas(){
       const fn=u.querySelector('[data-fn]');if(fn)fn.onclick=()=>funcaoRest(us);const cg=u.querySelector('[data-cg]');if(cg)cg.onclick=()=>usuarioCamara(x,us);
       const csn=u.querySelector('[data-csn]');if(csn)csn.onclick=()=>senhaCamara(x,us)});
     const ncm=el.querySelector('[data-nc]');if(ncm)ncm.onclick=()=>usuarioCamara(x,null);
+    if(k==='rural'){const re=el.querySelector('[data-red]');if(re)re.onclick=()=>hortaS(x);const rn=el.querySelector('[data-rnu]');if(rn)rn.onclick=()=>usuarioRuralS(x,null);
+      el.querySelectorAll('[data-u]').forEach(u=>{const us=x.usuarios.find(y=>y.id===u.dataset.u);const q=s=>u.querySelector(s);
+        if(q('[data-red-u]'))q('[data-red-u]').onclick=()=>usuarioRuralS(x,us);if(q('[data-rsn]'))q('[data-rsn]').onclick=()=>senhaRuralS(x,us);if(q('[data-rex]'))q('[data-rex]').onclick=()=>excluirRuralS(x,us)})}
     el.querySelectorAll('[data-tipo]').forEach(b=>b.onclick=()=>trocarTipo(x,b.dataset.tipo));
     const nu=el.querySelector('[data-nu]');if(nu)nu.onclick=()=>novoRest(x);const ed=el.querySelector('[data-ed]');if(ed)ed.onclick=()=>editarCliRest(x)});
+}
+/* ---- Rural dentro de "Sistemas e clientes": horta, usuários, senha, excluir ---- */
+function hortaS(x){
+  modal(`<h2>${x?'Editar horta':'Nova horta'}</h2><p class="dica">${x?'O nome aparece no app da horta para todos os usuários.':'Cria um cliente novo do Rural, com link próprio. Depois crie o administrador da horta em “+ Usuário”.'}</p>
+    <label>Nome da horta<input id="hn" maxlength="60" value="${x?esc(x.nome):''}" placeholder="Ex.: Horta Bom Jesus"></label>${x?`<label>Link da horta<input value="${esc(linkHorta(x.id))}" readonly></label>`:''}<p class="msg" id="hm"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">${x?'Salvar':'Criar horta'}</button></div>`,f=>{$('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{try{if(x)await api('rural/horta/editar',{metodo:'POST',corpo:{e:x.id,nome:$('#hn',f).value}});else await api('rural/horta',{metodo:'POST',corpo:{nome:$('#hn',f).value}});fechar();carregarSistemas()}catch(e){if(e.message!=='sessao')$('#hm',f).textContent=e.message}}});
+}
+async function usuarioRuralS(x,u){
+  let r;try{r=await api('rural/usuarios?e='+encodeURIComponent(x.id))}catch(e){return}
+  const vend=r.vendedores||[],novo=!u;let perfil=u?(u.perfil==='adm'?'adm':'padrao'):'adm';
+  modal(`<h2>${novo?'Novo usuário':'Editar '+esc(u.nome)} · ${esc(x.nome)}</h2>
+    <div class="lbl">Perfil</div><div class="esc" data-grupo="perf" style="grid-template-columns:1fr 1fr"><button type="button" data-v="adm" class="${perfil==='adm'?'act':''}"><b>Administrador da horta</b><small>Vê tudo da horta e cadastra os vendedores</small></button><button type="button" data-v="padrao" class="${perfil==='padrao'?'act':''}"><b>Vendedor</b><small>Vê só as rotas, saídas e pedidos dele</small></button></div>
+    <label>Nome<input id="nn" maxlength="60" value="${u?esc(u.nome):''}" placeholder="Ex.: Sueli"></label>
+    <label>Usuário (para entrar)<input id="nu" autocapitalize="none" spellcheck="false" value="${u?esc(u.usuario):''}" placeholder="Ex.: sueli"></label>
+    <label id="vl" ${perfil==='padrao'?'':'hidden'}>Vendedor<select id="nv">${vend.map(v=>`<option value="${esc(v.id)}" ${u&&u.vendedorId===v.id?'selected':''}>${esc(v.nome)}</option>`).join('')||'<option value="">Cadastre o vendedor no app da horta primeiro</option>'}</select></label>
+    ${novo?`<label>Senha<input id="ns" value="${gerar()}" style="font-family:ui-monospace,monospace"></label>`:'<p class="dica">Para trocar a senha, use “Senha nova”.</p>'}<p class="msg" id="nm"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">${novo?'Criar usuário':'Salvar'}</button></div>`,f=>{
+    $('#cn',f).onclick=fechar;ligarEscolha(f);
+    f.querySelectorAll('.esc button').forEach(b=>b.addEventListener('click',()=>{perfil=b.dataset.v;$('#vl',f).hidden=perfil!=='padrao'}));
+    $('#ok',f).onclick=async()=>{const corpo={e:x.id,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),perfil,vendedor:perfil==='padrao'?$('#nv',f).value:''};
+      if(novo)corpo.senha=$('#ns',f).value.trim();else corpo.id=u.id;
+      try{await api('rural/usuario',{metodo:'POST',corpo});carregarSistemas();
+        if(!novo)return fechar();
+        modal(`<h2>Usuário criado</h2><p class="dica">Passe para ${esc(corpo.nome||corpo.usuario)}:</p><label>Endereço<input value="${esc(linkHorta(x.id))}" readonly></label><label>Usuário<input value="${esc(corpo.usuario)}" readonly></label><label>Senha<input value="${esc(corpo.senha)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('GR Rural\n'+linkHorta(x.id)+'\nUsuário: '+corpo.usuario+'\nSenha: '+corpo.senha);$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true})}
+      catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
+  });
+}
+function senhaRuralS(x,u){
+  const s=gerar();
+  modal(`<h2>Senha nova · ${esc(u.nome)}</h2><p class="dica">A pessoa sai do app em todos os aparelhos e entra de novo com a senha nova. Se estava bloqueada por erro de senha, fica liberada.</p>
+    <label>Usuário<input value="${esc(u.usuario)}" readonly></label><label>Senha nova<input id="sn" value="${s}" style="font-family:ui-monospace,monospace"></label><p class="msg" id="sm"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar senha nova</button></div>`,f=>{$('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{const nova=$('#sn',f).value.trim();try{await api('rural/senha',{metodo:'POST',corpo:{id:u.id,senha:nova}});
+      modal(`<h2>Senha trocada</h2><p class="dica">Passe para ${esc(u.nome)}:</p><label>Usuário<input value="${esc(u.usuario)}" readonly></label><label>Senha<input value="${esc(nova)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar usuário e senha</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=()=>{fechar();carregarSistemas()};$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('Usuário: '+u.usuario+'\nSenha: '+nova+'\n'+linkHorta(x.id));$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true})}
+      catch(e){if(e.message!=='sessao')$('#sm',f).textContent=e.message}}});
+}
+function excluirRuralS(x,u){
+  modal(`<h2>Excluir ${esc(u.nome)}?</h2><p class="dica">O usuário <b>${esc(u.usuario)}</b> sai do app na hora e não entra mais. Os dados da horta (rotas, pedidos, vendas) continuam.</p><p class="msg" id="em"></p>
+    <div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok" style="background:var(--erro);border-color:var(--erro);color:#fff">Excluir usuário</button></div>`,f=>{$('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{try{await api('rural/excluir',{metodo:'POST',corpo:{e:x.id,id:u.id,usuario:u.usuario}});fechar();carregarSistemas()}catch(e){if(e.message!=='sessao')$('#em',f).textContent=e.message}}});
 }
 function cartaoCliente(k,x){
   const on=!x.bloqueado,us=x.usuarios||[],rest=k==='restaurante',tp=x.tipo==='acougue'?'acougue':'restaurante';
   const sub=rest?`Responsável: ${esc(x.responsavel||'—')} · ${us.length} usuário(s)`:`${us.length} usuário(s)`;
   return `<div class="cli ${on?'':'off'}" data-cli="${k}|${esc(x.id)}"><div class="cli-c"><div><b>${esc(x.nome)}</b>${rest?` <span class="tptag ${tp}">${TIPOCOM[tp]}</span>`:''}<small>${sub}${x.bloqueado&&x.desde?' · cortado em '+quando(x.desde):''}${x.motivo?' · '+esc(x.motivo):''}</small></div>
-    <div class="cli-d"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">${rest?'<button class="btn" data-ed>Editar</button><button class="btn" data-nu>+ Usuário</button>':''}${k==='camara'?'<button class="btn" data-nc>+ Usuário</button>':''}${chave(on,on?'Cliente ativo':'Cliente bloqueado')}</div>
+    <div class="cli-d"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">${rest?'<button class="btn" data-ed>Editar</button><button class="btn" data-nu>+ Usuário</button>':''}${k==='camara'?'<button class="btn" data-nc>+ Usuário</button>':''}${k==='rural'?'<button class="btn" data-red>Editar</button><button class="btn" data-rnu>+ Usuário</button>':''}${chave(on,on?'Cliente ativo':'Cliente bloqueado')}</div>
     ${rest?`<div class="tpsel" role="group" aria-label="Tipo do comércio"><span>Tipo:</span>${Object.entries(TIPOCOM).map(([t,nm])=>`<button type="button" data-tipo="${t}" class="${tp===t?'act':''}" aria-pressed="${tp===t}">${nm}</button>`).join('')}</div>`:''}</div></div>
     ${us.length?`<div class="usgrid">${us.map(u=>{const uon=!u.bloqueado;return `<div class="usr ${uon&&on?'':'off'}" data-u="${esc(u.id)}"><div><b>${esc(u.nome)}</b><small>${esc(u.cargo||'')}${u.usuario?' · '+esc(u.usuario):''}</small>${u.ativo===false?'<small style="color:var(--erro)">desativado pelo administrador da Câmara</small>':''}${u.bloqueado&&u.motivo?`<small>${esc(u.motivo)}</small>`:''}</div>
-      <div class="ln">${chave(uon,null,'p')}${rest?'<span><button class="lkbtn" data-fn>Função</button><button class="lkbtn" data-sn>Senha nova</button><button class="lkbtn" data-ex style="color:var(--erro)">Excluir</button></span>':''}${k==='camara'?'<span><button class="lkbtn" data-cg>Cargo</button><button class="lkbtn" data-csn>Senha nova</button></span>':''}</div></div>`}).join('')}</div>`:rest?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o acesso de quem comprou.</p>':''}</div>`;
+      <div class="ln">${chave(uon,null,'p')}${rest?'<span><button class="lkbtn" data-fn>Função</button><button class="lkbtn" data-sn>Senha nova</button><button class="lkbtn" data-ex style="color:var(--erro)">Excluir</button></span>':''}${k==='camara'?'<span><button class="lkbtn" data-cg>Cargo</button><button class="lkbtn" data-csn>Senha nova</button></span>':''}${k==='rural'?'<span><button class="lkbtn" data-red-u>Editar</button><button class="lkbtn" data-rsn>Senha nova</button><button class="lkbtn" data-rex style="color:var(--erro)">Excluir</button></span>':''}</div></div>`}).join('')}</div>`:k==='rural'?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o administrador da horta.</p>':rest?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o acesso de quem comprou.</p>':''}</div>`;
 }
 async function trocarTipo(x,t){if((x.tipo||'restaurante')===t)return;
   modal(`<h2>Mudar ${esc(x.nome)} para ${TIPOCOM[t]}?</h2><p class="dica">${t==='acougue'?'O sistema deste cliente passa a abrir como açougue: caixa grande, venda por quilo e grama, sem mesas, cores amarelas.':'O sistema deste cliente passa a abrir como restaurante: mesas, garçons, delivery e cardápio digital.'} Os dados (produtos, vendas, estoque) continuam os mesmos. Quem estiver usando vê a mudança em alguns segundos.</p>

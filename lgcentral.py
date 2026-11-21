@@ -522,6 +522,21 @@ def rota(h, metodo):
                     if cod == 200:
                         _log(c, s["usuario"], "Rural: senha nova", f"{r['empresa']}/{r['usuario']}", ip)
                     return _resp(h, cod, r)
+                if acao == "rural/usuario" and metodo == "POST" and corpo.get("id"):
+                    cod, r = lgrural.central_editar_usuario(rc, str(corpo.get("e", "")), corpo)
+                    if cod == 200:
+                        _log(c, s["usuario"], "Rural: usuário alterado", f"{corpo.get('e')}/{corpo.get('usuario')} ({corpo.get('perfil')})", ip)
+                    return _resp(h, cod, r)
+                if acao == "rural/excluir" and metodo == "POST":
+                    cod, r = lgrural.central_excluir_usuario(rc, str(corpo.get("e", "")), corpo.get("id"))
+                    if cod == 200:
+                        _log(c, s["usuario"], "Rural: usuário excluído", f"{corpo.get('e')}/{corpo.get('usuario') or corpo.get('id')}", ip)
+                    return _resp(h, cod, r)
+                if acao == "rural/horta/editar" and metodo == "POST":
+                    cod, r = lgrural.central_renomear_horta(rc, str(corpo.get("e", "")), corpo.get("nome"), s["usuario"])
+                    if cod == 200:
+                        _log(c, s["usuario"], "Rural: horta renomeada", f"{corpo.get('e')} → {corpo.get('nome')}", ip)
+                    return _resp(h, cod, r)
                 if acao == "rural/usuario" and metodo == "POST":
                     cod, r = lgrural.central_criar_usuario(rc, str(corpo.get("e", "")), corpo)
                     if cod == 200:
