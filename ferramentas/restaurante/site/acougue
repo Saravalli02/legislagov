@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v40">
+<meta name="lg-versao" content="lg-v41">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -949,6 +949,9 @@ function baixarApp(){if(instalar){instalar.prompt();instalar=null;return}
 function lgDev(){let d=lsGet('lg-dev','');if(!/^[A-Za-z0-9_-]{16,64}$/.test(d)){const a=new Uint8Array(18);crypto.getRandomValues(a);d=Array.from(a,x=>x.toString(16).padStart(2,'0')).join('');lsSet('lg-dev',d)}return d}
 async function entrarRest(){const b=$('#lgb'),u=$('#lgu').value.trim(),sn=$('#lgs').value;$('#lge').textContent='';
   if(!u||!sn){$('#lge').textContent='Digite o usuário e a senha.';return}b.disabled=true;
+  /* no app do garçom, "Pedro" + "1234" (nome e PIN cadastrados no caixa) também entra */
+  if(GARCOM&&/^\d{4}$/.test(sn.trim())){try{const l=((await (await fetch('/api/garcons'+(gCli()?'?c='+gCli():''))).json()).garcons||[]),nrm=x=>String(x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase(),x=l.find(y=>nrm(y.nome)===nrm(u));
+    if(x){gEnt.id=x.id;gEnt.nome=x.nome;gEnt.pin=sn.trim().slice(0,3);await gEntPin(sn.trim().slice(3));lsSet('lg-gusr','');return}}catch(e){}}
   try{const r=await fetch('/api/entrar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({usuario:u,senha:sn,tipo:TIPO,dev:lgDev(),ua:navigator.userAgent,codigo:($('#lgcod')||{value:''}).value})});
     const d=await r.json().catch(()=>({}));
     if(r.ok&&d.token){apiKey=d.token;lsSet('lg-tok',apiKey);lsSet('lg-nome',d.nome||'');lsSet('lg-perfil',d.perfil||'');if(d.perfil==='garcom'&&!GARCOM){location.replace('/garcom');return}const t=d.tipo==='acougue'?'acougue':'restaurante';lsSet('lg-tipo',t);
