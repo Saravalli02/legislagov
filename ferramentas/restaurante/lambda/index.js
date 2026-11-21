@@ -11,6 +11,24 @@ const CR=require('crypto'),hm=x=>CR.createHmac('sha256',process.env.KEY||'lg').u
 const pinH=(cli,gid,pin)=>hm('pin|'+cli+'|'+gid+'|'+pin).slice(0,16);
 const gTok=o=>{const p=Buffer.from(JSON.stringify(o)).toString('base64url');return 'g.'+p+'.'+hm(p)};
 const gLer=t=>{const a=String(t).split('.');if(a.length!==3||hm(a[1])!==a[2])return null;try{return JSON.parse(Buffer.from(a[1],'base64url').toString())}catch(x){return null}};
+// ---- certificado próprio (autoassinado) para o QZ Tray: gerado no próprio Lambda, a chave nunca sai da Amazon
+const asn=(t,b)=>{const l=b.length,len=l<128?Buffer.from([l]):l<256?Buffer.from([0x81,l]):Buffer.from([0x82,l>>8,l&255]);return Buffer.concat([Buffer.from([t]),len,b])};
+const aSeq=(...x)=>asn(0x30,Buffer.concat(x)),aSet=(...x)=>asn(0x31,Buffer.concat(x));
+const aOid=s=>{const p=s.split('.').map(Number),o=[40*p[0]+p[1]];for(const n of p.slice(2)){const t=[];let v=n;do{t.unshift(v&127);v>>=7}while(v);for(let i=0;i<t.length-1;i++)t[i]|=128;o.push(...t)}return asn(6,Buffer.from(o))};
+const aUtf=s=>asn(0x0c,Buffer.from(s,'utf8')),aNull=()=>Buffer.from([5,0]);
+const aUtc=d=>{const z=n=>String(n).padStart(2,'0');return asn(0x17,Buffer.from(z(d.getUTCFullYear()%100)+z(d.getUTCMonth()+1)+z(d.getUTCDate())+z(d.getUTCHours())+z(d.getUTCMinutes())+z(d.getUTCSeconds())+'Z'))};
+const novoCertQz=()=>{const {privateKey,publicKey}=CR.generateKeyPairSync('rsa',{modulusLength:2048});
+  const nome=aSeq(aSet(aSeq(aOid('2.5.4.6'),asn(0x13,Buffer.from('BR')))),aSet(aSeq(aOid('2.5.4.10'),aUtf('GR Software'))),aSet(aSeq(aOid('2.5.4.3'),aUtf('GR Software - Impressao'))));
+  const alg=aSeq(aOid('1.2.840.113549.1.1.11'),aNull()),ser=CR.randomBytes(8);ser[0]&=0x7f;
+  const agora=new Date(Date.now()-86400000),fim=new Date(Date.UTC(2045,11,31));
+  const bc=asn(0xa3,aSeq(aSeq(aOid('2.5.29.19'),asn(1,Buffer.from([0xff])),asn(4,aSeq(asn(1,Buffer.from([0xff])))))));
+  const tbs=aSeq(asn(0xa0,asn(2,Buffer.from([2]))),asn(2,ser),alg,nome,aSeq(aUtc(agora),aUtc(fim)),nome,publicKey.export({type:'spki',format:'der'}),bc);
+  const sig=CR.sign('sha256',tbs,privateKey),der=aSeq(tbs,alg,asn(3,Buffer.concat([Buffer.from([0]),sig])));
+  return {cert:'-----BEGIN CERTIFICATE-----\n'+der.toString('base64').match(/.{1,64}/g).join('\n')+'\n-----END CERTIFICATE-----\n',chave:privateKey.export({type:'pkcs8',format:'pem'})}};
+const QZK=new Map();
+const qzCert=async st=>{const m=QZK.get('x');if(m)return m;let x=await st.privGet('qz|cert');
+  if(!x){const n=novoCertQz();if(await st.privPutNovo('qz|cert',n))x=n;else x=await st.privGet('qz|cert')}
+  QZK.set('x',x);return x};
 const ATV=new Map();
 const cliAtivo=async cli=>{const c=ATV.get(cli),n=Date.now();if(c&&n-c.t<15000)return c.v;
   try{const r=await post('rest/ativo',{cliente:cli});const v=r.s===200&&r.b.ok?{ativo:!!r.b.ativo,tipo:r.b.tipo==='acougue'?'acougue':'restaurante'}:(c?c.v:null);
@@ -120,6 +138,7 @@ const mk=base=>async e=>{
   if(p==='/pedido'&&m==='POST')return pedido(pubSt(),e,corpo(e));
   if(p==='/reserva'&&m==='GET'){const v=await reservaInfo(pubSt());return J(200,v)}
   if(p==='/reserva'&&m==='POST')return reservar(pubSt(),e,corpo(e));
+  if(p==='/qz-cert'&&m==='GET'){const x=await qzCert(base(LEGADO));return{statusCode:200,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'public, max-age=3600','content-disposition':q.baixar?'attachment; filename="gr-impressao.crt"':'inline'},body:x.cert}}
   if(p==='/garcons'&&m==='GET'){const gs=await garcons(pubSt());return J(200,{garcons:gs.map(x=>({id:x.id,nome:x.nome}))})}
   if(p==='/entrar-garcom'&&m==='POST'){const b=corpo(e),cli=CLI_RE.test(b.c||'')?b.c:LEGADO,st=base(cli),gid=String(b.id||''),pin=String(b.pin||'').replace(/\D/g,'');
     const fk='gfalha|'+gid,f=(await st.privGet(fk))||{n:0,ate:0},n=Date.now();
@@ -135,6 +154,8 @@ const mk=base=>async e=>{
   const ss=await sessao(t,base),v=ss.v;
   if(v===0)return J(401,{erro:'login'});if(v===2)return J(423,{erro:'suspenso'});if(v===3)return J(503,{erro:'central'});
   const st=base(ss.cli);
+  if(p==='/qz-assinar'&&m==='POST'){const b=corpo(e),d=String(b.d||'');if(!d||d.length>20000)return J(400,{erro:'dados'});
+    const x=await qzCert(base(LEGADO));return{statusCode:200,headers:{'content-type':'text/plain','cache-control':'no-store'},body:CR.sign('sha512',Buffer.from(d),x.chave).toString('base64')}}
   if(m==='GET'&&p==='/eu')return J(200,{cliente:ss.cli,tipo:ss.tipo,nome:ss.nome});
   if(m==='GET'&&p==='/sync'){
     const s=+(q.since||0),r=await st.since(s,1500);
@@ -166,6 +187,7 @@ const ddb=()=>{
       catch(e){if(e.name==='ConditionalCheckFailedException')return false;throw e}
     },
     async privGet(key){const r=await c.send(new D.GetItemCommand({TableName:T,Key:{k:{S:'priv|'+(cli)+'|'+key}},ConsistentRead:true}));return r.Item&&r.Item.d?JSON.parse(r.Item.d.S):null},
+    async privPutNovo(key,o){try{await c.send(new D.PutItemCommand({TableName:T,Item:{k:{S:'priv|'+(cli)+'|'+key},d:{S:JSON.stringify(o)}},ConditionExpression:'attribute_not_exists(k)'}));return true}catch(e){if(e.name==='ConditionalCheckFailedException')return false;throw e}},
     async privPut(key,o){await c.send(new D.PutItemCommand({TableName:T,Item:{k:{S:'priv|'+(cli)+'|'+key},d:{S:JSON.stringify(o)}}}))},
     async get(col,id){
       const r=await c.send(new D.GetItemCommand({TableName:T,Key:{k:{S:pre+col+'/'+id}},ConsistentRead:true}));
