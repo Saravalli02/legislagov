@@ -257,7 +257,23 @@
     if (!usuario || !senha) return erro('Informe usuário e senha.');
     const btn = document.querySelector('#login-form button[type=submit]'); if (btn) btn.disabled = true;
     try {
-      const d = await api('/api/login', { usuario, senha });
+      const codEl = document.getElementById('login-codigo');
+      const d = await api('/api/login', { usuario, senha, codigo: codEl ? codEl.value : '' });
+      if (d.precisaCodigo) {
+        // primeiro acesso com e-mail cadastrado: confirma com o código de 6 números que chegou no e-mail
+        let c = codEl;
+        if (!c) {
+          const sen = document.getElementById('login-senha'), w = document.createElement('div');
+          w.className = 'form-group'; w.style.marginTop = '12px';
+          w.innerHTML = '<label for="login-codigo">Código que chegou no e-mail</label><input id="login-codigo" class="form-control" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 números" style="letter-spacing:.35em;font-weight:800;font-size:20px;text-align:center">';
+          const alvo = (sen && (sen.closest('.form-group') || sen.closest('.lg-olho-w') || sen)) || null;
+          if (alvo && alvo.parentNode) alvo.parentNode.insertBefore(w, alvo.nextSibling); else document.getElementById('login-form').appendChild(w);
+          c = document.getElementById('login-codigo');
+        }
+        c.value = ''; c.focus();
+        if (btn) { btn.disabled = false; btn.textContent = 'Confirmar e entrar'; }
+        return erro(d.erro);
+      }
       if (!d.ok) return erro(d.erro || 'Não foi possível entrar.');
       const r = await fetch('/api/inicio', { credentials: 'same-origin' }); const i = await r.json();
       eu = SYNC.eu = i.eu; seq = i.seq || seq;

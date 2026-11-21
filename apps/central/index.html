@@ -166,6 +166,7 @@ input,select{height:46px;border:1px solid var(--linha);border-radius:10px;paddin
 .esc button.act{border-color:#1f9d55;background:#e9f7ef;box-shadow:0 0 0 2px #1f9d5533}
 [data-tema=escuro] .esc button.act{background:#12321f}
 @media (max-width:560px){.esc{grid-template-columns:1fr}}</style>
+<style>.emst{color:var(--sub,#6b7280)}.emst.ok{color:#1f8a4c}.emst.esp{color:#b7791f}</style>
 </head>
 <body>
 <div id="app"><p style="padding:30px;text-align:center;color:#5d6b7b">Carregando…</p></div>
@@ -552,7 +553,8 @@ function desenharSistemas(){
     el.querySelectorAll('[data-u]').forEach(u=>{const us=x.usuarios.find(y=>y.id===u.dataset.u);u.querySelector('.sw').onclick=()=>trocarAcesso(k,x,us);
       const sn=u.querySelector('[data-sn]');if(sn)sn.onclick=()=>senhaRest(us);const ex=u.querySelector('[data-ex]');if(ex)ex.onclick=()=>excluirRest(us);
       const fn=u.querySelector('[data-fn]');if(fn)fn.onclick=()=>funcaoRest(us);const cg=u.querySelector('[data-cg]');if(cg)cg.onclick=()=>usuarioCamara(x,us);
-      const csn=u.querySelector('[data-csn]');if(csn)csn.onclick=()=>senhaCamara(x,us)});
+      const csn=u.querySelector('[data-csn]');if(csn)csn.onclick=()=>senhaCamara(x,us);
+      const em=u.querySelector('[data-eml]');if(em)em.onclick=()=>emailUsuario(k,us)});
     const ncm=el.querySelector('[data-nc]');if(ncm)ncm.onclick=()=>usuarioCamara(x,null);
     if(k==='rural'){const re=el.querySelector('[data-red]');if(re)re.onclick=()=>hortaS(x);const rn=el.querySelector('[data-rnu]');if(rn)rn.onclick=()=>usuarioRuralS(x,null);
       el.querySelectorAll('[data-u]').forEach(u=>{const us=x.usuarios.find(y=>y.id===u.dataset.u);const q=s=>u.querySelector(s);
@@ -575,12 +577,12 @@ async function usuarioRuralS(x,u){
     <label>Nome<input id="nn" maxlength="60" value="${u?esc(u.nome):''}" placeholder="Ex.: Sueli"></label>
     <label>Usuário (para entrar)<input id="nu" autocapitalize="none" spellcheck="false" value="${u?esc(u.usuario):''}" placeholder="Ex.: sueli"></label>
     <label id="vl" ${perfil==='padrao'?'':'hidden'}>Vendedor<select id="nv">${vend.map(v=>`<option value="${esc(v.id)}" ${u&&u.vendedorId===v.id?'selected':''}>${esc(v.nome)}</option>`).join('')||'<option value="">Cadastre o vendedor no app da horta primeiro</option>'}</select></label>
-    ${novo?`<label>Senha<input id="ns" value="${gerar()}" style="font-family:ui-monospace,monospace"></label>`:'<p class="dica">Para trocar a senha, use “Senha nova”.</p>'}<p class="msg" id="nm"></p>
+    ${novo?`<label>Senha<input id="ns" value="${gerar()}" style="font-family:ui-monospace,monospace"></label><label>E-mail da pessoa <small class="dica" style="font-weight:500">(no primeiro acesso ela confirma com um código de 6 números)</small><input id="eml" type="email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="nome@exemplo.com"></label>`:'<p class="dica">Para trocar a senha, use “Senha nova”.</p>'}<p class="msg" id="nm"></p>
     <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">${novo?'Criar usuário':'Salvar'}</button></div>`,f=>{
     $('#cn',f).onclick=fechar;ligarEscolha(f);
     f.querySelectorAll('.esc button').forEach(b=>b.addEventListener('click',()=>{perfil=b.dataset.v;$('#vl',f).hidden=perfil!=='padrao'}));
     $('#ok',f).onclick=async()=>{const corpo={e:x.id,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),perfil,vendedor:perfil==='padrao'?$('#nv',f).value:''};
-      if(novo)corpo.senha=$('#ns',f).value.trim();else corpo.id=u.id;
+      if(novo){corpo.senha=$('#ns',f).value.trim();corpo.email=$('#eml',f).value.trim()}else corpo.id=u.id;
       try{await api('rural/usuario',{metodo:'POST',corpo});carregarSistemas();
         if(!novo)return fechar();
         modal(`<h2>Usuário criado</h2><p class="dica">Passe para ${esc(corpo.nome||corpo.usuario)}:</p><label>Endereço<input value="${esc(linkHorta(x.id))}" readonly></label><label>Usuário<input value="${esc(corpo.usuario)}" readonly></label><label>Senha<input value="${esc(corpo.senha)}" readonly style="font-family:ui-monospace,monospace"></label><div class="rod"><button class="btn" id="cp">Copiar tudo</button><button class="btn pri" id="fx">Pronto</button></div>`,g=>{$('#fx',g).onclick=fechar;$('#cp',g).onclick=async()=>{try{await navigator.clipboard.writeText('GR Rural\n'+linkHorta(x.id)+'\nUsuário: '+corpo.usuario+'\nSenha: '+corpo.senha);$('#cp',g).textContent='Copiado'}catch(e){}}},{travar:true})}
@@ -601,14 +603,21 @@ function excluirRuralS(x,u){
     <div class="rod"><button class="btn" id="cn">Voltar</button><button class="btn pri" id="ok" style="background:var(--erro);border-color:var(--erro);color:#fff">Excluir usuário</button></div>`,f=>{$('#cn',f).onclick=fechar;
     $('#ok',f).onclick=async()=>{try{await api('rural/excluir',{metodo:'POST',corpo:{e:x.id,id:u.id,usuario:u.usuario}});fechar();carregarSistemas()}catch(e){if(e.message!=='sessao')$('#em',f).textContent=e.message}}});
 }
+function emailUsuario(k,u){
+  modal(`<h2>E-mail · ${esc(u.nome)}</h2><p class="dica">Com e-mail cadastrado, no próximo acesso a pessoa recebe um código de 6 números e só entra depois de confirmar. Trocar o e-mail pede confirmação de novo. Deixe vazio para tirar.</p>
+    <label>E-mail<input id="eml" type="email" inputmode="email" autocapitalize="none" spellcheck="false" value="${esc(u.email||'')}" placeholder="nome@exemplo.com"></label>
+    ${u.email?`<p class="dica">Situação: <b>${u.emailOk?'confirmado':'aguardando a pessoa confirmar'}</b></p>`:''}<p class="msg" id="emm"></p>
+    <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Salvar</button></div>`,f=>{$('#cn',f).onclick=fechar;
+    $('#ok',f).onclick=async()=>{try{await api('admin/email',{metodo:'POST',corpo:{sistema:k,id:u.id,email:$('#eml',f).value.trim()}});fechar();carregarSistemas()}catch(e){if(e.message!=='sessao')$('#emm',f).textContent=e.message}}});
+}
 function cartaoCliente(k,x){
   const on=!x.bloqueado,us=x.usuarios||[],rest=k==='restaurante',tp=x.tipo==='acougue'?'acougue':'restaurante';
   const sub=rest?`Responsável: ${esc(x.responsavel||'—')} · ${us.length} usuário(s)`:`${us.length} usuário(s)`;
   return `<div class="cli ${on?'':'off'}" data-cli="${k}|${esc(x.id)}"><div class="cli-c"><div><b>${esc(x.nome)}</b>${rest?` <span class="tptag ${tp}">${TIPOCOM[tp]}</span>`:''}<small>${sub}${x.bloqueado&&x.desde?' · cortado em '+quando(x.desde):''}${x.motivo?' · '+esc(x.motivo):''}</small></div>
     <div class="cli-d"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">${rest?'<button class="btn" data-ed>Editar</button><button class="btn" data-nu>+ Usuário</button>':''}${k==='camara'?'<button class="btn" data-nc>+ Usuário</button>':''}${k==='rural'?'<button class="btn" data-red>Editar</button><button class="btn" data-rnu>+ Usuário</button>':''}${chave(on,on?'Cliente ativo':'Cliente bloqueado')}</div>
     ${rest?`<div class="tpsel" role="group" aria-label="Tipo do comércio"><span>Tipo:</span>${Object.entries(TIPOCOM).map(([t,nm])=>`<button type="button" data-tipo="${t}" class="${tp===t?'act':''}" aria-pressed="${tp===t}">${nm}</button>`).join('')}</div>`:''}</div></div>
-    ${us.length?`<div class="usgrid">${us.map(u=>{const uon=!u.bloqueado;return `<div class="usr ${uon&&on?'':'off'}" data-u="${esc(u.id)}"><div><b>${esc(u.nome)}</b><small>${esc(u.cargo||'')}${u.usuario?' · '+esc(u.usuario):''}</small>${u.ativo===false?'<small style="color:var(--erro)">desativado pelo administrador da Câmara</small>':''}${u.bloqueado&&u.motivo?`<small>${esc(u.motivo)}</small>`:''}</div>
-      <div class="ln">${chave(uon,null,'p')}${rest?'<span><button class="lkbtn" data-fn>Função</button><button class="lkbtn" data-sn>Senha nova</button><button class="lkbtn" data-ex style="color:var(--erro)">Excluir</button></span>':''}${k==='camara'?'<span><button class="lkbtn" data-cg>Cargo</button><button class="lkbtn" data-csn>Senha nova</button></span>':''}${k==='rural'?'<span><button class="lkbtn" data-red-u>Editar</button><button class="lkbtn" data-rsn>Senha nova</button><button class="lkbtn" data-rex style="color:var(--erro)">Excluir</button></span>':''}</div></div>`}).join('')}</div>`:k==='rural'?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o administrador da horta.</p>':rest?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o acesso de quem comprou.</p>':''}</div>`;
+    ${us.length?`<div class="usgrid">${us.map(u=>{const uon=!u.bloqueado;return `<div class="usr ${uon&&on?'':'off'}" data-u="${esc(u.id)}"><div><b>${esc(u.nome)}</b><small>${esc(u.cargo||'')}${u.usuario?' · '+esc(u.usuario):''}</small>${(rest||k==='camara'||k==='rural')?`<small class="emst ${u.email?(u.emailOk?'ok':'esp'):''}">${u.email?(u.emailOk?'✉ '+esc(u.email)+' · confirmado':'✉ '+esc(u.email)+' · aguardando confirmação'):'✉ sem e-mail'}</small>`:''}${u.ativo===false?'<small style="color:var(--erro)">desativado pelo administrador da Câmara</small>':''}${u.bloqueado&&u.motivo?`<small>${esc(u.motivo)}</small>`:''}</div>
+      <div class="ln">${chave(uon,null,'p')}${rest?'<span><button class="lkbtn" data-eml>E-mail</button><button class="lkbtn" data-fn>Função</button><button class="lkbtn" data-sn>Senha nova</button><button class="lkbtn" data-ex style="color:var(--erro)">Excluir</button></span>':''}${k==='camara'?'<span><button class="lkbtn" data-eml>E-mail</button><button class="lkbtn" data-cg>Cargo</button><button class="lkbtn" data-csn>Senha nova</button></span>':''}${k==='rural'?'<span><button class="lkbtn" data-eml>E-mail</button><button class="lkbtn" data-red-u>Editar</button><button class="lkbtn" data-rsn>Senha nova</button><button class="lkbtn" data-rex style="color:var(--erro)">Excluir</button></span>':''}</div></div>`}).join('')}</div>`:k==='rural'?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o administrador da horta.</p>':rest?'<p class="dica" style="margin-top:10px">Nenhum usuário. Toque em “+ Usuário” para criar o acesso de quem comprou.</p>':''}</div>`;
 }
 async function trocarTipo(x,t){if((x.tipo||'restaurante')===t)return;
   modal(`<h2>Mudar ${esc(x.nome)} para ${TIPOCOM[t]}?</h2><p class="dica">${t==='acougue'?'O sistema deste cliente passa a abrir como açougue: caixa grande, venda por quilo e grama, sem mesas, cores amarelas.':'O sistema deste cliente passa a abrir como restaurante: mesas, garçons, delivery e cardápio digital.'} Os dados (produtos, vendas, estoque) continuam os mesmos. Quem estiver usando vê a mudança em alguns segundos.</p>
@@ -632,10 +641,10 @@ function novoRest(x){
   modal(`<h2>Novo usuário · ${esc(x.nome)}</h2><p class="dica">É o acesso de quem comprou o sistema. Ela entra no caixa com este usuário e senha, uma vez em cada aparelho (no celular do garçom também; depois o garçom escolhe o nome e o PIN).</p>
     <label>Nome<input id="nn" maxlength="60" placeholder="Ex.: Marina"></label><label>Usuário<input id="nu" autocapitalize="none" spellcheck="false" placeholder="Ex.: marina"></label>
     <label>Senha<input id="ns" value="${s}" style="font-family:ui-monospace,monospace"></label>
-    ${seletorFuncao('adm')}<p class="msg" id="nm"></p>
+    ${seletorFuncao('adm')}<label>E-mail da pessoa <small class="dica" style="font-weight:500">(no primeiro acesso ela confirma com um código de 6 números)</small><input id="eml" type="email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="nome@exemplo.com"></label><p class="msg" id="nm"></p>
     <div class="rod"><button class="btn" id="cn">Cancelar</button><button class="btn pri" id="ok">Criar usuário</button></div>`,f=>{
     $('#cn',f).onclick=fechar;ligarEscolha(f);
-    $('#ok',f).onclick=async()=>{const corpo={cliente:x.id,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),senha:$('#ns',f).value.trim(),perfil:escolhido(f,'fun')};
+    $('#ok',f).onclick=async()=>{const corpo={cliente:x.id,nome:$('#nn',f).value.trim(),usuario:$('#nu',f).value.trim(),senha:$('#ns',f).value.trim(),perfil:escolhido(f,'fun'),email:$('#eml',f).value.trim()};
       try{await api('admin/rest/usuario',{metodo:'POST',corpo});mostrarAcessoRest(corpo.nome,corpo.usuario,corpo.senha,x.tipo);carregarSistemas()}catch(e){if(e.message!=='sessao')$('#nm',f).textContent=e.message}};
   });
 }
@@ -654,7 +663,7 @@ function usuarioCamara(x,u){
   const novo=!u,s=gerar(),cid=u?u.cargoId:'',adm=u?!!u.admin:false;
   modal(`<h2>${novo?'Novo usuário':esc(u.nome)} · ${esc(x.nome)}</h2>
     ${novo?`<label>Nome completo<input id="cn1" maxlength="120" placeholder="Ex.: Maria da Silva"></label><label>Usuário<input id="cu1" autocapitalize="none" spellcheck="false" placeholder="Ex.: maria.silva"></label>
-    <label>Senha provisória<input id="cs1" value="${s}" style="font-family:ui-monospace,monospace"></label>`:''}
+    <label>Senha provisória<input id="cs1" value="${s}" style="font-family:ui-monospace,monospace"></label><label>E-mail da pessoa <small class="dica" style="font-weight:500">(no primeiro acesso ela confirma com um código de 6 números)</small><input id="eml" type="email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="nome@exemplo.com"></label>`:''}
     <div class="lbl">Cargo</div><div class="esc chips" data-grupo="cargo">${CARGOS_CAM.map(([k,n])=>`<button type="button" data-v="${k}" class="${cid===k?'act':''}"><b>${n}</b></button>`).join('')}</div>
     <div class="lbl">Administrador do sistema</div><button type="button" class="sw" data-tg id="adm1" role="switch" aria-checked="${adm}"><i></i><span>Sim, é administrador</span></button>
     <p class="dica" style="margin-top:6px">Verde = administrador (vê e muda tudo, cria usuários). Vermelho = só o que o cargo permite.${novo?' No primeiro acesso a pessoa troca a senha.':' A pessoa entra de novo já com o cargo novo.'}</p>
@@ -663,7 +672,7 @@ function usuarioCamara(x,u){
     const sw=$('#adm1',f),txt=()=>{sw.querySelector('span').textContent=sw.getAttribute('aria-checked')==='true'?'Sim, é administrador':'Não é administrador'};txt();sw.addEventListener('click',()=>setTimeout(txt));
     $('#ok',f).onclick=async()=>{const cargoId=escolhido(f,'cargo'),admin=sw.getAttribute('aria-checked')==='true';
       if(!cargoId){$('#cm1',f).textContent='Escolha o cargo.';return}
-      try{if(novo){const corpo={camara:x.id,nome:$('#cn1',f).value.trim(),usuario:$('#cu1',f).value.trim(),senha:$('#cs1',f).value.trim(),cargoId,admin};
+      try{if(novo){const corpo={camara:x.id,nome:$('#cn1',f).value.trim(),usuario:$('#cu1',f).value.trim(),senha:$('#cs1',f).value.trim(),cargoId,admin,email:$('#eml',f).value.trim()};
           await api('admin/camara/usuario',{metodo:'POST',corpo});mostrarAcessoCamara(corpo.nome,corpo.usuario,corpo.senha)}
         else{await api('admin/camara/editar',{metodo:'POST',corpo:{camara:x.id,id:u.id,cargoId,admin}});fechar()}
         carregarSistemas()}catch(e){if(e.message!=='sessao')$('#cm1',f).textContent=e.message}}});

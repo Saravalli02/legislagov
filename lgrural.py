@@ -881,7 +881,8 @@ def rota(h, metodo):
                     cod, r = entrar(c, empresa, corpo.get("usuario"), corpo.get("senha"))
                     import lgacesso
                     cod, r = lgacesso.porta_login(c, h, "rural", cod, r, _ip(h),
-                                                  lambda s: f"{s.get('nome')} ({s.get('usuario')}) · horta {r.get('empresa') or empresa}", _resumo)
+                                                  lambda s: f"{s.get('nome')} ({s.get('usuario')}) · horta {r.get('empresa') or empresa}", _resumo,
+                                                  corpo.get("codigo"))
                     lgapi.registrar("rural:" + (r.get("empresa") or empresa or "?"), str(corpo.get("usuario"))[:40], "Rural: entrou" if cod == 200 else "Rural: aparelho não liberado" if cod == 403 else "Rural: senha errada", "", _ip(h))
                     if cod in (401, 429):
                         lgapi._falha_ip(_ip(h), None, "Rural")

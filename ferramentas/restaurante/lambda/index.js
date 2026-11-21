@@ -93,6 +93,13 @@ const corpo=e=>{let b=e.body||'{}';if(e.isBase64Encoded)b=Buffer.from(b,'base64'
 const mk=base=>async e=>{
   const m=e.requestContext.http.method,p=(e.rawPath||'').replace(/^\/api/,''),h=e.headers||{},t=h['x-lg-token'],q=e.queryStringParameters||{};
   if(p==='/ping')return J(200,{ok:1});
+  // e-mail (código de confirmação etc.): a Central só manda o número; o conteúdo vem da própria Central (uma vez só)
+  if(p==='/_email'&&m==='POST'){const b=corpo(e),id=String(b.id||'');if(!/^[A-Za-z0-9_-]{16,40}$/.test(id))return J(400,{ok:false});
+    const r=await post('rest/saida',{id});if(r.s!==200||!r.b.para)return J(404,{ok:false});
+    try{const S=require('@aws-sdk/client-sesv2'),ses=new S.SESv2Client({region:'sa-east-1'});
+      await ses.send(new S.SendEmailCommand({FromEmailAddress:r.b.de||'GR Software <nao-responda@grsoftware.com.br>',Destination:{ToAddresses:[String(r.b.para)]},
+        Content:{Simple:{Subject:{Data:String(r.b.assunto||''),Charset:'UTF-8'},Body:{Text:{Data:String(r.b.texto||''),Charset:'UTF-8'}}}}}));
+      return J(200,{ok:true})}catch(x){console.log('email',String(x).slice(0,300));return J(502,{ok:false})}}
   // cardápio digital público: ?c=cliente (sem c = o primeiro restaurante)
   const pubSt=()=>base(CLI_RE.test(q.c||'')?q.c:LEGADO);
   if(p==='/cardapio'&&m==='GET'){const v=await cardapio(pubSt());return J(200,{...v,produtos:v.produtos.map(({custo,...x})=>x)})}
@@ -100,7 +107,7 @@ const mk=base=>async e=>{
   if(p==='/reserva'&&m==='GET'){const v=await reservaInfo(pubSt());return J(200,v)}
   if(p==='/reserva'&&m==='POST')return reservar(pubSt(),e,corpo(e));
   if(p==='/entrar'&&m==='POST'){const b=corpo(e);
-    try{const r=await post('rest/entrar',{usuario:b.usuario,senha:b.senha,tipo:b.tipo==='acougue'?'acougue':'restaurante',dev:String(b.dev||'').slice(0,64),ip:String((e.headers||{})['x-forwarded-for']||'').split(',')[0].trim()||(e.requestContext.http&&e.requestContext.http.sourceIp)||'',ua:String(b.ua||(e.headers||{})['user-agent']||'').slice(0,300)});return J(r.s,r.b)}catch(x){return J(503,{erro:'Sem conexão com a LegislaGov. Tente de novo em instantes.'})}}
+    try{const r=await post('rest/entrar',{usuario:b.usuario,senha:b.senha,tipo:b.tipo==='acougue'?'acougue':'restaurante',dev:String(b.dev||'').slice(0,64),ip:String((e.headers||{})['x-forwarded-for']||'').split(',')[0].trim()||(e.requestContext.http&&e.requestContext.http.sourceIp)||'',ua:String(b.ua||(e.headers||{})['user-agent']||'').slice(0,300),codigo:String(b.codigo||'').replace(/\D/g,'').slice(0,6)});return J(r.s,r.b)}catch(x){return J(503,{erro:'Sem conexão com o servidor. Tente de novo em instantes.'})}}
   if(p==='/sair'&&m==='POST'){if(t){SES.delete(t);try{await post('rest/sair',{token:t})}catch(x){}}return J(200,{ok:1})}
   const ss=await sessao(t),v=ss.v;
   if(v===0)return J(401,{erro:'login'});if(v===2)return J(423,{erro:'suspenso'});if(v===3)return J(503,{erro:'central'});

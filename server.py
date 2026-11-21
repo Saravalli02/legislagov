@@ -513,6 +513,11 @@ class Handler(SimpleHTTPRequestHandler):
                 usr, erro = lgapi.login(camara, d.get("usuario", ""), d.get("senha", ""), ip)
                 if not usr:
                     return self._json(401, {"ok": False, "erro": erro})
+                import lgacesso
+                with lgapi._trava:
+                    em = lgacesso.email_porta(lgapi._db(), "camara", "camara:" + usr["id"], usr.get("nome") or usr["usuario"], d.get("codigo"))
+                if em:
+                    return self._json(em[0], em[1])
                 return self._json(200, {"ok": True, "id": usr["id"], "provisoria": bool(usr.get("trocarSenha")) or str(d.get("senha", "")) in ("123456", "admin123")},
                                   cookie=lgapi.criar_sessao(usr))
             if caminho == "/api/logout" and metodo == "POST":

@@ -110,7 +110,8 @@ def painel(c):
             us.append({"id": u["id"], "nome": u.get("nome") or u["usuario"], "usuario": u["usuario"],
                        "cargo": " · ".join(x for x in (("Administrador" if u.get("perfil") == "admin" or u.get("orgao") == "ambos" else ""),
                                                         (u.get("cargo") or ("" if u.get("perfil") == "admin" else u.get("perfil")) or "")) if x),
-                       "cargoId": u.get("cargoId") or "", "admin": u.get("perfil") == "admin" or u.get("orgao") == "ambos", "ativo": u.get("ativo") is not False, **_info(c, "camara", cam, u["id"])})
+                       "cargoId": u.get("cargoId") or "", "admin": u.get("perfil") == "admin" or u.get("orgao") == "ambos", "ativo": u.get("ativo") is not False, **_info(c, "camara", cam, u["id"]),
+                       **email_info(c, "camara", "camara:" + u["id"])})
         us.sort(key=lambda x: x["nome"].lower())
         camaras.append({"id": cam, "nome": NOMES_CAMARA.get(cam, cam), "usuarios": us, **_info(c, "camara", cam)})
     out["camara"] = camaras
@@ -125,7 +126,7 @@ def painel(c):
                            "usuarios": [{"id": u["id"], "nome": u["nome"], "usuario": u["usuario"],
                                          "cargo": "Administrador da horta" if u["perfil"] == "adm" else "Vendedor" + (" · " + u["vendedor"] if u["vendedor"] else ""),
                                          "perfil": u["perfil"], "vendedorId": u["vendedorId"],
-                                         "ativo": True, **_info(c, "rural", h["codigo"], u["id"])} for u in us]})
+                                         "ativo": True, **_info(c, "rural", h["codigo"], u["id"]), **email_info(c, "rural", "rural:" + u["id"])} for u in us]})
         out["rural"] = hortas
     except Exception as e:
         print("acesso: rural", repr(e), flush=True)
@@ -146,7 +147,7 @@ def painel(c):
                            "usuarios": [{"id": u["id"], "nome": u["nome"], "usuario": u["usuario"],
                                          "cargo": PERFIS_REST.get(u["perfil"], "Administrador"), "perfil": u["perfil"] if u["perfil"] in PERFIS_REST else "adm",
                                          "ativo": True, "ultimo": u["ultimo"],
-                                         **_info(c, "restaurante", r["id"], u["id"])}
+                                         **_info(c, "restaurante", r["id"], u["id"]), **email_info(c, "restaurante", "restaurante:" + u["id"])}
                                         for u in c.execute("SELECT * FROM ct_rest_usuarios WHERE cliente=? ORDER BY nome", (r["id"],))],
                            **_info(c, "restaurante", r["id"])} for r in c.execute("SELECT * FROM ct_clientes WHERE sistema='restaurante' ORDER BY nome")]
     return out
@@ -202,7 +203,7 @@ def _resumo(t):
     return hashlib.sha256(("rest:" + str(t)).encode()).hexdigest()
 
 
-def rest_entrar(c, login, senha, tipo=None, dev=None, ip='', ua=''):
+def rest_entrar(c, login, senha, tipo=None, dev=None, ip='', ua='', codigo=None):
     login = str(login or "").strip().lower()
     u = c.execute("SELECT * FROM ct_rest_usuarios WHERE usuario=?", (login,)).fetchone()
     agora = time.time()
@@ -229,6 +230,9 @@ def rest_entrar(c, login, senha, tipo=None, dev=None, ip='', ua=''):
                (401, {"ok": False, "erro": "Usuário ou senha incorretos."})
     if bloqueado("restaurante", u["cliente"], u["id"]):
         return 423, {"ok": False, "erro": MSG}
+    em = email_porta(c, "restaurante", "restaurante:" + u["id"], u["nome"], codigo)
+    if em:
+        return em
     cl = c.execute("SELECT nome FROM ct_clientes WHERE sistema='restaurante' AND id=?", (u["cliente"],)).fetchone()
     barra = porta(c, "restaurante", "restaurante:" + u["id"], f"{u['nome']} ({u['usuario']}) · {cl['nome'] if cl else u['cliente']}", dev, ip, ua)
     if barra:
@@ -271,9 +275,14 @@ def rest_criar(c, d):
     if c.execute("SELECT 1 FROM ct_rest_usuarios WHERE usuario=?", (login,)).fetchone():
         return 409, {"ok": False, "erro": "Este usuário já existe. Escolha outro."}
     perfil = d.get("perfil") if d.get("perfil") in PERFIS_REST else "adm"
+    if str(d.get("email") or "").strip() and not email_ok(d.get("email")):
+        return 400, {"ok": False, "erro": "E-mail inválido."}
+    uid = "r" + uuid.uuid4().hex[:10]
     c.execute("INSERT INTO ct_rest_usuarios(id, cliente, usuario, nome, perfil, senha, criado) VALUES(?,?,?,?,?,?,?)",
-              ("r" + uuid.uuid4().hex[:10], cli, login, nome, perfil, lgapi.hash_senha(senha), time.time()))
-    return 200, {"ok": True}
+              (uid, cli, login, nome, perfil, lgapi.hash_senha(senha), time.time()))
+    if str(d.get("email") or "").strip():
+        email_definir(c, "restaurante", "restaurante:" + uid, d.get("email"))
+    return 200, {"ok": True, "id": uid}
 
 
 PERFIS_REST = {"adm": "Administrador", "caixa": "Caixa", "garcom": "Garçom"}
@@ -487,7 +496,7 @@ def dev_do_pedido(h):
     return d
 
 
-def porta_login(c, h, sistema, cod, r, ip, rotulo_fn, resumo_fn):
+def porta_login(c, h, sistema, cod, r, ip, rotulo_fn, resumo_fn, codigo=None):
     """Chamado depois de um login 200: confere o aparelho; se não puder, desfaz a sessão e devolve o recusa."""
     if cod != 200 or not r.get("token"):
         return cod, r
@@ -495,7 +504,8 @@ def porta_login(c, h, sistema, cod, r, ip, rotulo_fn, resumo_fn):
     uid = s.get("uid") or s.get("id")
     if not uid or str(uid).startswith("master:") or str(s.get("usuario", "")) in MASTERS:
         return cod, r
-    barra = porta(c, sistema, f"{sistema}:{uid}", rotulo_fn(s), dev_do_pedido(h), ip, h.headers.get("User-Agent", ""))
+    barra = email_porta(c, sistema, f"{sistema}:{uid}", s.get("nome") or s.get("usuario") or "", codigo) or \
+        porta(c, sistema, f"{sistema}:{uid}", rotulo_fn(s), dev_do_pedido(h), ip, h.headers.get("User-Agent", ""))
     if barra:
         tabela, col = {"rural": ("rural_sess", "token"), "email": ("em_sess", "token")}[sistema]
         c.execute(f"DELETE FROM {tabela} WHERE {col}=?", (resumo_fn(r["token"]),))
@@ -542,7 +552,12 @@ def camara_criar(c, d, por):
     dados = {"usuario": login, "nome": nome, "cargoId": cg["id"], "cargo": cg["nome"], "setor": cg["setor"],
              "perfil": "admin" if adm else cg["perfil"], "orgao": "cam", "municipio": "Neves Paulista — SP",
              "ativo": True, "pendente": False, "criadoEm": lgapi.agora(), "trocarSenha": True}
-    lgapi._criar_usuario(cam, dados, senha)
+    if str(d.get("email") or "").strip() and not email_ok(d.get("email")):
+        return 400, {"ok": False, "erro": "E-mail inválido."}
+    novo_id = lgapi._criar_usuario(cam, dados, senha)
+    if str(d.get("email") or "").strip():
+        email_definir(c, "camara", "camara:" + novo_id, d.get("email"))
+        lgapi._gravar_dados_usuario(novo_id, lambda x: x.update({"email": email_ok(d.get("email"))}))
     lgapi.registrar(cam, por, "Usuário criado pela GR Central", f"{login} · {cg['nome']}{' · administrador' if adm else ''}")
     return 200, {"ok": True}
 
@@ -585,3 +600,101 @@ def camara_senha(c, d, por):
     c.execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))
     lgapi.registrar(cam, por, "Senha nova dada pela GR Central", u["usuario"])
     return 200, {"ok": True, "usuario": u["usuario"]}
+
+
+# ------------------------------------------------------------------ confirmação de e-mail (21/11/2026)
+# Usuário criado pela Central com e-mail: no primeiro acesso (e sempre que o e-mail mudar) recebe um código de 6 números
+# e só entra depois de digitar o código. Quem não tem e-mail cadastrado entra como antes.
+REMETENTE_EMAIL = {"camara": None}   # None = remetente padrão do LegislaGov; os outros saem como GR Software
+NOME_SIS = {"restaurante": "GR Restaurante / Açougue", "rural": "GR Rural", "email": "Painel de e-mails", "camara": "LegislaGov"}
+
+
+def _emdb(c):
+    c.execute("""CREATE TABLE IF NOT EXISTS ct_email(sistema TEXT NOT NULL, conta TEXT NOT NULL, email TEXT NOT NULL, confirmado REAL,
+                 cod TEXT, expira REAL, tentativas INTEGER DEFAULT 0, enviado REAL, PRIMARY KEY(sistema, conta))""")
+    return c
+
+
+def email_ok(e):
+    e = str(e or "").strip().lower()
+    return e if re.fullmatch(r"[^@\s]{1,64}@[^@\s]+\.[a-z]{2,}", e) and len(e) <= 120 else ""
+
+
+def mascara_email(e):
+    u, _, d = e.partition("@")
+    return (u[:2] + "•" * max(1, len(u) - 2)) + "@" + d
+
+
+def email_definir(c, sistema, conta, email):
+    """Guarda (ou troca) o e-mail do usuário. Vazio = tira. E-mail novo precisa ser confirmado no próximo acesso."""
+    _emdb(c)
+    e = email_ok(email)
+    if not str(email or "").strip():
+        c.execute("DELETE FROM ct_email WHERE sistema=? AND conta=?", (sistema, conta))
+        return 200, {"ok": True}
+    if not e:
+        return 400, {"ok": False, "erro": "E-mail inválido."}
+    r = c.execute("SELECT email FROM ct_email WHERE sistema=? AND conta=?", (sistema, conta)).fetchone()
+    if r and r["email"] == e:
+        return 200, {"ok": True}
+    c.execute("INSERT OR REPLACE INTO ct_email(sistema, conta, email, confirmado, tentativas) VALUES(?,?,?,NULL,0)", (sistema, conta, e))
+    return 200, {"ok": True}
+
+
+def email_info(c, sistema, conta):
+    _emdb(c)
+    r = c.execute("SELECT email, confirmado FROM ct_email WHERE sistema=? AND conta=?", (sistema, conta)).fetchone()
+    return {"email": r["email"], "emailOk": bool(r["confirmado"])} if r else {"email": "", "emailOk": False}
+
+
+def _hash_cod(conta, cod):
+    import hashlib
+    return hashlib.sha256(f"{conta}|{cod}".encode()).hexdigest()
+
+
+def email_porta(c, sistema, conta, nome, codigo):
+    """No login, depois da senha certa. None = pode entrar; senão (403, resposta pedindo o código)."""
+    _emdb(c)
+    r = c.execute("SELECT * FROM ct_email WHERE sistema=? AND conta=?", (sistema, conta)).fetchone()
+    if not r or r["confirmado"]:
+        return None
+    agora, codigo = time.time(), re.sub(r"\D", "", str(codigo or ""))
+    base = {"ok": False, "precisaCodigo": True, "email": mascara_email(r["email"])}
+    if codigo:
+        if r["cod"] and (r["expira"] or 0) > agora and (r["tentativas"] or 0) < 5 and secrets.compare_digest(_hash_cod(conta, codigo), r["cod"]):
+            c.execute("UPDATE ct_email SET confirmado=?, cod=NULL, expira=NULL, tentativas=0 WHERE sistema=? AND conta=?", (agora, sistema, conta))
+            return None
+        c.execute("UPDATE ct_email SET tentativas=COALESCE(tentativas,0)+1 WHERE sistema=? AND conta=?", (sistema, conta))
+        if (r["tentativas"] or 0) + 1 >= 5 or (r["expira"] or 0) <= agora:
+            c.execute("UPDATE ct_email SET cod=NULL, expira=NULL WHERE sistema=? AND conta=?", (sistema, conta))
+            return 403, {**base, "erro": "Código vencido ou com muitas tentativas. Toque em Entrar de novo para receber um código novo."}
+        return 403, {**base, "erro": "Código errado. Confira no e-mail e digite de novo."}
+    if r["cod"] and (r["expira"] or 0) > agora and agora - (r["enviado"] or 0) < 60:
+        return 403, {**base, "erro": f"Enviamos um código de 6 números para {base['email']}. Digite o código para entrar."}
+    cod = f"{secrets.randbelow(10 ** 6):06d}"
+    c.execute("UPDATE ct_email SET cod=?, expira=?, enviado=?, tentativas=0 WHERE sistema=? AND conta=?",
+              (_hash_cod(conta, cod), agora + 15 * 60, agora, sistema, conta))
+    import lgenvio
+    sis = NOME_SIS.get(sistema, "GR Software")
+    texto = (f"Olá, {nome}!\n\nSeu código para confirmar o e-mail e entrar no {sis} é:\n\n    {cod}\n\n"
+             "Ele vale por 15 minutos. Copie e cole na tela de entrada.\n\n"
+             "Se não foi você que tentou entrar, ignore este e-mail e avise o administrador.\n\n— "
+             + ("LegislaGov" if sistema == "camara" else "GR Software · grsoftware.com.br"))
+    ok = lgenvio.enviar(r["email"], f"{cod} é o seu código de confirmação — {sis}", texto,
+                        None if sistema == "camara" else lgenvio.REMETENTE_GR)
+    if not ok:
+        return 503, {**base, "erro": "Não conseguimos enviar o código agora. Tente de novo em alguns minutos."}
+    return 403, {**base, "erro": f"Enviamos um código de 6 números para {base['email']}. Digite o código para entrar."}
+
+
+def email_admin(c, d):
+    sis, uid = str(d.get("sistema") or ""), str(d.get("id") or "")
+    if sis not in ("restaurante", "rural", "camara") or not re.fullmatch(r"[A-Za-z0-9_:.-]{1,80}", uid):
+        return 400, {"ok": False, "erro": "Pedido inválido."}
+    cod, r = email_definir(c, sis, f"{sis}:{uid}", d.get("email"))
+    if cod == 200 and sis == "camara" and email_ok(d.get("email")):
+        try:
+            lgapi._gravar_dados_usuario(uid, lambda x: x.update({"email": email_ok(d.get("email"))}))
+        except Exception:
+            pass
+    return cod, r

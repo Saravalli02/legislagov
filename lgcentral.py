@@ -362,11 +362,16 @@ def rota(h, metodo):
                 rc = lgacesso._db()
                 if acao == "rest/entrar":
                     return _resp(h, *lgacesso.rest_entrar(rc, corpo.get("usuario"), corpo.get("senha"), corpo.get("tipo"),
-                                                          corpo.get("dev"), str(corpo.get("ip") or "")[:64], str(corpo.get("ua") or "")[:300]))
+                                                          corpo.get("dev"), str(corpo.get("ip") or "")[:64], str(corpo.get("ua") or "")[:300],
+                                                          corpo.get("codigo")))
                 if acao == "rest/sessao":
                     return _resp(h, *lgacesso.rest_sessao(rc, str(corpo.get("token") or "")))
                 if acao == "rest/sair":
                     return _resp(h, *lgacesso.rest_sair(rc, str(corpo.get("token") or "")))
+                if acao == "rest/saida":   # o Lambda busca o e-mail que este servidor pediu para enviar
+                    import lgenvio
+                    m = lgenvio.retirar(corpo.get("id"))
+                    return _resp(h, 200 if m else 404, {"ok": bool(m), **({k: m[k] for k in ("para", "assunto", "texto", "de")} if m else {})})
             return _resp(h, 404, {"ok": False})
         if acao == "licenca" and metodo == "GET":
             # consultado pelo servidor do LegislaGov Restaurante (e futuros sistemas fora deste servidor)
@@ -447,6 +452,12 @@ def rota(h, metodo):
                         _log(c, s["usuario"], "Comércio: cliente " + ("alterado" if corpo.get("id") else "criado"),
                              f"{corpo.get('nome')} ({lgacesso.TIPOS.get(corpo.get('tipo'), 'Restaurante')})", ip)
                     return _resp(h, cod, r)
+            if acao == "admin/email" and metodo == "POST":
+                import lgacesso
+                cod, r = lgacesso.email_admin(lgacesso._db(), corpo)
+                if cod == 200:
+                    _log(c, s["usuario"], "E-mail do usuário definido", f"{corpo.get('sistema')}/{corpo.get('id')}: {corpo.get('email') or '(sem e-mail)'}", ip)
+                return _resp(h, cod, r)
             if acao in ("admin/camara/usuario", "admin/camara/editar", "admin/camara/senha", "admin/rest/perfil") and metodo == "POST":
                 import lgacesso
                 ac = lgacesso._db()
@@ -538,7 +549,12 @@ def rota(h, metodo):
                         _log(c, s["usuario"], "Rural: horta renomeada", f"{corpo.get('e')} → {corpo.get('nome')}", ip)
                     return _resp(h, cod, r)
                 if acao == "rural/usuario" and metodo == "POST":
+                    import lgacesso
+                    if str(corpo.get("email") or "").strip() and not lgacesso.email_ok(corpo.get("email")):
+                        return _resp(h, 400, {"ok": False, "erro": "E-mail inválido."})
                     cod, r = lgrural.central_criar_usuario(rc, str(corpo.get("e", "")), corpo)
+                    if cod == 200 and str(corpo.get("email") or "").strip():
+                        lgacesso.email_definir(lgacesso._db(), "rural", "rural:" + r["id"], corpo.get("email"))
                     if cod == 200:
                         _log(c, s["usuario"], "Rural: usuário criado", f"{corpo.get('e')}/{corpo.get('usuario')} ({corpo.get('perfil')})", ip)
                     return _resp(h, cod, r)

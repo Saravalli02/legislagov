@@ -265,7 +265,7 @@ async function api(acao,{metodo='GET',corpo=null,q=''}={}){
   if(r.status===410&&d.encerrada){demoEncerrada();throw new Error('sessao')}
   if(r.status===423&&d.suspensa){acessoSuspenso();throw new Error('sessao')}
   if(r.status===401&&TOKEN&&!['entrar','primeiro'].includes(acao)){sessaoTerminou();throw new Error('sessao')}
-  if(!r.ok){const e=new Error(d.erro||('Erro '+r.status));e.status=r.status;throw e}
+  if(!r.ok){const e=new Error(d.erro||('Erro '+r.status));e.status=r.status;e.dados=d;throw e}
   return d;
 }
 function zerarDados(){S=JSON.parse(JSON.stringify(VAZIO));ultimo={config:{}};vers={};COLS.forEach(c=>ultimo[c]={});SEQ=0}
@@ -495,6 +495,7 @@ function vLogin(){
   return `<div style="text-align:center;padding:20px 6px 4px"><div><img src="logo-gr.webp" alt="GR Rural" style="height:72px;width:auto"></div><h2 style="margin-bottom:4px">Entrar</h2><p style="color:var(--sub);margin-top:0">Use o usuário e a senha que você recebeu.</p></div>
     ${entradaInfo.erro?`<div class="aviso">${esc(entradaInfo.erro)}</div>`:''}
     <form class="card" id="fLogin" onsubmit="return false">${campo('lUsu','Usuário','text','username')}${campo('lSen','Senha','password','current-password')}
+    <div id="lCodW" hidden><label for="lCod">Código que chegou no e-mail</label><input id="lCod" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 números" style="letter-spacing:.35em;font-weight:800;font-size:20px;text-align:center"></div>
     <button class="btn" id="entrarBt" type="submit" style="margin-top:14px">Entrar</button><div id="logMsg" class="neg" style="margin-top:8px;font-size:14px"></div></form>${botaoBaixar()}`;
 }
 function ligarLogin(){
@@ -508,8 +509,9 @@ function ligarLogin(){
   const fl=$('#fLogin');if(fl){setTimeout(()=>{const u=$('#lUsu');if(u&&!u.value)u.focus()},60);
     fl.onsubmit=async ev=>{ev.preventDefault();const usuario=$('#lUsu').value.trim(),senha=$('#lSen').value;if(!usuario||!senha){msg('Digite o usuário e a senha.');return}
       const bt=$('#entrarBt');bt.disabled=true;msg('');
-      try{const r=await api('entrar',{metodo:'POST',corpo:{usuario,senha,e:EMP||undefined}});logado(r);toast('Olá, '+(r.sessao.nome||usuario))}
-      catch(e){msg(e.status?e.message:'Sem internet. Tente de novo quando conectar.');$('#lSen').value='';$('#lSen').focus();bt.disabled=false}}}
+      try{const r=await api('entrar',{metodo:'POST',corpo:{usuario,senha,e:EMP||undefined,codigo:($('#lCod')||{value:''}).value}});logado(r);toast('Olá, '+(r.sessao.nome||usuario))}
+      catch(e){if(e.dados&&e.dados.precisaCodigo){$('#lCodW').hidden=false;msg(e.message);$('#lCod').value='';$('#lCod').focus();bt.textContent='Confirmar e entrar';bt.disabled=false;return}
+        msg(e.status?e.message:'Sem internet. Tente de novo quando conectar.');$('#lSen').value='';$('#lSen').focus();bt.disabled=false}}}
 }
 
 function confirmarSair(){const p=pendentes().length;modal(`<h2>Sair?</h2><p>Você vai voltar para a tela de entrada.</p>${p?`<p class="neg"><b>Atenção:</b> ${p} lançamento(s) ainda não chegaram ao servidor${online?'':' (sem internet)'}. Se sair agora, eles se perdem. Espere aparecer "✓ em tempo real".</p>`:''}<div class="acoes"><button class="btn sec" id="sn">Cancelar</button><button class="btn" id="ss">Sair</button></div>`,f=>{f.querySelector('#sn').onclick=fecharModal;f.querySelector('#ss').onclick=()=>{fecharModal();sair()}})}

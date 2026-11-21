@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v31">
+<meta name="lg-versao" content="lg-v32">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -896,6 +896,7 @@ function pedirChave(){if($('#lgLogin'))return;$('#loading').classList.add('hidde
   d.innerHTML=`<div class="lgl-in"><div class="lgl-cab"><div class="lgent-logo">${LOGO_X()}</div><h2>Entrar</h2><p>Use o usuário e a senha que você recebeu.</p></div>
   <form class="lgl-card" id="lgForm"><label for="lgu">Usuário</label><input id="lgu" autocomplete="username" autocapitalize="none" spellcheck="false">
   <label for="lgs">Senha</label><input id="lgs" type="password" autocomplete="current-password">
+  <div id="lgcodw" hidden><label for="lgcod">Código que chegou no e-mail</label><input id="lgcod" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 números" style="letter-spacing:.35em;font-weight:800;font-size:1.3rem;text-align:center"></div>
   <button class="lgl-bt" id="lgb" type="submit">Entrar</button><p id="lge" class="lgl-erro" role="alert"></p></form>
   <div class="lgl-card lgl-app"><div class="lgl-ic">${LOGO_X()}</div><div style="flex:1"><b>Baixe o app no celular</b><small>Abre direto pela tela inicial, como os outros apps.</small></div><button class="lgl-bx" id="lgApp" type="button">Baixar</button></div>
   <p class="lgl-rod">GR ${ACG?'Açougue':'Restaurante'} · ${GARCOM?'App do garçom':'Caixa'}</p></div>`;
@@ -909,10 +910,11 @@ function baixarApp(){if(instalar){instalar.prompt();instalar=null;return}
 function lgDev(){let d=lsGet('lg-dev','');if(!/^[A-Za-z0-9_-]{16,64}$/.test(d)){const a=new Uint8Array(18);crypto.getRandomValues(a);d=Array.from(a,x=>x.toString(16).padStart(2,'0')).join('');lsSet('lg-dev',d)}return d}
 async function entrarRest(){const b=$('#lgb'),u=$('#lgu').value.trim(),sn=$('#lgs').value;$('#lge').textContent='';
   if(!u||!sn){$('#lge').textContent='Digite o usuário e a senha.';return}b.disabled=true;
-  try{const r=await fetch('/api/entrar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({usuario:u,senha:sn,tipo:TIPO,dev:lgDev(),ua:navigator.userAgent})});
+  try{const r=await fetch('/api/entrar',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({usuario:u,senha:sn,tipo:TIPO,dev:lgDev(),ua:navigator.userAgent,codigo:($('#lgcod')||{value:''}).value})});
     const d=await r.json().catch(()=>({}));
     if(r.ok&&d.token){apiKey=d.token;lsSet('lg-tok',apiKey);lsSet('lg-nome',d.nome||'');lsSet('lg-perfil',d.perfil||'');if(d.perfil==='garcom'&&!GARCOM){location.replace('/garcom');return}const t=d.tipo==='acougue'?'acougue':'restaurante';lsSet('lg-tipo',t);
       if(t!==TIPO){location.reload();return}$('#lgLogin').remove();apiSync();return}
+    if(d.precisaCodigo){$('#lgcodw').hidden=false;$('#lge').textContent=d.erro||'Digite o código que chegou no e-mail.';$('#lge').classList.toggle('lgl-erro',/errado|vencido|conseguimos/i.test(d.erro||''));$('#lgcod').value='';$('#lgcod').focus();b.textContent='Confirmar e entrar';b.disabled=false;return}
     $('#lge').textContent=d.erro||'Não foi possível entrar.';$('#lgs').value='';$('#lgs').focus()}catch(e){$('#lge').textContent='Sem internet. Tente de novo quando conectar.'}
   b.disabled=false}
 function pedirSair(){abrirModal(`<h2>Sair do sistema?</h2><p>Você volta para a tela de entrada. Para entrar de novo, use seu usuário e senha.</p><div class="row" style="margin-top:14px"><button class="btn" style="flex:1" onclick="fecharModal()">Cancelar</button><button class="btn" style="flex:1;background:#c4261d;border-color:#c4261d;color:#fff" onclick="fecharModal();sairRest()">Sair</button></div>`)}
