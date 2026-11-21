@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v35">
+<meta name="lg-versao" content="lg-v36">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -898,7 +898,33 @@ async function apiSync(){if(syncing||!apiKey)return;syncing=true;
     setOnline(true);
     if(!prontoFeito)pronto();else if(sujo){sujo=false;render()}}
   catch(e){setOnline(false)}finally{syncing=false}}
-function pedirChave(){if($('#lgLogin'))return;$('#loading').classList.add('hidden');fecharModal();
+/* app do garçom: entra com o NOME e o PIN cadastrados no caixa (Ajustes › Garçons) */
+const gCli=()=>{const c=new URLSearchParams(location.search).get('c')||lsGet('lg-cli','');return /^[a-z0-9-]{1,60}$/.test(c)?c:''};
+let gEnt={id:null,nome:'',pin:'',lista:null,erro:''};
+async function gEntrarTela(){if($('#lgLogin'))$('#lgLogin').remove();$('#loading').classList.add('hidden');fecharModal();
+  const d=document.createElement('div');d.id='lgLogin';document.body.appendChild(d);
+  if(!gEnt.lista){d.innerHTML='<div class="lgl-in"><p class="lgl-rod">Carregando…</p></div>';
+    try{const r=await fetch('/api/garcons'+(gCli()?'?c='+gCli():''));gEnt.lista=(await r.json()).garcons||[]}catch(e){gEnt.lista=null;gEnt.erro='Sem internet. Tente de novo.'}}
+  gEntDesenha()}
+function gEntDesenha(){const d=$('#lgLogin');if(!d)return;const l=gEnt.lista||[];
+  let h=`<div class="lgl-in"><div class="lgl-cab"><div class="lgent-logo">${LOGO_X()}</div><h2>App do garçom</h2><p>${gEnt.id?'Digite o seu PIN de 4 números':'Toque no seu nome'}</p></div><div class="lgl-card">`;
+  if(!gEnt.id){h+=l.length?`<div class="gnomes">${l.map(x=>`<button onclick="gEnt.id='${x.id}';gEnt.nome=this.dataset.n;gEnt.pin='';gEnt.erro='';gEntDesenha()" data-n="${esc(x.nome)}">👤<br>${esc(x.nome)}</button>`).join('')}</div>`
+      :`<p style="text-align:center;color:var(--mut)">${gEnt.lista?'Nenhum garçom cadastrado ainda.<br>O caixa cadastra em <b>⚙️ Ajustes › Garçons</b> (nome e PIN).':esc(gEnt.erro||'')}</p><button class="btn" style="width:100%;margin-top:8px" onclick="gEnt.lista=null;gEntrarTela()">🔄 Tentar de novo</button>`}
+  else h+=`<p style="text-align:center;margin:0 0 6px"><b>${esc(gEnt.nome)}</b></p><div class="pindots">${[0,1,2,3].map(i=>`<span class="${gEnt.pin.length>i?'on':''}"></span>`).join('')}</div>
+    <div class="pinpad">${[1,2,3,4,5,6,7,8,9,'←',0,'⌫'].map(k=>`<button onclick="gEntPin('${k}')">${k}</button>`).join('')}</div>`;
+  h+=`${gEnt.erro&&gEnt.id?`<p class="lgl-erro" style="text-align:center;color:#c4261d;font-weight:700">${esc(gEnt.erro)}</p>`:''}</div>
+    <p class="lgl-rod"><a href="#" onclick="event.preventDefault();lsSet('lg-gusr','1');$('#lgLogin').remove();pedirChave()">Entrar com usuário e senha</a> · GR ${ACG?'Açougue':'Restaurante'}</p></div>`;
+  d.innerHTML=h}
+async function gEntPin(k){if(k==='←'){gEnt.id=null;gEnt.pin='';gEnt.erro='';return gEntDesenha()}if(k==='⌫'){gEnt.pin=gEnt.pin.slice(0,-1);return gEntDesenha()}
+  if(gEnt.pin.length>=4)return;gEnt.pin+=k;gEnt.erro='';gEntDesenha();if(gEnt.pin.length<4)return;
+  try{const r=await fetch('/api/entrar-garcom',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({c:gCli(),id:gEnt.id,pin:gEnt.pin})}),d=await r.json().catch(()=>({}));
+    if(r.ok&&d.token){apiKey=d.token;lsSet('lg-tok',apiKey);lsSet('lg-nome',d.nome||'');lsSet('lg-perfil','garcom');lsSet('lg-garcom',d.id);if(d.cliente)lsSet('lg-cli',d.cliente);
+      const t=d.tipo==='acougue'?'acougue':'restaurante';lsSet('lg-tipo',t);if(t!==TIPO){location.reload();return}
+      $('#lgLogin').remove();toast('Olá, '+d.nome+'! 👋');apiSync();return}
+    gEnt.erro=d.erro||'Não foi possível entrar.'}catch(e){gEnt.erro='Sem internet. Tente de novo.'}
+  gEnt.pin='';gEntDesenha()}
+function pedirChave(){if(GARCOM&&lsGet('lg-gusr','')!=='1'&&!$('#lgLogin'))return gEntrarTela();
+  if($('#lgLogin'))return;$('#loading').classList.add('hidden');fecharModal();
   const d=document.createElement('div');d.id='lgLogin';
   d.innerHTML=`<div class="lgl-in"><div class="lgl-cab"><div class="lgent-logo">${LOGO_X()}</div><h2>Entrar</h2><p>Use o usuário e a senha que você recebeu.</p></div>
   <form class="lgl-card" id="lgForm"><label for="lgu">Usuário</label><input id="lgu" autocomplete="username" autocapitalize="none" spellcheck="false">
@@ -925,7 +951,7 @@ async function entrarRest(){const b=$('#lgb'),u=$('#lgu').value.trim(),sn=$('#lg
     $('#lge').textContent=d.erro||'Não foi possível entrar.';$('#lgs').value='';$('#lgs').focus()}catch(e){$('#lge').textContent='Sem internet. Tente de novo quando conectar.'}
   b.disabled=false}
 function pedirSair(){abrirModal(`<h2>Sair do sistema?</h2><p>Você volta para a tela de entrada. Para entrar de novo, use seu usuário e senha.</p><div class="row" style="margin-top:14px"><button class="btn" style="flex:1" onclick="fecharModal()">Cancelar</button><button class="btn" style="flex:1;background:#c4261d;border-color:#c4261d;color:#fff" onclick="fecharModal();sairRest()">Sair</button></div>`)}
-function sairRest(){fetch('/api/sair',{method:'POST',headers:{'x-lg-token':apiKey}}).catch(()=>{});apiKey='';lsSet('lg-tok','');lsSet('lg-tipo','');lsSet('lg-cli','');lsSet('lg-perfil','');location.reload()}
+function sairRest(){fetch('/api/sair',{method:'POST',headers:{'x-lg-token':apiKey}}).catch(()=>{});apiKey='';lsSet('lg-tok','');lsSet('lg-tipo','');lsSet('lg-cli','');lsSet('lg-perfil','');lsSet('lg-garcom','');lsSet('lg-gusr','');location.reload()}
 /* --- gravação única para os 3 modos --- */
 function mutate(col,id,fn){
   if(SINGLE[col])id=SINGLE[col];
@@ -2227,7 +2253,7 @@ function relHtml(id,tela){
 }
 
 /* ---------- AJUSTES ---------- */
-function linkGarcom(){return mode==='api'?location.origin+'/garcom':location.href.split('#')[0]+'#garcom'}
+function linkGarcom(){const c=lsGet('lg-cli','');return mode==='api'?location.origin+'/garcom'+(c&&c!=='restaurante-1'?'?c='+encodeURIComponent(c):''):location.href.split('#')[0]+'#garcom'}
 /* foto genérica (ilustração) para produto sem foto, escolhida pelo nome e pela categoria */
 function fotoGenerica(nome,cat){const n=String(nome||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''),c=String(cat||'');
   const T=[[/cerveja|chop|skol|brahma|antar|heineken|budweiser|itaipava|amstel|stella|corona|devassa|eisenbahn|spaten/,'cerveja'],[/coca|cola|guarana|fanta|sprite|refri|pepsi|soda|tonica|kuat|schweppes|sukita|dolly/,'lata'],

@@ -368,6 +368,10 @@ def rota(h, metodo):
                     return _resp(h, *lgacesso.rest_sessao(rc, str(corpo.get("token") or "")))
                 if acao == "rest/sair":
                     return _resp(h, *lgacesso.rest_sair(rc, str(corpo.get("token") or "")))
+                if acao == "rest/ativo":   # o app do garçom (entra com nome + PIN) confere se o cliente está liberado
+                    cli = str(corpo.get("cliente") or "")
+                    return _resp(h, 200, {"ok": True, "ativo": not lgacesso.bloqueado("restaurante", cli),
+                                          "tipo": lgacesso.tipo_cliente(rc, cli)})
                 if acao == "rest/saida":   # o Lambda busca o e-mail que este servidor pediu para enviar
                     import lgenvio
                     m = lgenvio.retirar(corpo.get("id"))

@@ -6,7 +6,21 @@ const post=async(p,b)=>{const r=await fetch(C+p,{method:'POST',headers:{'content
 // O primeiro cliente (restaurante-1, Casa Saravalli) continua nas chaves antigas; os outros usam "cliente|coleção/id".
 const LEGADO='restaurante-1',CLI_RE=/^[a-z0-9-]{1,60}$/;
 const SES=new Map();
-const sessao=async t=>{if(!t)return{v:0};const c=SES.get(t),n=Date.now();if(c&&n-c.t<15000)return c.s;
+// ---- garçom: entra com nome + PIN cadastrados no caixa (Ajustes › Garçons). Token assinado, sem usuário da Central.
+const CR=require('crypto'),hm=x=>CR.createHmac('sha256',process.env.KEY||'lg').update(x).digest('base64url');
+const pinH=(cli,gid,pin)=>hm('pin|'+cli+'|'+gid+'|'+pin).slice(0,16);
+const gTok=o=>{const p=Buffer.from(JSON.stringify(o)).toString('base64url');return 'g.'+p+'.'+hm(p)};
+const gLer=t=>{const a=String(t).split('.');if(a.length!==3||hm(a[1])!==a[2])return null;try{return JSON.parse(Buffer.from(a[1],'base64url').toString())}catch(x){return null}};
+const ATV=new Map();
+const cliAtivo=async cli=>{const c=ATV.get(cli),n=Date.now();if(c&&n-c.t<15000)return c.v;
+  try{const r=await post('rest/ativo',{cliente:cli});const v=r.s===200&&r.b.ok?{ativo:!!r.b.ativo,tipo:r.b.tipo==='acougue'?'acougue':'restaurante'}:(c?c.v:null);
+    if(v)ATV.set(cli,{t:n,v});return v}catch(x){return c?c.v:null}};
+const garcons=async st=>{const g=await doc(st,'config','geral');return ((g&&g.data&&g.data.garcons)||[]).filter(x=>x&&x.id&&x.nome)};
+const sessao=async(t,base)=>{if(!t)return{v:0};const c=SES.get(t),n=Date.now();if(c&&n-c.t<15000)return c.s;
+  if(String(t).startsWith('g.')){const o=gLer(t);if(!o||!CLI_RE.test(o.cli||'')||o.exp<n)return{v:0};
+    const gs=await garcons(base(o.cli)),x=gs.find(y=>y.id===o.gid);if(!x||pinH(o.cli,o.gid,String(x.pin||''))!==o.ph)return{v:0};
+    const a=await cliAtivo(o.cli);const s=!a?{v:3}:{v:a.ativo?1:2,cli:o.cli,tipo:a.tipo,nome:x.nome,garcom:true};
+    if(SES.size>500)SES.clear();if(s.v!==3)SES.set(t,{t:n,s});return s}
   try{const r=await post('rest/sessao',{token:t});
     const s=r.s!==200?(c?c.s:{v:3}):!r.b.ok?{v:0}:{v:r.b.ativo?1:2,cli:CLI_RE.test(r.b.cliente||'')?r.b.cliente:LEGADO,tipo:r.b.tipo==='acougue'?'acougue':'restaurante',nome:r.b.nome||''};
     if(SES.size>500)SES.clear();SES.set(t,{t:n,s});return s}
@@ -106,10 +120,19 @@ const mk=base=>async e=>{
   if(p==='/pedido'&&m==='POST')return pedido(pubSt(),e,corpo(e));
   if(p==='/reserva'&&m==='GET'){const v=await reservaInfo(pubSt());return J(200,v)}
   if(p==='/reserva'&&m==='POST')return reservar(pubSt(),e,corpo(e));
+  if(p==='/garcons'&&m==='GET'){const gs=await garcons(pubSt());return J(200,{garcons:gs.map(x=>({id:x.id,nome:x.nome}))})}
+  if(p==='/entrar-garcom'&&m==='POST'){const b=corpo(e),cli=CLI_RE.test(b.c||'')?b.c:LEGADO,st=base(cli),gid=String(b.id||''),pin=String(b.pin||'').replace(/\D/g,'');
+    const fk='gfalha|'+gid,f=(await st.privGet(fk))||{n:0,ate:0},n=Date.now();
+    if(f.ate>n)return J(429,{erro:'Muitas tentativas com PIN errado. Espere '+Math.ceil((f.ate-n)/60000)+' minuto(s) ou peça ao caixa para trocar o PIN.'});
+    const x=(await garcons(st)).find(y=>y.id===gid);
+    if(!x||String(x.pin||'')!==pin||pin.length<4){const k=(f.n||0)+1;await st.privPut(fk,{n:k>=5?0:k,ate:k>=5?n+15*60000:0});return J(401,{erro:k>=5?'PIN errado 5 vezes. Bloqueado por 15 minutos.':'PIN errado.'})}
+    const a=await cliAtivo(cli);if(!a)return J(503,{erro:'Sem conexão com o servidor. Tente de novo.'});if(!a.ativo)return J(423,{erro:'Acesso suspenso. Fale com o responsável.'});
+    await st.privPut(fk,{n:0,ate:0});
+    return J(200,{ok:1,token:gTok({cli,gid,ph:pinH(cli,gid,pin),exp:n+30*86400000}),nome:x.nome,id:x.id,cliente:cli,tipo:a.tipo})}
   if(p==='/entrar'&&m==='POST'){const b=corpo(e);
     try{const r=await post('rest/entrar',{usuario:b.usuario,senha:b.senha,tipo:b.tipo==='acougue'?'acougue':'restaurante',dev:String(b.dev||'').slice(0,64),ip:String((e.headers||{})['x-forwarded-for']||'').split(',')[0].trim()||(e.requestContext.http&&e.requestContext.http.sourceIp)||'',ua:String(b.ua||(e.headers||{})['user-agent']||'').slice(0,300),codigo:String(b.codigo||'').replace(/\D/g,'').slice(0,6)});return J(r.s,r.b)}catch(x){return J(503,{erro:'Sem conexão com o servidor. Tente de novo em instantes.'})}}
   if(p==='/sair'&&m==='POST'){if(t){SES.delete(t);try{await post('rest/sair',{token:t})}catch(x){}}return J(200,{ok:1})}
-  const ss=await sessao(t),v=ss.v;
+  const ss=await sessao(t,base),v=ss.v;
   if(v===0)return J(401,{erro:'login'});if(v===2)return J(423,{erro:'suspenso'});if(v===3)return J(503,{erro:'central'});
   const st=base(ss.cli);
   if(m==='GET'&&p==='/eu')return J(200,{cliente:ss.cli,tipo:ss.tipo,nome:ss.nome});
@@ -118,6 +141,7 @@ const mk=base=>async e=>{
     return J(200,{items:r.items,more:r.more,now:Date.now(),cliente:ss.cli,tipo:ss.tipo});
   }
   const r=p.match(/^\/doc\/([a-z]+)\/([^/]+)$/);
+  if(r&&m==='PUT'&&ss.garcom&&!['mesas','fila','estado'].includes(r[1]))return J(403,{erro:'O app do garçom não altera isso.'});
   if(r&&m==='PUT'&&COLS.has(r[1])){
     const col=r[1],id=decodeURIComponent(r[2]);
     const b=corpo(e);
@@ -141,6 +165,8 @@ const ddb=()=>{
       try{await c.send(new D.PutItemCommand(q));return true}
       catch(e){if(e.name==='ConditionalCheckFailedException')return false;throw e}
     },
+    async privGet(key){const r=await c.send(new D.GetItemCommand({TableName:T,Key:{k:{S:'priv|'+(cli)+'|'+key}},ConsistentRead:true}));return r.Item&&r.Item.d?JSON.parse(r.Item.d.S):null},
+    async privPut(key,o){await c.send(new D.PutItemCommand({TableName:T,Item:{k:{S:'priv|'+(cli)+'|'+key},d:{S:JSON.stringify(o)}}}))},
     async get(col,id){
       const r=await c.send(new D.GetItemCommand({TableName:T,Key:{k:{S:pre+col+'/'+id}},ConsistentRead:true}));
       return r.Item?toIt(r.Item):null;
