@@ -70,3 +70,30 @@
             function (e) { manual--; concluir('Não foi concluído', true); throw e; });
   };
 })();
+
+/* "Mostrar senha": olho em todo campo de senha (Central, Rural, E-mails, Câmara, caixa) */
+(function () {
+  if (window.lgOlho) return; window.lgOlho = true;
+  var css = document.createElement('style');
+  css.textContent = '.lg-olho-w{position:relative;display:block}.lg-olho-w>input{padding-right:46px!important;width:100%;box-sizing:border-box}' +
+    '.lg-olho{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;background:transparent;cursor:pointer;border-radius:10px;display:grid;place-items:center;color:inherit;opacity:.7;padding:0}' +
+    '.lg-olho:hover{opacity:1;background:rgba(127,127,127,.15)}.lg-olho svg{width:20px;height:20px}';
+  (document.head || document.documentElement).appendChild(css);
+  var ABERTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var FECHADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.5 0-10-7-10-7a18.6 18.6 0 0 1 5.1-5.9"/><path d="M9.9 5.2A9.5 9.5 0 0 1 12 5c6.5 0 10 7 10 7a18.7 18.7 0 0 1-2.2 3.2"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="M2 2l20 20"/></svg>';
+  function poe() {
+    document.querySelectorAll('input[type=password]:not([data-olho])').forEach(function (i) {
+      i.setAttribute('data-olho', '1');
+      var w = document.createElement('span'); w.className = 'lg-olho-w';
+      i.parentNode.insertBefore(w, i); w.appendChild(i);
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'lg-olho'; b.tabIndex = -1;
+      b.setAttribute('aria-label', 'Mostrar senha'); b.title = 'Mostrar senha'; b.innerHTML = ABERTO;
+      b.onclick = function () { var v = i.type === 'password'; i.type = v ? 'text' : 'password'; b.innerHTML = v ? FECHADO : ABERTO;
+        b.setAttribute('aria-label', v ? 'Esconder senha' : 'Mostrar senha'); b.title = b.getAttribute('aria-label'); i.focus(); };
+      w.appendChild(b);
+    });
+  }
+  poe(); if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poe);
+  var ag = 0; new MutationObserver(function () { if (!ag) { ag = 1; requestAnimationFrame(function () { ag = 0; poe(); }); } })
+    .observe(document.documentElement, { childList: true, subtree: true });
+})();
