@@ -45,6 +45,8 @@ img{max-width:100%}
 @keyframes gira{to{transform:translate(-50%,-50%) rotate(360deg)}}
 .brilho{position:absolute;left:50%;top:clamp(170px,22vw,250px);width:760px;height:520px;transform:translate(-50%,-50%);background:radial-gradient(closest-side,#2f6bff66,#19e3d022 55%,transparent);filter:blur(30px);animation:pulsa 6s ease-in-out infinite}
 @keyframes pulsa{50%{opacity:.7}}
+.abre{position:relative;width:min(92vw,640px);aspect-ratio:960/636;margin:-24px auto 6px;-webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 48%,#000 58%,transparent 100%);mask-image:radial-gradient(ellipse 50% 50% at 50% 48%,#000 58%,transparent 100%)}
+.abre video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
 .emb{position:relative;width:clamp(190px,24vw,300px);margin:0 auto 34px;filter:drop-shadow(0 0 28px #19e3d066) drop-shadow(0 0 60px #2f6bff55)}
 .selo{position:relative;display:inline-flex;gap:8px;align-items:center;font-size:13px;color:#c9c9d1;border:1px solid #ffffff1f;background:#ffffff08;padding:6px 14px 6px 8px;border-radius:999px;margin-bottom:26px}
 .selo b{background:linear-gradient(90deg,var(--azul),var(--ciano));color:#001;font-size:11.5px;padding:2px 8px;border-radius:999px}
@@ -167,7 +169,7 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 
 <header class="hero" id="topo">
   <div class="grade"></div><div class="brilho"></div><div class="raios"></div>
-  <img class="emb" src="gr-emblema.webp" alt="GR Software">
+  <div class="abre" role="img" aria-label="GR Software"><video id="abertura" muted playsinline preload="none" poster="gr-abertura.webp"></video></div>
   <h1>Seu sistema,<br><span class="grad">do seu jeito.</span></h1>
   <p class="lead">O programa para o seu comércio <b>do jeito que você sempre quis</b>. Personalizado e acessível: partimos de um modelo pronto e ajustamos cada tela para você.</p>
   <div class="acoes"><a class="bt cl g" href="#modelos">Ver os modelos prontos →</a><a class="bt es g" href="#como">Ver como funciona</a></div>
@@ -320,5 +322,11 @@ function fx(){document.querySelectorAll(SEL).forEach(function(i){if(!i.src)retur
   if(lento)alvo.classList.add('lento');alvo.style.setProperty('--m','url("'+i.src+'")')})}
 window.grFx=fx;fx();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fx);
 var ag=0;new MutationObserver(function(){if(!ag){ag=1;requestAnimationFrame(function(){ag=0;fx()})}}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['src']})})();</script>
+<script>/* abertura: o vídeo do GR roda 2 vezes na primeira visita e para no último quadro; nas outras visitas fica a imagem parada */
+(function(){var v=document.getElementById('abertura');if(!v)return;var visto=false;try{visto=localStorage.getItem('gr-abertura')==='1'}catch(e){}
+if(visto||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+var fonte=v.canPlayType('video/webm; codecs="vp9"')?'gr-abertura.webm':'gr-abertura.mp4',vezes=0;
+fetch(fonte).then(function(r){return r.blob()}).then(function(b){v.src=URL.createObjectURL(b);v.play().catch(function(){})}).catch(function(){});
+v.addEventListener('ended',function(){vezes++;if(vezes<2){v.currentTime=0;v.play().catch(function(){})}else{try{localStorage.setItem('gr-abertura','1')}catch(e){}}});})();</script>
 </body>
 </html>
