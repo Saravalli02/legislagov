@@ -1,0 +1,14 @@
+GR SOFTWARE - KIT DE IMPRESSAO (impressora de cupom / nao fiscal)
+
+1. Clique com o botao direito neste ZIP > "Extrair tudo" (precisa extrair antes!).
+2. Abra a pasta extraida e de dois cliques em INSTALAR-IMPRESSAO-GR.bat
+   (se o Windows avisar: "Mais informacoes" > "Executar assim mesmo"; e "Sim" para administrador).
+3. O instalador:
+   - baixa e instala o QZ Tray (programa gratuito de impressao), se ainda nao tiver;
+   - instala o certificado da GR (gr-impressao.crt) e libera a impressao do sistema GR;
+   - abre o QZ Tray (fica perto do relogio e abre sozinho quando liga o computador).
+4. No caixa (Restaurante/Acougue): Ajustes > Impressora > Escolher impressora > escolha a impressora de cupom.
+5. Se o QZ perguntar uma vez, marque "Remember this decision" e clique em "Allow".
+
+Sem internet ou se algo falhar: baixe o QZ Tray em https://qz.io/download/ , instale,
+e no QZ (icone perto do relogio) > Advanced > Site Manager > "+" > Browse > gr-impressao.crt.

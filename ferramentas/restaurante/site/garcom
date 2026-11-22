@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v41">
+<meta name="lg-versao" content="lg-v42">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -1533,7 +1533,7 @@ function cartaoImpressora(){const p=qzPrinter(),w=bobina();
     <li>Clique no <b>+</b> e escolha o arquivo <b>gr-impressao.crt</b>; confirme com <b>Yes</b> (e Sim no aviso do Windows).</li>
     <li>Feche o QZ (botão direito › <b>Exit</b>) e abra de novo pelo menu Iniciar.</li>
     <li>Imprima um teste: marque <b>Remember this decision</b> e clique em <b>Allow</b>. Pronto, não pergunta mais.</li></ol>
-    <a class="btn ok" href="/api/qz-cert?baixar=1" download="gr-impressao.crt" onclick="lsSet('lg-qzcert','1')">⬇️ Baixar certificado GR</a></details>`:''}
+    <a class="btn ok" href="https://central.grsoftware.com.br/api/central/kit-impressao" onclick="lsSet('lg-qzcert','1')">⬇️ Kit completo (QZ + certificado)</a> <a class="btn ok" href="/api/qz-cert?baixar=1" download="gr-impressao.crt" onclick="lsSet('lg-qzcert','1')">⬇️ Baixar certificado GR</a></details>`:''}
   <details class="imp-mais"><summary>Outras formas de conectar (Bluetooth, porta serial, atalho)</summary>${cartaoImpDireta()}</details></div>`}
 function baixarAtalho(){
   const url=location.origin+location.pathname.replace(/\/(garcom)$/,'/')+'?kiosk=1',nome=ACG?'Caixa GR Acougue (imprime direto)':'Caixa GR Restaurante (imprime direto)',pasta=ACG?'GRAcougueCaixa':'GRCaixa';

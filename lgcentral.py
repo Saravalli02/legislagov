@@ -326,6 +326,40 @@ def manifest(base):
                       {"src": base + "icone-512.png", "sizes": "512x512", "type": "image/png"}]}
 
 
+_KIT = {"t": 0, "zip": b""}
+_KIT_DIR = __import__("os").path.join(__import__("os").path.dirname(__import__("os").path.abspath(__file__)), "ferramentas", "kit-impressao")
+
+
+def kit_impressao():
+    """Zip com o instalador da impressão direta (QZ Tray + certificado público da GR)."""
+    import io, os, zipfile, urllib.request
+    if _KIT["zip"] and time.time() - _KIT["t"] < 3600:
+        return _KIT["zip"]
+    cert = b""
+    try:
+        with urllib.request.urlopen("https://restaurante.grsoftware.com.br/api/qz-cert", timeout=10) as r:
+            cert = r.read()
+    except Exception:
+        cert = b""
+    cp = os.path.join(_KIT_DIR, "gr-impressao.crt")
+    if b"BEGIN CERTIFICATE" in cert:
+        try:
+            open(cp, "wb").write(cert)
+        except Exception:
+            pass
+    elif os.path.exists(cp):
+        cert = open(cp, "rb").read()
+    if b"BEGIN CERTIFICATE" not in cert:
+        raise RuntimeError("certificado indisponível")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for nome in ("INSTALAR-IMPRESSAO-GR.bat", "instalar.ps1", "LEIA-ME.txt"):
+            z.write(os.path.join(_KIT_DIR, nome), "GR-Impressao/" + nome)
+        z.writestr("GR-Impressao/gr-impressao.crt", cert)
+    _KIT.update(t=time.time(), zip=buf.getvalue())
+    return _KIT["zip"]
+
+
 def rota(h, metodo):
     caminho = h.path.split("?", 1)[0]
     if not caminho.startswith("/api/central/"):
@@ -354,6 +388,20 @@ def rota(h, metodo):
             h.send_header("Content-Length", str(len(b)))
             h.end_headers()
             h.wfile.write(b)
+            return True
+        if acao == "kit-impressao" and metodo in ("GET", "HEAD"):
+            try:
+                b = kit_impressao()
+            except Exception:
+                return _resp(h, 503, {"ok": False, "erro": "Kit indisponível agora. Tente de novo em instantes."})
+            h.send_response(200)
+            h.send_header("Content-Type", "application/zip")
+            h.send_header("Content-Disposition", 'attachment; filename="GR-Impressao.zip"')
+            h.send_header("Content-Length", str(len(b)))
+            h.send_header("Cache-Control", "no-cache")
+            h.end_headers()
+            if metodo == "GET":
+                h.wfile.write(b)
             return True
         if acao.startswith("rest/") and metodo == "POST":
             # chamado pelo servidor do LegislaGov Restaurante (Lambda na Amazon)
