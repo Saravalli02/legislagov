@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v43">
+<meta name="lg-versao" content="lg-v44">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -159,7 +159,8 @@ body.gmode main{padding:0;max-width:640px}
 .gprod{background:#fff;border-radius:12px;padding:10px;display:flex;gap:10px;align-items:center;margin-bottom:8px;box-shadow:0 1px 2px #0001}
 .gprod.esg{opacity:.5}
 .gprod .thumb{width:58px;height:58px;font-size:1.9rem}
-.gprod .nm{flex:1;min-width:0;display:flex;flex-direction:column}.gprod .nm small{color:var(--mut)}.gprod .pr{color:var(--ok);font-weight:800}
+.imp-dl{background:var(--chip,#f4f6f8);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0}.imp-dl small{display:block;margin-top:6px;color:var(--mut)}
+.gprod .nm{flex:1;min-width:0;display:flex;flex-direction:column}.gpede{color:#b45309!important;font-weight:700}.gobs-bt{align-self:flex-start;margin-top:4px;border:1px dashed var(--line);background:transparent;border-radius:8px;padding:4px 10px;font-weight:700;color:inherit;cursor:pointer}.gobs-bt.falta{border:2px solid #e0a100;background:#fff3c4;color:#7a4a00}.gobs-ops{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.gobs-ops button{border:1px solid var(--line);background:var(--chip,#f3f3f3);color:inherit;border-radius:20px;padding:8px 14px;font-weight:700;font-size:1rem;cursor:pointer}.gprod .nm small{color:var(--mut)}.gprod .pr{color:var(--ok);font-weight:800}
 .gqty{display:flex;align-items:center;gap:6px}
 .gqty button{width:42px;height:42px;border-radius:50%;background:#eee8dd;font-size:1.4rem;font-weight:800}
 .gqty button.mais{background:var(--ok);color:#fff}
@@ -420,7 +421,8 @@ nav button small{font-size:.72rem}
 #printArea .cupom table td,#printArea .cupom table th{font-size:var(--bobfs,12px)}
 #printArea.medir{display:block!important;position:absolute;left:-9999px;top:0;width:var(--bob,80mm)}
 .cupom.tk .tk-n{font-size:1.35em;font-weight:800;letter-spacing:.5px}.cupom.tk .tk-m{font-size:1.6em;font-weight:800;margin:2px 0}
-.cupom.tk .tk-i{font-size:1.2em;margin:4px 0}.cupom.tk .tk-o{font-weight:700;font-size:1.05em}
+.cupom.tk .tk-i{font-size:1.3em;margin:6px 0 2px;font-weight:800}.cupom.tk .tk-o,.cupom.tk .tk-io{font-weight:800;font-size:1.1em;border:2px solid #000;padding:2px 5px;margin:2px 0 6px}.cupom.tk .tk-io{margin-left:10px}
+.obs-it{display:block;background:#fff3c4;color:#7a4a00;border:1px solid #f0c85a;border-radius:8px;padding:3px 8px;margin:3px 0;font-weight:800;font-size:.9rem}
 .cdp-it .thumb img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
 label.sw{position:relative;display:inline-flex;margin:0;cursor:pointer}label.sw input{position:absolute;opacity:0;width:1px;height:1px}
 label.sw i{width:46px;height:28px;border-radius:999px;background:#c9ced6;position:relative;transition:background .15s}
@@ -919,7 +921,7 @@ function gEntDesenha(){const d=$('#lgLogin');if(!d)return;const l=gEnt.lista||[]
   else h+=`<p style="text-align:center;margin:0 0 6px"><b>${esc(gEnt.nome)}</b></p><div class="pindots">${[0,1,2,3].map(i=>`<span class="${gEnt.pin.length>i?'on':''}"></span>`).join('')}</div>
     <div class="pinpad">${[1,2,3,4,5,6,7,8,9,'←',0,'⌫'].map(k=>`<button onclick="gEntPin('${k}')">${k}</button>`).join('')}</div>`;
   h+=`${gEnt.erro&&gEnt.id?`<p class="lgl-erro" style="text-align:center;color:#c4261d;font-weight:700">${esc(gEnt.erro)}</p>`:''}</div>
-    <p class="lgl-rod"><a href="#" onclick="event.preventDefault();lsSet('lg-gusr','1');$('#lgLogin').remove();pedirChave()">Entrar com usuário e senha</a> · GR ${ACG?'Açougue':'Restaurante'}</p></div>`;
+    <p class="lgl-rod">GR ${ACG?'Açougue':'Restaurante'} · App do garçom</p></div>`;
   d.innerHTML=h}
 async function gEntPin(k){if(k==='←'){gEnt.id=null;gEnt.pin='';gEnt.erro='';return gEntDesenha()}if(k==='⌫'){gEnt.pin=gEnt.pin.slice(0,-1);return gEntDesenha()}
   if(gEnt.pin.length>=4)return;gEnt.pin+=k;gEnt.erro='';gEntDesenha();if(gEnt.pin.length<4)return;
@@ -929,7 +931,7 @@ async function gEntPin(k){if(k==='←'){gEnt.id=null;gEnt.pin='';gEnt.erro='';re
       $('#lgLogin').remove();toast('Olá, '+d.nome+'! 👋');apiSync();return}
     gEnt.erro=d.erro||'Não foi possível entrar.'}catch(e){gEnt.erro='Sem internet. Tente de novo.'}
   gEnt.pin='';gEntDesenha()}
-function pedirChave(){if(GARCOM&&lsGet('lg-gusr','')!=='1'&&!$('#lgLogin'))return gEntrarTela();
+function pedirChave(){if(GARCOM){if(!$('#lgLogin'))gEntrarTela();return}
   if($('#lgLogin'))return;$('#loading').classList.add('hidden');fecharModal();
   const d=document.createElement('div');d.id='lgLogin';
   d.innerHTML=`<div class="lgl-in"><div class="lgl-cab"><div class="lgent-logo">${LOGO_X()}</div><h2>Entrar</h2><p>Use o usuário e a senha que você recebeu.</p></div>
@@ -1114,10 +1116,10 @@ const isDel=id=>String(id).startsWith('d-');
 function rotulo(id){if(id===BAL)return ACG?'Venda no caixa':'Venda no balcão';if(!isDel(id))return 'Mesa '+id;const m=S.mesas[id]||{};return (m.tipo==='entrega'?'🛵 Entrega':m.tipo==='local'?'🍽️ No local':'🥡 Retirada')+' nº '+(m.num||'?')+(m.cliente?' — '+m.cliente:'')}
 const rotV=v=>v.rotulo||('Mesa '+v.mesa);
 const pedidosAbertos=()=>Object.entries(S.mesas).filter(([k])=>isDel(k)).map(([k,m])=>({...m,id:k})).sort((a,b)=>(a.num||0)-(b.num||0));
-function addNaComanda(m,pid,q,por){
-  const p=S.produtos[pid];m=m||{itens:[]};m.itens=m.itens||[];if(!p)return m;
-  const it=m.itens.find(i=>i.pid===pid);
-  if(it)it.qtd+=q;else m.itens.push({pid,nome:nomeP(p),preco:+p.preco,custo:+p.custo||0,qtd:q});
+function addNaComanda(m,pid,q,por,obs){
+  const p=S.produtos[pid];m=m||{itens:[]};m.itens=m.itens||[];if(!p)return m;obs=String(obs||'').trim();
+  const it=m.itens.find(i=>i.pid===pid&&String(i.obs||'')===obs);
+  if(it)it.qtd+=q;else if(q>0)m.itens.push({pid,nome:nomeP(p),preco:+p.preco,custo:+p.custo||0,qtd:q,...(obs?{obs}:{})});
   m.itens=m.itens.filter(i=>i.qtd>0);if(!m.aberta)m.aberta=new Date().toISOString();if(por&&!m.garcom)m.garcom=por;return m}
 const vazioMesa=(id,m)=>!isDel(id)&&(!m.itens||!m.itens.length)&&!m.conta?null:m;
 
@@ -1207,15 +1209,15 @@ function vMesa(){
   <div class="chips" style="margin-bottom:0">${Object.entries(STATUS).filter(([k])=>k!=='saiu'||m.tipo==='entrega').map(([k,[i,t]])=>`<button class="chip ${(m.status||'preparo')===k?'act':''}" onclick="setStatus('${n}','${k}')">${i} ${t}</button>`).join('')}</div></div>`;
   h+=`<div class="caixa"><section class="card"><h3>🧾 Comanda — tudo que ${dl?'o cliente pediu':'a mesa consumiu'}</h3>`;
   if(!its.length)h+=`<div class="vazio"><span style="display:inline-block;color:#8a6a4a">${dl?'🥡':MESA_LIVRE}</span><br>${dl?'Nenhum item ainda.':'Mesa livre.'} Toque nos produtos ao lado para lançar.</div>`;
-  its.forEach(i=>{const p=S.produtos[i.pid];
+  its.forEach((i,k)=>{const p=S.produtos[i.pid];
     h+=`<div class="it"><div class="thumb">${p&&p.img?`<img src="${p.img}">`:(CATIC[p&&p.cat]||'🍽️')}</div>
-    <div class="nm"><b>${esc(i.nome)}</b><small>${brl(i.preco)} cada</small></div>
-    <div class="qty"><button onclick="qtd('${i.pid}',-1)">−</button><span>${i.qtd}</span><button onclick="qtd('${i.pid}',1)">+</button></div>
+    <div class="nm"><b>${esc(i.nome)}</b>${i.obs?`<span class="obs-it">📝 ${esc(i.obs)}</span>`:''}<small>${brl(i.preco)} cada</small></div>
+    <div class="qty"><button onclick="qtdI(${k},-1)">−</button><span>${i.qtd}</span><button onclick="qtdI(${k},1)">+</button></div>
     <div class="sub">${brl(vIt(i))}</div></div>`});
   h+=`<div class="total"><span>Total</span><span>${brl(tot)}</span></div>
   <div class="row"><button class="btn" style="flex:1" ${its.length?'':'disabled'} onclick="imprimirConta()">🖨️ Imprimir consumo <kbd class="k">F10</kbd></button>
   <button class="btn acc" style="flex:1.4" ${its.length?'':'disabled'} onclick="fecharVenda()">💰 Fechar venda <kbd class="k">F8</kbd></button></div>
-  ${(m.pedidos||[]).length?`<h3 style="margin-top:16px">🧑‍🍳 Pedidos enviados pelos garçons</h3>${m.pedidos.slice().reverse().map(p=>`<div class="pedlog"><b>${hr(p.hora)} · ${esc(p.por)}</b> — ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)).join(', ')}${p.obs?`<br><i>📝 ${esc(p.obs)}</i>`:''}</div>`).join('')}`:''}</section>
+  ${(m.pedidos||[]).length?`<h3 style="margin-top:16px">🧑‍🍳 Pedidos enviados pelos garçons</h3>${m.pedidos.slice().reverse().map(p=>`<div class="pedlog"><b>${hr(p.hora)} · ${esc(p.por)}</b> — ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)+(i.obs?` <span class="obs-it">📝 ${esc(i.obs)}</span>`:'')).join(', ')}${p.obs?`<br><i>📝 ${esc(p.obs)}</i>`:''}</div>`).join('')}`:''}</section>
   <section class="card"><h3>➕ Lançar produto</h3>
   <input data-focus placeholder="🔎 Código, nome ou código de barras (Enter lança)" value="${esc(st.busca)}" oninput="st.busca=this.value;filtrarProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(lancarTexto(curMesa,this.value)){st.busca='';this._restore=1;render(true);const f=$('#view [data-focus]');if(f)f.focus()}}">
   <div class="chips">${['Todas',...CATS].map(c=>`<button class="chip ${st.cat===c?'act':''}" onclick="st.cat='${c}';render(true)">${c==='Todas'?'Todas':CATIC[c]+' '+c}</button>`).join('')}</div>
@@ -1239,12 +1241,13 @@ function lancarEm(n,pid){
   toast(`✅ ${p.nome} lançado — ${rotulo(n)}`);alertaEstoque([pid]);bip();return true
 }
 function addItem(pid){lancarEm(curMesa,pid)}
-function qtdEm(n,pid,d){
+function qtdEm(n,pid,d,obs){
   if(d>0){const p=S.produtos[pid];if(p&&disponivel(p)<=0)return toast('Sem estoque suficiente.')}
-  mutate('mesas',n,m=>{if(!m)return ABORT;return vazioMesa(n,addNaComanda(m,pid,d))});
+  mutate('mesas',n,m=>{if(!m)return ABORT;return vazioMesa(n,addNaComanda(m,pid,d,null,obs))});
   if(d>0)alertaEstoque([pid]);
 }
 function qtd(pid,d){qtdEm(curMesa,pid,d)}
+function qtdI(k,d){const i=((mesa(curMesa)||{}).itens||[])[k];if(i)qtdEm(curMesa,i.pid,d,i.obs)}
 /* ---------- CÓDIGO DO PRODUTO E CÓDIGO DE BARRAS ---------- */
 const casa=(p,b)=>p.nome.toLowerCase().includes(b)||String(p.codigo||'')===b||(!!p.barras&&p.barras===b);
 function proxCodigo(){let m=+((S.config||{}).ultCodigo)||0;for(const p of Object.values(S.produtos))m=Math.max(m,+p.codigo||0);return m+1}
@@ -1384,7 +1387,7 @@ ${v.nota?`<tr><td>Nota fiscal</td><td class="n">${v.nota.status==='emitida'?'NFC
 function ticketPedido(o){const its=(o.itens||[]).filter(i=>i.pid!=='taxa-entrega');
   const onde=o.mesa?'MESA '+o.mesa:o.tipo==='entrega'?'ENTREGA':o.tipo==='local'?'COMER NO LOCAL':o.tipo?'RETIRADA':'';
   return `<div class="cupom tk"><div class="c tk-n">PEDIDO Nº ${esc(o.num||'')}</div>${onde?`<div class="c tk-m">${onde}</div>`:''}<hr>
-  ${its.map(i=>`<div class="tk-i"><b>${i.qtd}x</b> ${esc(i.nome)}</div>`).join('')}
+  ${its.map(i=>`<div class="tk-i"><b>${i.qtd}x ${esc(i.nome)}</b></div>${i.obs?`<div class="tk-io">&gt;&gt; ${esc(i.obs)}</div>`:''}`).join('')}
   ${o.obs?`<hr><div class="tk-o">OBS: ${esc(o.obs)}</div>`:''}<hr>
   ${o.cliente?`<div>Cliente: <b>${esc(o.cliente)}</b>${o.fone?' · '+esc(o.fone):''}</div>`:''}${o.tipo==='entrega'&&o.endereco?`<div>Endereço: ${esc(o.endereco)}</div>`:''}
   ${o.pagamento?`<div>Pagamento: ${esc(o.pagamento)}${o.troco?' · troco p/ '+esc(o.troco):''}</div>`:''}
@@ -1408,8 +1411,8 @@ function impTexto(n){const c=n.cloneNode(true);c.querySelectorAll('br').forEach(
 /* converte o HTML do cupom em comandos ESC/POS */
 function htmlParaEscpos(html){
   const C=impCols(),E=[],enc=s=>{for(const ch of s)E.push(ch.charCodeAt(0)&255)};
-  const cmd=(...b)=>E.push(...b),al=a=>cmd(27,97,a),neg=o=>cmd(27,69,o?1:0),tam=d=>cmd(29,33,d?17:0),nl=()=>cmd(10);
-  const linha=(t,{a=0,b=false,g=false}={})=>{al(a);neg(b);tam(g);impQuebra(t,g?Math.floor(C/2):C).forEach(l=>{enc(l);nl()});tam(0);neg(0);al(0)};
+  const cmd=(...b)=>E.push(...b),al=a=>cmd(27,97,a),neg=o=>cmd(27,69,o?1:0),tam=d=>cmd(29,33,d===true?17:d===2?1:0),inv=o=>cmd(29,66,o?1:0),nl=()=>cmd(10);
+  const linha=(t,{a=0,b=false,g=false,v=false}={})=>{al(a);neg(b);tam(g);if(v)inv(1);impQuebra(t,g===true?Math.floor(C/2):v?C-2:C).forEach(l=>{enc(v?' '+l+' ':l);nl()});if(v)inv(0);tam(0);neg(0);al(0)};
   const lr=(l,r,b)=>{l=impAscii(l).replace(/\s+/g,' ').trim();r=impAscii(r).replace(/\s+/g,' ').trim();neg(b);
     const ls=impQuebra(l,C),u=ls.pop()||'';ls.forEach(x=>{enc(x);nl()});if(u.length+r.length+1<=C){enc(u+' '.repeat(C-u.length-r.length)+r);nl()}else{enc(u);nl();enc(' '.repeat(Math.max(0,C-r.length))+r);nl()}neg(0)};
   const tr=()=>{enc('-'.repeat(C));nl()};
@@ -1426,7 +1429,8 @@ function htmlParaEscpos(html){
         lr(impTexto(cs[0])+' '+impTexto(nome),impTexto(cs[cs.length-1]),b);if(sm){enc('   '+impAscii(sm.textContent).trim());nl()}}
       else if(cs.length===2)lr(impTexto(cs[0]),impTexto(cs[1]),b);else if(cs.length===1)linha(impTexto(cs[0]),{b})});continue}
     if(cl.contains('tk-n')||cl.contains('tk-m')){linha(impTexto(n),{a:1,b:true,g:true});continue}
-    if(cl.contains('tk-i')){linha(impTexto(n),{b:true,g:impTexto(n).length<=C/2});continue}
+    if(cl.contains('tk-i')){linha(impTexto(n),{b:true,g:impTexto(n).length<=C/2?true:2});continue}
+    if(cl.contains('tk-io')||cl.contains('tk-o')){linha(impTexto(n),{b:true,g:2,v:true});continue}
     if(cl.contains('c')){impTexto(n).split('\n').forEach(t=>linha(t,{a:1,b:!!n.querySelector('b')&&t.length<C}));continue}
     if(n.children.length&&[...n.children].some(x=>/^(DIV|TABLE|HR|H4|P)$/.test(x.tagName))){anda(n);continue}
     linha(impTexto(n),{b:tag==='B'||n.querySelector('b')&&impTexto(n).length<C})}};
@@ -1477,6 +1481,7 @@ const impKiosk=()=>lsGet('lg-kiosk','')==='1';
    Usa o programa gratuito QZ Tray, instalado uma vez no computador do caixa. O sistema conversa com ele
    e manda o cupom direto para a impressora escolhida, sem janela e só do tamanho do conteúdo (ESC/POS). */
 const qzPrinter=()=>lsGet('lg-qzimp','');
+const KIT_URL='https://central.grsoftware.com.br/api/central/kit-impressao';
 const QZ_URL='https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js';
 function qzCarregar(){if(window.qz)return Promise.resolve();return new Promise((ok,erro)=>{const s=document.createElement('script');s.src=QZ_URL;s.onload=ok;s.onerror=()=>erro(new Error('Sem internet para carregar a ferramenta de impressão.'));document.head.appendChild(s)})}
 async function qzConectar(){await qzCarregar();if(qz.websocket.isActive())return true;
@@ -1485,7 +1490,7 @@ async function qzConectar(){await qzCarregar();if(qz.websocket.isActive())return
   if(qz.security.setSignatureAlgorithm)qz.security.setSignatureAlgorithm('SHA512');
   qz.security.setSignaturePromise(d=>(ok,erro)=>fetch('/api/qz-assinar',{method:'POST',headers:{'content-type':'application/json','x-lg-token':apiKey},body:JSON.stringify({d})}).then(r=>r.ok?r.text():'').then(ok,()=>ok()));
   await qz.websocket.connect({retries:1,delay:1});return true}
-const CUPOM_CSS='body{margin:0;font-family:Arial,sans-serif;font-size:12px;color:#000}.cupom{padding:0 2mm}h4{text-align:center;margin:2px 0;font-size:15px}.c{text-align:center}hr{border:0;border-top:1px dashed #000;margin:4px 0}table{width:100%;border-collapse:collapse}td,th{padding:1px 0;vertical-align:top;text-align:left}.n{text-align:right}.tk-n,.tk-m{font-size:18px;font-weight:800}.tk-i{font-size:15px}small{font-size:10px}';
+const CUPOM_CSS='body{margin:0;font-family:Arial,sans-serif;font-size:12px;color:#000}.cupom{padding:0 2mm}h4{text-align:center;margin:2px 0;font-size:15px}.c{text-align:center}hr{border:0;border-top:1px dashed #000;margin:4px 0}table{width:100%;border-collapse:collapse}td,th{padding:1px 0;vertical-align:top;text-align:left}.n{text-align:right}.tk-n,.tk-m{font-size:18px;font-weight:800}.tk-i{font-size:16px;font-weight:800;margin-top:4px}.tk-o,.tk-io{font-size:14px;font-weight:800;border:2px solid #000;padding:2px 4px;margin:2px 0 4px}.tk-io{margin-left:8px}small{font-size:10px}';
 async function qzImprimir(html){
   try{await qzConectar();const nome=qzPrinter();
     if(lsGet('lg-qztipo','termica')==='termica'){const b=htmlParaEscpos(html);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);
@@ -1527,17 +1532,22 @@ function cartaoImpressora(){const p=qzPrinter(),w=bobina();
   const st=p?`🟢 Imprimindo direto em <b>${esc(p)}</b>`:impDireta()?`🟢 Impressão direta por ${impModo()==='ble'?'Bluetooth':'porta USB/serial'}`:impKiosk()?'🟢 Atalho de impressão direta':'⚪ Nenhuma impressora escolhida — abre a janela do Windows';
   return `<div class="card imp-card"><h3>🖨️ Impressora</h3>
   <div class="imp-st">${st}</div>
+  <div class="imp-dl"><b>Programa de impressão (instale uma vez em cada computador do caixa)</b>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px"><a class="btn ok" href="${KIT_URL}" onclick="lsSet('lg-qzcert','1')">⬇️ Kit completo (QZ + certificado)</a>
+    <a class="btn" href="https://qz.io/download/" target="_blank" rel="noopener">⬇️ Só o QZ Tray</a>
+    <a class="btn" href="/api/qz-cert?baixar=1" download="gr-impressao.crt" onclick="lsSet('lg-qzcert','1')">⬇️ Só o certificado GR</a></div>
+    <small>Kit: extraia o ZIP e abra <b>INSTALAR-IMPRESSAO-GR.bat</b>. Ele instala tudo sozinho; depois é só escolher a impressora aqui.</small></div>
   <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn pri" onclick="qzEscolher()">🔎 ${p?'Trocar impressora':'Escolher impressora'}</button><button class="btn" onclick="testeBobina()">🖨️ Imprimir teste</button></div>
   <div class="lbl">Largura do papel</div><div class="imp-seg">${[58,80].map(x=>`<button class="${w===x?'act':''}" onclick="lsSet('lg-bob','${x}');aplicarBobina();render(true)">${x} mm${x===58?' (5,5 cm)':' (8 cm)'}</button>`).join('')}</div>
   <div class="lbl">Cópia</div><div class="imp-seg">${[['perguntar','Perguntar'],['sempre','Sempre'],['nunca','Nunca']].map(([k,t])=>`<button class="${lsGet('lg-copia','perguntar')===k?'act':''}" onclick="lsSet('lg-copia','${k}');render(true)">${t}</button>`).join('')}</div>
   <label class="chk" style="margin-top:12px"><input type="checkbox" ${lsGet('lg-autoprint','0')==='1'?'checked':''} onchange="lsSet('lg-autoprint',this.checked?'1':'0');lsSet('lg-printer','1')"><span>Imprimir sozinho os pedidos dos garçons e do cardápio</span></label>
   ${p?`<details class="imp-mais" ${lsGet('lg-qzcert','')?'':'open'}><summary>🔒 Parar a pergunta “Allow” do QZ a cada impressão</summary>
-    <ol style="line-height:1.6;padding-left:20px;margin:8px 0;font-size:.92rem"><li>Toque em <b>Baixar certificado GR</b> (salva o arquivo <b>gr-impressao.crt</b>).</li>
+    <ol style="line-height:1.6;padding-left:20px;margin:8px 0;font-size:.92rem"><li>Jeito fácil: use o <b>Kit completo</b> acima. Jeito manual: toque em <b>Baixar certificado GR</b> (salva o arquivo <b>gr-impressao.crt</b>).</li>
     <li>No ícone do <b>QZ</b> perto do relógio, clique com o botão direito › <b>Advanced</b> › <b>Site Manager</b>.</li>
     <li>Clique no <b>+</b> e escolha o arquivo <b>gr-impressao.crt</b>; confirme com <b>Yes</b> (e Sim no aviso do Windows).</li>
     <li>Feche o QZ (botão direito › <b>Exit</b>) e abra de novo pelo menu Iniciar.</li>
     <li>Imprima um teste: marque <b>Remember this decision</b> e clique em <b>Allow</b>. Pronto, não pergunta mais.</li></ol>
-    <a class="btn ok" href="https://central.grsoftware.com.br/api/central/kit-impressao" onclick="lsSet('lg-qzcert','1')">⬇️ Kit completo (QZ + certificado)</a> <a class="btn ok" href="/api/qz-cert?baixar=1" download="gr-impressao.crt" onclick="lsSet('lg-qzcert','1')">⬇️ Baixar certificado GR</a></details>`:''}
+    <a class="btn ok" href="/api/qz-cert?baixar=1" download="gr-impressao.crt" onclick="lsSet('lg-qzcert','1')">⬇️ Baixar certificado GR</a></details>`:''}
   <details class="imp-mais"><summary>Outras formas de conectar (Bluetooth, porta serial, atalho)</summary>${cartaoImpDireta()}</details></div>`}
 function baixarAtalho(){
   const url=location.origin+location.pathname.replace(/\/(garcom)$/,'/')+'?kiosk=1',nome=ACG?'Caixa GR Acougue (imprime direto)':'Caixa GR Restaurante (imprime direto)',pasta=ACG?'GRAcougueCaixa':'GRCaixa';
@@ -1667,6 +1677,8 @@ function formProduto(id){
   <div><label>Tamanho / medida</label><input id="fun" value="${esc(p.unidade)}" placeholder="${ACG?'Ex.: Bandeja 1kg':'Ex.: Lata 350ml'}" onblur="padCampo(this)"></div></div>
   <label>Código de barras <small style="color:var(--mut);font-weight:500">(opcional)</small></label><input id="fbar" inputmode="numeric" value="${esc(p.barras||'')}" placeholder="Clique e passe o leitor" onkeydown="if(event.key==='Enter')event.preventDefault()">
   <button type="button" class="sw" id="fpcp" aria-checked="${vit}" onclick="this.dataset.mexeu=1;fpSw(this)"><i></i>${ACG?'Mostrar no pedido digital (link dos assados)':'Mostrar no cardápio digital'}</button>
+  ${ACG?'':`<button type="button" class="sw" id="fpobs" aria-checked="${!!p.pedeObs}" onclick="fpSw(this);$('#fobsw').classList.toggle('hidden',this.getAttribute('aria-checked')!=='true')"><i></i>Garçom escreve a escolha do cliente (ex.: sabores)</button>
+  <div id="fobsw" class="${p.pedeObs?'':'hidden'}"><label>Opções para tocar <small style="color:var(--mut);font-weight:500">(separe por vírgula)</small></label><input id="fobsd" maxlength="160" value="${esc(p.obsDica||'')}" placeholder="Ex.: Doritos, cebolinha, gergelim, tarê"></div>`}
   <button type="button" class="btn fp-maisb" id="fmaisb" data-n="${preench?` <small>· ${preench} preenchida(s)</small>`:''}" onclick="fpMais()">➕ Mais opções${preench?` <small>· ${preench} preenchida(s)</small>`:''}</button>
   <div id="fmais" class="hidden fp-mais"><p class="fp-dica">Tudo aqui é opcional. O caixa funciona sem isso; use se quiser controlar custo, lucro e estoque.</p>
   <div class="grid2"><div><label>Quanto pagou (custo) R$</label><input id="fcus" inputmode="decimal" value="${p.custo||''}" placeholder="0,00" oninput="calcLucro()"></div>
@@ -1691,7 +1703,7 @@ function salvarProduto(id){
   const plu=ACG?soDig(($('#fplu')||{value:''}).value):'';if(plu&&Object.values(S.produtos).some(x=>x.id!==id&&(String(+x.plu||'')===String(+plu)||(!x.plu&&String(x.codigo)===String(+plu)))))return toast('Esse código da balança já é de outro produto.');
   const codigo=(old&&+old.codigo)||proxCodigo(),barras=soDig($('#fbar').value);
   const dupb=barras&&Object.values(S.produtos).find(x=>x.id!==id&&x.barras===barras);if(dupb)return toast(`Esse código de barras já é do produto ${dupb.nome}.`);
-  const campos={codigo,barras,nome,unidade:padNome($('#fun').value),cat,custo:num($('#fcus').value),preco,estoqueMin:Math.max(0,Math.round(num($('#fmin').value))),img:fImg||'',desc:($('#fdesc')||{value:''}).value.trim(),...(ACG?{porKg:kgp,plu,margem:($('#fmg').value.trim()?num($('#fmg').value):null)}:{})};
+  const campos={codigo,barras,nome,unidade:padNome($('#fun').value),cat,custo:num($('#fcus').value),preco,estoqueMin:Math.max(0,Math.round(num($('#fmin').value))),img:fImg||'',desc:($('#fdesc')||{value:''}).value.trim(),...(ACG?{}:{pedeObs:($('#fpobs')||{getAttribute:()=>''}).getAttribute('aria-checked')==='true',obsDica:($('#fobsd')||{value:''}).value.trim()}),...(ACG?{porKg:kgp,plu,margem:($('#fmg').value.trim()?num($('#fmg').value):null)}:{})};
   const pid=id||uid(),oldE=old?(controla(old)?+old.estoque:''):null,mudouEst=!old||String(oldE)!==String(est);
   mutate('produtos',pid,cur=>{const p={...(cur||{}),...campos,id:pid};if(cur&&+cur.codigo)p.codigo=+cur.codigo;
     if(!cur){p.estoque=est;if(est!=='')p.hist=histEst(p,'cadastro',est)}
@@ -2361,7 +2373,7 @@ function relHtml(id,tela){
 }
 
 /* ---------- AJUSTES ---------- */
-function linkGarcom(){const c=lsGet('lg-cli','');return mode==='api'?location.origin+'/garcom'+(c&&c!=='restaurante-1'?'?c='+encodeURIComponent(c):''):location.href.split('#')[0]+'#garcom'}
+function linkGarcom(){const c=lsGet('lg-cli','');return mode==='api'?'https://'+(TIPO==='acougue'?'acougue':'restaurante')+'.grsoftware.com.br/garcom'+(c&&c!=='restaurante-1'?'?c='+encodeURIComponent(c):''):location.href.split('#')[0]+'#garcom'}
 /* foto genérica (ilustração) para produto sem foto, escolhida pelo nome e pela categoria */
 function fotoGenerica(nome,cat){const n=String(nome||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''),c=String(cat||'');
   const T=[[/cerveja|chop|skol|brahma|antar|heineken|budweiser|itaipava|amstel|stella|corona|devassa|eisenbahn|spaten/,'cerveja'],[/coca|cola|guarana|fanta|sprite|refri|pepsi|soda|tonica|kuat|schweppes|sukita|dolly/,'lata'],
@@ -2422,7 +2434,7 @@ function vConfig(){const c=S.config||{},l=c.logo,gs=c.garcons||[];
   <div class="grid2" style="margin-top:6px"><div><label>Nome</label><input id="gn" placeholder="Ex.: João"></div><div><label>PIN (4 números)</label><input id="gp" inputmode="numeric" maxlength="4" placeholder="1234"></div></div>
   <button class="btn ok" style="margin-top:10px" onclick="addGarcom()">➕ Cadastrar garçom</button>
   <div class="calc" style="background:#eef3f8;margin-top:14px">📱 <b>Link do app do garçom</b><br><span style="word-break:break-all;font-weight:500">${esc(linkGarcom())}</span><br>
-  <button class="btn" style="margin-top:8px" onclick="copiar(linkGarcom(),'Link copiado — mande para o garçom')">📋 Copiar link</button>
+  <button class="btn" style="margin-top:8px" onclick="copiar(linkGarcom(),'Link copiado — mande para o garçom')">📋 Copiar link</button> <a class="btn ok" style="margin-top:8px" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('App do garçom — '+((S.config||{}).razao||'GR Restaurante')+'\nAbra o link, escolha seu nome e digite o seu PIN de 4 números:\n'+linkGarcom())}">💬 Enviar no WhatsApp</a>
   <p style="font-size:.85rem;font-weight:500;margin:8px 0 0">O garçom abre o link no celular e toca em <b>“Adicionar à tela inicial”</b>. Vira um app com ícone.</p></div></div>
   ${cartaoImpressora()}
   <div class="card"><h3>Logo do ${ACG?'açougue':'restaurante'}</h3>
@@ -2472,7 +2484,7 @@ hooks.push((col,id,old,nw)=>{
   if(GARCOM||col!=='mesas'||!nw)return;
   const po=(old&&old.pedidos)||[],pn=nw.pedidos||[];
   const novos=pn.filter(p=>!po.some(q=>q.id===p.id)&&p.dev!==DEV);
-  novos.forEach(p=>novoAvisoCaixa({html:`🧑‍🍳 <b>${esc(rotulo(id))}</b> — ${esc(p.por)}: ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)).join(', ')}${p.obs?` <i>(${esc(p.obs)})</i>`:''}`,abrir:id}));
+  novos.forEach(p=>novoAvisoCaixa({html:`🧑‍🍳 <b>${esc(rotulo(id))}</b> — ${esc(p.por)}: ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)+(i.obs?' ('+esc(i.obs)+')':'')).join(', ')}${p.obs?` <i>(${esc(p.obs)})</i>`:''}`,abrir:id}));
   if(nw.conta&&!(old&&old.conta)&&nw.conta.dev!==DEV&&!novos.length&&lsGet('lg-printer','1')!=='1')novoAvisoCaixa({html:`🧾 <b>${esc(rotulo(id))}</b> — ${esc(nw.conta.por)} pediu a conta`,abrir:id});
 });
 
@@ -2481,7 +2493,18 @@ const g={tela:'mesas',mesa:null,aba:'pedido',cat:null,pin:'',sel:null,carts:{},o
 try{g.carts=JSON.parse(lsGet('lg-carts','{}'))||{}}catch(e){}
 const gUser=()=>(S.config.garcons||[]).find(x=>x.id===lsGet('lg-garcom'));
 const cart=()=>g.carts[g.mesa]||(g.carts[g.mesa]={});
-const saveCarts=()=>lsSet('lg-carts',JSON.stringify(g.carts));
+const saveCarts=()=>{lsSet('lg-carts',JSON.stringify(g.carts));lsSet('lg-cobs',JSON.stringify(g.cobs))};
+g.cobs={};try{g.cobs=JSON.parse(lsGet('lg-cobs','{}'))||{}}catch(e){}
+/* observação de cada item do pedido (ex.: hot roll — Doritos, cebolinha) */
+const cobs=()=>g.cobs[g.mesa]||(g.cobs[g.mesa]={});
+function gObs(pid){const p=S.produtos[pid];if(!p)return;const atual=cobs()[pid]||'',ops=String(p.obsDica||'').split(/[,;\n]/).map(x=>x.trim()).filter(Boolean);
+  abrirModal(`<h2>📝 ${esc(p.nome)}</h2><p style="color:var(--mut);margin:0 0 8px">${p.pedeObs?'Escreva o que o cliente escolheu.':'Observação deste item para a cozinha.'}</p>
+  ${ops.length?`<div class="gobs-ops">${ops.map(o=>`<button type="button" onclick="gObsAdd(this.textContent)">${esc(o)}</button>`).join('')}</div>`:''}
+  <textarea id="gobsi" rows="3" maxlength="160" placeholder="${esc(ops.length?'Toque nas opções acima ou escreva aqui':'Ex.: sem cebola, molho à parte')}" style="width:100%;font-size:1.1rem">${esc(atual)}</textarea>
+  <div class="row" style="margin-top:12px"><button class="btn big" style="flex:1" onclick="fecharModal()">Voltar</button><button class="btn ok big" style="flex:1.6" onclick="gObsSalvar('${pid}')">✅ Pronto</button></div>`);
+  setTimeout(()=>{const t=$('#gobsi');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}},60)}
+function gObsAdd(t){const el=$('#gobsi');if(!el)return;const v=el.value.trim();el.value=v?(v.replace(/[,\s]+$/,'')+', '+t):t;el.focus()}
+function gObsSalvar(pid){const v=($('#gobsi')||{value:''}).value.trim().slice(0,160),o=cobs();if(v)o[pid]=v;else delete o[pid];saveCarts();fecharModal();render(true)}
 const cartItens=()=>Object.entries(cart()).filter(([pid,q])=>q>0&&S.produtos[pid]).map(([pid,q])=>({p:S.produtos[pid],q}));
 function gGo(t,extra){Object.assign(g,{tela:t},extra||{});render(true);window.scrollTo(0,0)}
 function gRender(){
@@ -2522,7 +2545,7 @@ function gMesa(){
   if(!g.cat){h+=`<div class="gpad"><div class="gcats">${cats.map(c=>`<button onclick="g.cat='${c}';render(true)"><i>${CATIC[c]}</i>${c}<small>${prodList().filter(p=>p.cat===c).length} itens</small></button>`).join('')}</div>${!cats.length?'<div class="card vazio">Nenhum produto cadastrado no caixa.</div>':''}</div>`}
   else{h+=`<div class="gchips"><button onclick="g.cat=null;render(true)">☰ Menus</button>${cats.map(c=>`<button class="${g.cat===c?'act':''}" onclick="g.cat='${c}';render(true);window.scrollTo(0,0)">${CATIC[c]} ${c}</button>`).join('')}</div><div class="gpad">`;
     prodList().filter(p=>p.cat===g.cat).forEach(p=>{const q=cart()[p.id]||0,d=disponivel(p)-q;
-      h+=`<div class="gprod ${disponivel(p)<=0?'esg':''}"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${p.codigo?'cód. '+p.codigo+(p.unidade?' · ':''):''}${esc(p.unidade||'')}</small><span class="pr">${brl(p.preco)}</span>${disponivel(p)<=0?'<small class="st-esg">⛔ Esgotado</small>':d!==Infinity&&d<=estMin(p)?`<small class="low">⚠️ restam ${Math.max(0,d)}</small>`:''}</div>
+      h+=`<div class="gprod ${disponivel(p)<=0?'esg':''}"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${p.codigo?'cód. '+p.codigo+(p.unidade?' · ':''):''}${esc(p.unidade||'')}</small><span class="pr">${brl(p.preco)}</span>${q&&cobs()[p.id]?`<span class="obs-it" onclick="gObs('${p.id}')">📝 ${esc(cobs()[p.id])}</span>`:p.pedeObs?`<small class="gpede">✏️ pede escolha${p.obsDica?': '+esc(p.obsDica):''}</small>`:''}${disponivel(p)<=0?'<small class="st-esg">⛔ Esgotado</small>':d!==Infinity&&d<=estMin(p)?`<small class="low">⚠️ restam ${Math.max(0,d)}</small>`:''}</div>
       <div class="gqty">${q?`<button onclick="gAdd('${p.id}',-1)">−</button><span>${q}</span>`:''}<button class="mais" onclick="gAdd('${p.id}',1)">+</button></div></div>`});
     h+='</div>'}
   const ci=cartItens();
@@ -2530,25 +2553,28 @@ function gMesa(){
   return h}
 function gAdd(pid,d){const c=cart(),p=S.produtos[pid];if(!p)return;
   if(d>0&&disponivel(p)-(c[pid]||0)<=0)return toast(`${p.nome} sem estoque`);
-  c[pid]=Math.max(0,(c[pid]||0)+d);if(!c[pid])delete c[pid];saveCarts();render(true)}
+  c[pid]=Math.max(0,(c[pid]||0)+d);if(!c[pid]){delete c[pid];delete cobs()[pid]}saveCarts();render(true);
+  if(d>0&&p.pedeObs&&!cobs()[pid])gObs(pid)}
 function gCarrinho(){const ci=cartItens(),t=ci.reduce((a,x)=>a+x.q*x.p.preco,0);
   let h=`<div class="gbar"><button class="gbtn" onclick="gGo('mesa')">← Continuar</button><b style="flex:1;font-size:1.15rem">Pedido — Mesa ${g.mesa}</b></div><div class="gpad">`;
   if(!ci.length)return h+`<div class="card vazio">Nenhum item escolhido.</div></div>`;
-  ci.forEach(({p,q})=>{h+=`<div class="gprod"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${brl(p.preco)} cada</small><span class="pr">${brl(p.preco*q)}</span></div><div class="gqty"><button onclick="gAdd('${p.id}',-1)">−</button><span>${q}</span><button class="mais" onclick="gAdd('${p.id}',1)">+</button></div></div>`});
+  ci.forEach(({p,q})=>{const ob=cobs()[p.id]||'';h+=`<div class="gprod"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${brl(p.preco)} cada</small><span class="pr">${brl(p.preco*q)}</span>
+    ${ob?`<span class="obs-it" onclick="gObs('${p.id}')">📝 ${esc(ob)} <u>trocar</u></span>`:p.pedeObs?`<button class="gobs-bt falta" onclick="gObs('${p.id}')">⚠️ Falta escrever a escolha</button>`:`<button class="gobs-bt" onclick="gObs('${p.id}')">✏️ Observação</button>`}</div><div class="gqty"><button onclick="gAdd('${p.id}',-1)">−</button><span>${q}</span><button class="mais" onclick="gAdd('${p.id}',1)">+</button></div></div>`});
   h+=`<div class="total"><span>Total do pedido</span><span>${brl(t)}</span></div>
-  <label>📝 Observação para a cozinha</label><input id="gobs" value="${esc(g.obs)}" oninput="g.obs=this.value" placeholder="Ex.: sem cebola, bem passado">
+  <label>📝 Observação geral do pedido</label><input id="gobs" value="${esc(g.obs)}" oninput="g.obs=this.value" placeholder="Ex.: servir tudo junto">
   <button class="btn ok big" style="margin-top:14px" onclick="gEnviar()">📤 Enviar pedido para o caixa</button>
-  <button class="btn big" style="margin-top:8px" onclick="g.carts[g.mesa]={};saveCarts();gGo('mesa')">🗑️ Limpar pedido</button></div>`;
+  <button class="btn big" style="margin-top:8px" onclick="g.carts[g.mesa]={};g.cobs[g.mesa]={};saveCarts();gGo('mesa')">🗑️ Limpar pedido</button></div>`;
   return h}
 async function gEnviar(){
   if(!movAberto())return toast('O caixa ainda não abriu o movimento.');
   const u=gUser(),n=g.mesa,ci=cartItens();if(!ci.length)return;
   for(const {p,q} of ci)if(disponivel(p)<q)return toast(`⛔ ${p.nome}: só tem ${Math.max(0,disponivel(p))} no estoque`);
+  const ob=cobs(),falta=ci.find(({p})=>p.pedeObs&&!ob[p.id]);if(falta){toast(`✏️ Escreva a escolha do ${falta.p.nome}`);return gObs(falta.p.id)}
   await mutate('estado','atual',e=>({...(e||{}),seq:((e&&e.seq)||0)+1}));const num=(S.estado&&S.estado.seq)||'';
-  const ped={id:uid(),num,por:u.nome,dev:DEV,hora:new Date().toISOString(),itens:ci.map(({p,q})=>({nome:nomeP(p),qtd:q})),obs:g.obs.trim()};
-  const ok=await mutate('mesas',n,m=>{for(const {p,q} of ci)m=addNaComanda(m,p.id,q,u.nome);m.pedidos=[...(m.pedidos||[]),ped].slice(-40);return m});
+  const ped={id:uid(),num,por:u.nome,dev:DEV,hora:new Date().toISOString(),itens:ci.map(({p,q})=>({nome:nomeP(p),qtd:q,...(ob[p.id]?{obs:ob[p.id]}:{})})),obs:g.obs.trim()};
+  const ok=await mutate('mesas',n,m=>{for(const {p,q} of ci)m=addNaComanda(m,p.id,q,u.nome,ob[p.id]);m.pedidos=[...(m.pedidos||[]),ped].slice(-40);return m});
   if(!ok)return toast('Não foi possível enviar. Tente de novo.');
-  g.carts[n]={};g.obs='';saveCarts();toast('✅ Pedido nº '+num+' enviado para o caixa!');alertaEstoque(ci.map(x=>x.p.id));gGo('mesa',{aba:'conta',cat:null});
+  g.carts[n]={};g.cobs[n]={};g.obs='';saveCarts();toast('✅ Pedido nº '+num+' enviado para o caixa!');alertaEstoque(ci.map(x=>x.p.id));gGo('mesa',{aba:'conta',cat:null});
   gPerguntarImpressao(n,ped,u)}
 let gUltPed=null;
 function gPerguntarImpressao(n,ped,u){gUltPed={n,ped,u};
@@ -2567,7 +2593,7 @@ function gConta(){const n=g.mesa,m=mesa(n),its=m.itens||[],tot=totItens(its);
   ${m.conta?`<div class="aviso" style="margin-top:10px">🧾 Conta pedida por ${esc(m.conta.por)} às ${hr(m.conta.hora)}.</div>`:''}
   <button class="btn pri big" style="margin-top:12px" onclick="gPedirConta()">🖨️ Pedir conta — imprime no caixa</button>
   <button class="btn acc big" style="margin-top:8px" onclick="st.pag=null;st.cpf='';st.nota=false;gGo('fechar')">💳 Fechar pelo app (maquininha)</button>
-  ${(m.pedidos||[]).length?`<h3 style="margin-top:18px">Pedidos enviados</h3>${m.pedidos.slice().reverse().map(p=>`<div class="pedlog"><b>${hr(p.hora)} · ${esc(p.por)}</b> — ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)).join(', ')}${p.obs?`<br><i>📝 ${esc(p.obs)}</i>`:''}</div>`).join('')}`:''}</div>`;
+  ${(m.pedidos||[]).length?`<h3 style="margin-top:18px">Pedidos enviados</h3>${m.pedidos.slice().reverse().map(p=>`<div class="pedlog"><b>${hr(p.hora)} · ${esc(p.por)}</b> — ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)+(i.obs?` <span class="obs-it">📝 ${esc(i.obs)}</span>`:'')).join(', ')}${p.obs?`<br><i>📝 ${esc(p.obs)}</i>`:''}</div>`).join('')}`:''}</div>`;
   return h}
 function resumoHtml(n,titulo){const its=mesa(n).itens||[];return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">${titulo||'FECHAMENTO DE CONTA'}</div><div class="c">${esc(rotulo(n))} · ${dt(new Date().toISOString())}${mesa(n).garcom?'<br>Garçom: '+esc(mesa(n).garcom):''}</div><hr>${tabelaItens(its)}<hr>
   <table><tr><td>Itens</td><td class="n">${its.reduce((s,i)=>s+i.qtd,0)}</td></tr><tr><td><b>TOTAL</b></td><td class="n"><b>${brl(totItens(its))}</b></td></tr></table><hr><div class="c">NÃO É DOCUMENTO FISCAL<br>Confira antes de pagar</div></div>`}
