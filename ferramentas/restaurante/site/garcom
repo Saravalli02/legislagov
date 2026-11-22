@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v47">
+<meta name="lg-versao" content="lg-v48">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -851,6 +851,34 @@ input,select,textarea{border-radius:12px}
 @media(max-width:760px){header{padding:8px 12px!important}nav#nav{padding:8px 8px 10px!important;gap:6px!important}nav#nav button{min-width:70px!important;padding:8px 6px 7px!important;font-size:.72rem!important}main{padding:14px 10px!important;margin:0 auto 80px!important}}
 /* app do garçom */
 .mesas-wrap.so-mesas{grid-template-columns:minmax(0,1fr)!important}
+/* ===== tela fixa no computador: tudo cabe sem rolar ===== */
+@media(min-width:901px){
+ header{padding:5px 18px!important}header .logo{width:46px!important;height:34px!important}.brand b{font-size:1.02rem!important}.brand span{font-size:.62rem!important}
+ header .sino{height:36px!important}header .sino:not(.atu-bt){width:36px!important}header .pill{padding:6px 12px!important;font-size:.85rem!important}
+ nav#nav{padding:6px 14px 8px!important;gap:6px!important}nav#nav button{padding:6px 10px 5px!important;min-width:78px!important;gap:2px!important}nav#nav button small{display:none!important}
+ nav#nav button .nico{width:19px!important;height:19px!important}
+ main{padding:12px 18px!important;margin-bottom:34px!important}
+ .sabs{margin-bottom:10px;gap:10px}.sab{padding:7px 12px;border-radius:15px}.sab-ic{width:36px;height:36px;border-radius:11px}.sab-ic svg{width:20px;height:20px}.sab-tx b{font-size:1rem}
+ .aviso{padding:8px 14px!important;margin-bottom:10px!important}
+ .pdv{align-items:stretch}.pdv[style*="height"] .pdv-main,.pdv[style*="height"] .pdv-lado{min-height:0!important;height:100%;box-sizing:border-box}
+ .pdv[style*="height"] .pdv-main{overflow:hidden}
+ .pdv-lado{position:static!important;overflow:auto;padding:12px!important;gap:7px!important}
+ .pdv-total{padding:12px 16px!important}.pdv-total b{font-size:2.3rem!important;line-height:1.1}
+ .pdv-bt{font-size:1.15rem!important;padding:11px!important}
+ .pdv-g2 .btn{padding:7px 6px!important;font-size:.85rem!important}
+ .pdv-g{grid-template-columns:1fr 1fr;gap:6px!important}.pdv-g .btn{padding:7px 9px!important;font-size:.8rem!important;min-height:38px}.pdv-g .btn .k{display:none}
+ .pdv-ult{padding:7px 10px!important;font-size:.85rem}
+ body.v-mesas .stats{margin-bottom:10px!important}body.v-mesas .stat{padding:9px 14px!important}
+ .mesas{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))!important;gap:10px!important}.mesa{min-height:96px!important;padding:8px 6px!important}
+ #dica{margin:-2px 0 8px!important}
+ .g-tops{margin-bottom:10px;gap:10px}.g-top{padding:10px 12px}.g-top .g-ic{width:36px;height:36px}.g-top b{font-size:1.1rem}
+ .pc2-grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))!important;gap:14px}.pc2-img{aspect-ratio:auto;height:100px}.pc2-img img[src^="data:image/svg"]{object-fit:contain}.pc2-pr span{font-size:.75rem!important}.pc2-l{gap:6px}.pc2-l b{white-space:nowrap}.pc2-sub{display:none}.pc2-ls{display:grid;grid-template-columns:1fr 1fr;column-gap:12px}.pc2-l span{white-space:nowrap}.pc2-st{font-size:.75rem;padding:3px 8px}.pc2-c{padding:10px 12px 12px;gap:4px}.pc2-c h4{font-size:1rem}.pc2-pr{padding:7px 10px}.pc2-pr b{font-size:1.25rem}.pc2-l{padding:4px 0;font-size:.85rem}.pc2-ac{padding-top:4px}.pc2-ac .btn{min-height:36px;padding:6px 10px}
+ main:has(.pc2-grid){max-width:1560px!important}
+ .prod-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.prod-top>input{flex:1 1 240px;margin:0!important}.prod-top .g-cats{margin:0!important}
+}
+.pager{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.pager button{min-width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-weight:700;cursor:pointer;font:inherit;font-weight:700}
+.pager button.act{background:var(--acc);border-color:var(--acc);color:#fff}.pager button:disabled{opacity:.4;cursor:default}.pager span{color:var(--mut);margin:0 6px}
 @media(max-width:760px){header{gap:8px!important}header .pill .save{display:none!important}header .pill{font-size:.8rem!important;padding:6px 10px!important}
  .tabs{flex-wrap:nowrap!important;overflow-x:auto;max-width:100%}.tabs button{white-space:nowrap;padding:8px 12px!important;font-size:.9rem}
  body.v-mesas #view>.row>.btn[onclick^="reimprimirUltimo"]{display:none}}
@@ -1200,7 +1228,20 @@ function render(force){try{marcaTopo()}catch(e){}document.body.classList.toggle(
   $('#view').innerHTML=V();lgEnfeitar($('#view'));
   if(emPdv()&&$('#modalBg').classList.contains('hidden')){const q=$('#pdq');if(q)q.focus()}
   if(view==='mesa'||view==='produtos'||view==='historico'){const f=$('#view [data-focus]');if(f&&f._restore)f.focus()}
+  ajustarTela();
 }
+/* tela fixa: o caixa ocupa a altura que sobra; produtos em páginas do tamanho da tela */
+const telaGrande=()=>innerWidth>900&&innerHeight>=520;
+function ajustarTela(){try{
+  const at=$('#atalhos'),rod=at&&getComputedStyle(at).display!=='none'?at.offsetHeight:0;
+  document.querySelectorAll('#view [data-fit]').forEach(el=>{if(!telaGrande()){el.style.height='';return}
+    const h=Math.max(380,Math.floor(innerHeight-el.getBoundingClientRect().top-rod-14));el.style.height=h+'px'});
+  if(view==='produtos'){const g=$('#view .pc2-grid'),c=g&&g.querySelector('.pc2');let n=12;
+    if(g&&c&&telaGrande()){const cols=getComputedStyle(g).gridTemplateColumns.split(' ').length,gap=14,ch=c.offsetHeight,
+      livre=innerHeight-g.getBoundingClientRect().top-rod-66;n=cols*Math.max(1,Math.floor((livre+gap)/(ch+gap)))}
+    if(n!==st.pPor){st.pPor=n;render(true)}}
+}catch(e){}}
+addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>{if(view==='produtos')st.pPor=0;ajustarTela()},150)});
 function cabecalho(){
   const m=movAtual(),s=$('#status');
   const sv=mode==='api'?(online?'☁️ servidor online':'⚠️ SEM CONEXÃO'):mode==='db'?'☁️ salvo na nuvem':'💾 salvo neste aparelho';
@@ -1741,20 +1782,24 @@ function vProdutos(){
   <div class="g-top">${gIc('din')}<div><small>Preço médio</small><b>${brl(pm)}</b></div></div>
   <div class="g-top g-bom">${gIc('subir','ok')}<div><small>Lucro médio por unidade</small><b>${pc.length?brl(lm):'—'}</b></div></div>
   <div class="g-top">${gIc('check','ok')}<div><small>Margem alcançada</small><b>${pc.length?alc+' de '+pc.length:'—'}</b></div></div></div>
-  <input data-focus placeholder="🔎 Buscar…" value="${esc(st.pbusca)}" oninput="st.pbusca=this.value;clearTimeout(window._pb);window._pb=setTimeout(()=>{const v=$('#view [data-focus]');v._restore=1;render(true);const f=$('#view [data-focus]');f.focus();f.setSelectionRange(f.value.length,f.value.length)},250)">
-  <div class="g-abas g-cats">${['Todas',...CATS].filter(c=>c==='Todas'||todos.some(p=>p.cat===c)).map(c=>`<button class="${st.pcat===c?'act':''}" onclick="st.pcat='${c}';render(true)">${c==='Todas'?'Todos':CATIC[c]+' '+c}<em>${c==='Todas'?todos.length:todos.filter(p=>p.cat===c).length}</em></button>`).join('')}</div>`;
+  <div class="prod-top"><input data-focus placeholder="🔎 Buscar…" value="${esc(st.pbusca)}" oninput="st.pbusca=this.value;st.pPag=0;clearTimeout(window._pb);window._pb=setTimeout(()=>{const v=$('#view [data-focus]');v._restore=1;render(true);const f=$('#view [data-focus]');f.focus();f.setSelectionRange(f.value.length,f.value.length)},250)">
+  <div class="g-abas g-cats">${['Todas',...CATS].filter(c=>c==='Todas'||todos.some(p=>p.cat===c)).map(c=>`<button class="${st.pcat===c?'act':''}" onclick="st.pcat='${c}';st.pPag=0;render(true)">${c==='Todas'?'Todos':CATIC[c]+' '+c}<em>${c==='Todas'?todos.length:todos.filter(p=>p.cat===c).length}</em></button>`).join('')}</div></div>`;
   if(!ps.length)return h+`<div class="card vazio">Nenhum produto ${b||st.pcat!=='Todas'?'encontrado':'ainda'}.<br><br><button class="btn acc" onclick="formProduto()">➕ Cadastrar produto</button></div>`;
+  const por=st.pPor||12,np=Math.max(1,Math.ceil(ps.length/por)),pg=Math.min(st.pPag||0,np-1);st.pPag=pg;
   h+='<div class="pc2-grid">';
-  ps.forEach(p=>{const x=infoProd(p),kg=ehKg(p),est=p.estoque===''||p.estoque==null?'':kg?kg3(p.estoque)+' kg':p.estoque+' un.';
+  ps.slice(pg*por,pg*por+por).forEach(p=>{const x=infoProd(p),kg=ehKg(p),est=p.estoque===''||p.estoque==null?'':kg?kg3(p.estoque)+' kg':p.estoque+' un.';
     h+=`<article class="pc2"><div class="pc2-img"><img src="${fotoP(p)}" alt="" loading="lazy">${p.codigo?`<span class="pc2-cod">${p.codigo}</span>`:''}</div>
     <div class="pc2-c"><h4>${esc(p.nome)}</h4><small class="pc2-sub">${[p.unidade,p.cat].filter(Boolean).map(esc).join(' · ')}${p.barras?' · ▮▮ '+esc(p.barras):''}</small>
     ${x.tem?(x.ok?`<span class="pc2-st ok">${ICG.ok} Margem alcançada</span>`:`<span class="pc2-st baixa">${ICG.alerta} Abaixo da margem (${x.alvo}%)</span>`):`<span class="pc2-st sem">Sem custo cadastrado</span>`}
     <div class="pc2-pr"><span>${ICG.etq} Preço de venda${kg?' (kg)':''}</span><b>${brl(x.v)}</b></div>
-    ${x.tem?`<div class="pc2-l"><span>💰 Lucro</span><b class="${x.l>=0?'lucro':'prej'}">${brl(x.l)}</b></div><div class="pc2-l"><span>📊 Margem de lucro</span><b>${pct(x.mg)}</b></div>
-    <div class="pc2-l"><span>🛒 Custo total</span><b>${brl(x.c)}</b></div><div class="pc2-l"><span>◔ CMV</span><b>${pct(x.cmv)}</b></div>`:`<button class="lnk pc2-add" onclick="formProduto('${p.id}');setTimeout(fpMais,80)">➕ Colocar quanto pagou para ver o lucro</button>`}
+    ${x.tem?`<div class="pc2-ls"><div class="pc2-l"><span>💰 Lucro</span><b class="${x.l>=0?'lucro':'prej'}">${brl(x.l)}</b></div><div class="pc2-l"><span>📊 Margem</span><b>${pct(x.mg)}</b></div>
+    <div class="pc2-l"><span>🛒 Custo</span><b>${brl(x.c)}</b></div><div class="pc2-l"><span>◔ CMV</span><b>${pct(x.cmv)}</b></div></div>`:`<button class="lnk pc2-add" onclick="formProduto('${p.id}');setTimeout(fpMais,80)">➕ Colocar quanto pagou para ver o lucro</button>`}
     ${est?`<div class="pc2-l"><span>📦 Estoque</span><b>${est}</b></div>`:''}
     <div class="pc2-ac"><button class="btn" onclick="formProduto('${p.id}')">✏️ Editar</button><button class="btn" onclick="apagarProduto('${p.id}')" title="Apagar">🗑️</button></div></div></article>`});
-  return h+'</div>';
+  h+='</div>';
+  if(np>1){const ir=k=>`st.pPag=${k};render(true)`,nums=[];for(let k=0;k<np;k++)if(np<=9||k===0||k===np-1||Math.abs(k-pg)<=2)nums.push(k);else if(nums[nums.length-1]!=='…')nums.push('…');
+    h+=`<div class="pager" role="navigation" aria-label="Páginas de produtos"><button ${pg?'':'disabled'} onclick="${ir(pg-1)}" aria-label="Página anterior">‹</button>${nums.map(k=>k==='…'?'<span>…</span>':`<button class="${k===pg?'act':''}" onclick="${ir(k)}">${k+1}</button>`).join('')}<button ${pg<np-1?'':'disabled'} onclick="${ir(pg+1)}" aria-label="Próxima página">›</button><span>${ps.length} produtos</span></div>`}
+  return h;
 }
 let fImg=null;
 /* nomes padronizados: "CARNE moída" -> "Carne Moída"; "coca cola 2l" -> "Coca Cola 2L" */
@@ -1953,7 +1998,7 @@ function vPdv(){const its=pdvIts(),tot=totItens(its),ult=ultimaVenda(),m=movAber
     <td class="n">${d?'':(i.un==='kg'?kg3(i.qtd)+' kg':fmtQ(i.qtd)+' un')}</td><td class="n">${d?'':brl(i.preco)+(i.un==='kg'?'/kg':'')}</td>
     <td class="n tot">${brl(vIt(i))}</td><td class="acs"><button class="btn" onclick="pdvEditar('${i.lid||i.pid}')" title="Alterar quantidade, preço ou desconto">✏️</button><button class="btn" onclick="pdvExcluir('${i.lid||i.pid}')" title="Excluir este item">🗑️</button></td></tr>`}).join('');
   return `${m||!ACG?'':`<div class="aviso">⚠️ O movimento do dia ainda <b>não foi aberto</b> <button class="btn ok" onclick="abrirMov();go(ACG?'pdv':'mesas')">▶️ Começar movimento</button></div>`}
-  <div class="pdv">
+  <div class="pdv" data-fit>
   <section class="card pdv-main">
     <div class="pdv-busca"><div class="pdv-q"><label for="pdq">${ACG?'Código, código de barras, etiqueta da balança ou nome':'Código, código de barras ou nome do produto'}</label>
       <input id="pdq" class="lupa" autocomplete="off" placeholder="Passe o leitor ou digite o código e aperte Enter" oninput="pdvSugerir()" onkeydown="if(event.key==='Enter'){event.preventDefault();pdvEnter()}else if(event.key==='ArrowDown'){event.preventDefault();$('#pdpeso').focus()}"></div>
