@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v46">
+<meta name="lg-versao" content="lg-v47">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -827,15 +827,15 @@ header::before,header::after{display:none!important}
 header .logo{width:52px!important;height:40px!important}
 .brand b{font-size:1.15rem!important}.brand span{font-size:.7rem!important;letter-spacing:2.5px!important}
 header .sino{height:40px!important;border-radius:11px!important}header .sino:not(.atu-bt){width:40px!important}
-nav#nav{background:var(--v2-bar)!important;border:0!important;border-top:1px solid #ffffff12!important;box-shadow:0 8px 20px #0000001f!important;padding:0 12px!important;gap:0!important;position:sticky!important;top:0;z-index:30;scrollbar-width:none}
+nav#nav{background:var(--v2-bar)!important;border:0!important;border-top:1px solid #ffffff12!important;box-shadow:0 8px 20px #0000001f!important;padding:10px 14px 12px!important;gap:8px!important;position:sticky!important;top:0;z-index:30;scrollbar-width:none}
 nav#nav::-webkit-scrollbar{display:none}
-nav#nav button{min-width:86px!important;min-height:0!important;padding:10px 12px 9px!important;border-radius:0!important;background:transparent!important;color:#c3c7cf!important;box-shadow:none!important;gap:4px!important;font-size:.8rem!important;font-weight:600!important;border:0!important}
+nav#nav button{min-width:84px!important;min-height:0!important;padding:9px 10px 8px!important;border-radius:14px!important;background:#ffffff08!important;color:#c3c7cf!important;box-shadow:inset 0 1px 0 #ffffff0d!important;gap:4px!important;font-size:.78rem!important;font-weight:600!important;border:1px solid #ffffff1f!important;transition:background .15s,border-color .15s,transform .15s}
 nav#nav button i{width:auto!important;height:auto!important;border:0!important;background:transparent!important;box-shadow:none!important;color:inherit!important;font-size:1.3rem!important}
 nav#nav button .nico{width:22px!important;height:22px!important;stroke-width:1.8}
 nav#nav button .mico{width:28px!important;height:20px!important}
 nav#nav button small{font-size:.6rem!important;opacity:.45!important;color:inherit!important;margin-top:-2px}
-nav#nav button:hover{background:#ffffff10!important;color:#fff!important}
-nav#nav button.act{background:var(--acc)!important;color:#fff!important}
+nav#nav button:hover{background:#ffffff14!important;border-color:#ffffff40!important;color:#fff!important;transform:translateY(-1px)}
+nav#nav button.act{background:linear-gradient(160deg,color-mix(in srgb,var(--acc) 82%,#fff),var(--acc))!important;border-color:color-mix(in srgb,var(--acc) 70%,#fff)!important;color:#fff!important;box-shadow:0 6px 16px color-mix(in srgb,var(--acc) 45%,transparent),inset 0 1px 0 #ffffff40!important}
 nav#nav button.act small{opacity:.75!important}
 main{background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;margin:0 auto 90px!important;padding:22px 20px!important}
 .card,.stat,.g-card,.g-top,.pc2{border-radius:var(--v2-r)!important;box-shadow:var(--v2-sh)!important;border:1px solid color-mix(in srgb,var(--line) 60%,transparent)!important}
@@ -848,12 +848,23 @@ main{background:transparent!important;border:0!important;box-shadow:none!importa
 .tabs .cnt{background:#ffffff33}
 input,select,textarea{border-radius:12px}
 #modal{border-radius:22px!important}
-@media(max-width:760px){header{padding:8px 12px!important}nav#nav{padding:0 4px!important}nav#nav button{min-width:72px!important;padding:9px 8px 8px!important;font-size:.74rem!important}main{padding:14px 10px!important;margin:0 auto 80px!important}}
+@media(max-width:760px){header{padding:8px 12px!important}nav#nav{padding:8px 8px 10px!important;gap:6px!important}nav#nav button{min-width:70px!important;padding:8px 6px 7px!important;font-size:.72rem!important}main{padding:14px 10px!important;margin:0 auto 80px!important}}
 /* app do garçom */
 .mesas-wrap.so-mesas{grid-template-columns:minmax(0,1fr)!important}
 @media(max-width:760px){header{gap:8px!important}header .pill .save{display:none!important}header .pill{font-size:.8rem!important;padding:6px 10px!important}
  .tabs{flex-wrap:nowrap!important;overflow-x:auto;max-width:100%}.tabs button{white-space:nowrap;padding:8px 12px!important;font-size:.9rem}
  body.v-mesas #view>.row>.btn[onclick^="reimprimirUltimo"]{display:none}}
+.sabs{display:flex;gap:12px;align-items:stretch;flex-wrap:wrap;margin-bottom:16px}
+.sab{flex:1 1 200px;max-width:300px;display:flex;align-items:center;gap:12px;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:12px 14px;cursor:pointer;color:var(--txt);box-shadow:var(--v2-sh);position:relative;transition:transform .15s,border-color .15s,box-shadow .15s;font:inherit}
+.sab:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.sab-ic{width:46px;height:46px;flex:none;border-radius:14px;display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 12%,var(--card));color:var(--acc)}
+.sab-ic svg{width:24px;height:24px}
+.sab-tx{display:flex;flex-direction:column;min-width:0}.sab-tx b{font-size:1.08rem}.sab-tx small{color:var(--mut);font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sab-n{position:absolute;top:-7px;right:-7px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--acc);color:#fff;font-weight:800;font-size:.8rem;display:grid;place-items:center;border:2px solid var(--v2-bg)}
+.sab.act{background:linear-gradient(150deg,color-mix(in srgb,var(--acc) 85%,#fff),var(--acc));border-color:transparent;color:#fff;box-shadow:0 10px 24px color-mix(in srgb,var(--acc) 40%,transparent)}
+.sab.act .sab-ic{background:#ffffff2e;color:#fff}.sab.act .sab-tx small{color:#ffffffd9}.sab.act .sab-n{background:#fff;color:var(--acc)}
+.sab-rec{margin-left:auto;align-self:center}
+@media(max-width:760px){.sabs{gap:8px;flex-wrap:nowrap}.sab{flex:1 1 0;flex-direction:column;gap:6px;padding:10px 6px;text-align:center;min-width:0}.sab-ic{width:38px;height:38px}.sab-tx small{display:none}.sab-tx b{font-size:.92rem}.sab-rec{display:none}}
 body.gmode{background:var(--v2-bg)!important}
 body.gmode .gtop,body.gmode .gcab{background:var(--v2-bar)!important;color:#fff!important}
 </style>
@@ -1223,7 +1234,12 @@ function vMesas(){
   const pa=pedidosAbertos();
   if(GARCOM&&st.aba==='caixa')st.aba='mesas';
   const nb=pdvIts().length;
-  let h=avisoMov()+`<div class="row" style="margin-bottom:14px"><div class="tabs">${GARCOM?'':`<button class="${st.aba==='caixa'?'act':''}" onclick="abaCaixa('caixa')"><svg class="nico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/></svg> Caixa${nb?` <span class="cnt">${nb}</span>`:''}</button>`}<button class="${st.aba==='mesas'?'act':''}" onclick="abaCaixa('mesas')"><span class="bic">${MESA_LIVRE}</span> Mesas${ocup?` <span class="cnt">${ocup}</span>`:''}</button><button class="${st.aba==='delivery'?'act':''}" onclick="abaCaixa('delivery')">🛵 Delivery / Retirada${pa.length?` <span class="cnt">${pa.length}</span>`:''}</button></div><span style="flex:1"></span><button class="btn" onclick="reimprimirUltimo()">🧾 Último recibo <kbd class="k">F9</kbd></button></div>`;
+  const sab=(k,ic,t,sub,n)=>`<button class="sab ${st.aba===k?'act':''}" onclick="abaCaixa('${k}')" aria-pressed="${st.aba===k}"><span class="sab-ic">${ic}</span><span class="sab-tx"><b>${t}</b><small>${sub}</small></span>${n?`<span class="sab-n">${n}</span>`:''}</button>`;
+  const IC_CX='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></svg>',
+    IC_MS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="8" width="20" height="4" rx="1.2"/><path d="M5 12v8M19 12v8M8 8V5M16 8V5"/></svg>',
+    IC_DL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h6l-3-8h4l2 5M12 9H8"/></svg>';
+  let h=avisoMov()+`<div class="sabs">${GARCOM?'':sab('caixa',IC_CX,'Caixa',nb?brl(totItens(pdvIts()))+' na venda':'Venda rápida no balcão',nb)}${sab('mesas',IC_MS,'Mesas',ocup?`${ocup} ocupada${ocup>1?'s':''} · ${brl(aberto)}`:`${NM()} mesas livres`,ocup)}${sab('delivery',IC_DL,'Delivery',pa.length?`${pa.length} pedido${pa.length>1?'s':''} em aberto`:'Entrega e retirada',pa.length)}
+    <button class="btn sab-rec" onclick="reimprimirUltimo()">🧾 Último recibo <kbd class="k">F9</kbd></button></div>`;
   if(st.aba==='delivery')return h+vDelivery();
   if(st.aba==='caixa')return h+vPdv();
   h+=`<div class="mesas-wrap so-mesas"><div class="mesas-col"><p style="color:var(--mut);margin:-4px 0 12px;font-size:.85rem" id="dica">Dica: digite o número da mesa e aperte Enter para abrir.</p><div class="stats">
