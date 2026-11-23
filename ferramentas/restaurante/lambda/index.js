@@ -121,10 +121,80 @@ const reservar=async(st,e,b)=>{
   await st.put({col:'reservas',id,ver:1,ts:Date.now(),del:false,data:rs},0);
   l.push(now);ipM.set(ip,l);
   return J(200,{ok:1,num,totalFixo:rs.totalFixo,temPeso:its.some(i=>i.porKg)})};
+// ---- WhatsApp: robô padrão da GR. O app "GR Software" na Meta recebe as mensagens de todos os clientes;
+// cada número do WhatsApp aponta para um cliente (cfg.numeros). Chaves (token e segredo do app) ficam só aqui na Amazon.
+const WAV='v25.0',WAC=new Map(),WAID=new Map();
+const waGl=base=>base('gr-global');
+const waCfg=async base=>{const c=WAC.get('c');if(c&&Date.now()-c.t<30000)return c.v;let v=await waGl(base).privGet('wa|cfg');
+  if(!v||!v.verify){v={...(v||{}),verify:CR.randomBytes(18).toString('base64url'),numeros:(v&&v.numeros)||{}};await waGl(base).privPut('wa|cfg',v)}
+  WAC.set('c',{t:Date.now(),v});return v};
+const waRaw=e=>e.body?(e.isBase64Encoded?Buffer.from(e.body,'base64'):Buffer.from(e.body,'utf8')):Buffer.alloc(0);
+const waBRL=v=>'R$ '+(+v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+const waEnviar=async(cfg,pid,msg)=>{try{const r=await fetch(`https://graph.facebook.com/${WAV}/${pid}/messages`,{method:'POST',
+    headers:{'content-type':'application/json',authorization:'Bearer '+cfg.token},body:JSON.stringify({messaging_product:'whatsapp',recipient_type:'individual',...msg}),signal:AbortSignal.timeout(7000)});
+  if(!r.ok)console.log('wa envio',r.status,(await r.text()).slice(0,400));return r.ok}catch(x){console.log('wa erro',String(x).slice(0,200));return false}};
+const waLink=(cli,tipo)=>cli===LEGADO?'https://casasaravalli.grsoftware.com.br/':tipo==='acougue'?`https://acougue.grsoftware.com.br/reserva?c=${cli}`:`https://restaurante.grsoftware.com.br/cardapio?c=${cli}`;
+const waTexto=(cfg,pid,to,body)=>waEnviar(cfg,pid,{to,type:'text',text:{preview_url:true,body:String(body).slice(0,4000)}});
+const waResponder=async(base,cfg,pid,cli,de,texto,botao)=>{
+  const st=base(cli),g=await doc(st,'config','geral'),c=(g&&g.data)||{},w=c.whatsapp||{};
+  if(w.ativo===false)return;
+  const a=await cliAtivo(cli);if(a&&!a.ativo)return;
+  const tipo=(a&&a.tipo)||'restaurante',loja=c.razao||(tipo==='acougue'?'nosso açougue':'nosso restaurante'),link=waLink(cli,tipo),n=Date.now();
+  const ct=(await st.privGet('wa|ct|'+de))||{};
+  const t=String(texto||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  if(!botao){if(/card[aá]?pio|menu|pedir|pedido/.test(t))botao='cardapio';else if(/atendente|pessoa|humano|falar com/.test(t))botao='humano';else if(/horario|endereco|onde fica|aberto/.test(t))botao='info'}
+  if(botao==='humano'){await st.privPut('wa|ct|'+de,{...ct,humano:n+2*3600e3});
+    return waTexto(cfg,pid,de,w.humano||'Certo! 🙂 Já avisamos a equipe. Um atendente vai te responder por aqui em instantes.')}
+  if(botao==='menu'){botao='';ct.humano=0}
+  if(!botao&&ct.humano&&ct.humano>n)return;               // conversa está com um atendente: o robô fica quieto
+  if(botao==='cardapio'){const v=await cardapio(st),ps=v.produtos.filter(p=>!p.esgotado);let s=`📋 *Cardápio — ${loja}*\n`;
+    if(!v.aberto)s+='\n⚠️ Estamos fechados agora. Os pedidos abrem no horário de funcionamento.\n';
+    const cats=[...new Set(ps.map(p=>p.cat))];
+    for(const k of cats){const l=`\n*${k}*\n`+ps.filter(p=>p.cat===k).map(p=>`• ${p.nome}${p.unidade?' '+p.unidade:''} — ${waBRL(p.preco)}`).join('\n')+'\n';if(s.length+l.length>3300){s+='\n…e mais itens no link abaixo.\n';break}s+=l}
+    s+=`\n🛵 Veja as fotos e faça seu pedido aqui:\n${link}`;
+    await st.privPut('wa|ct|'+de,{...ct,menu:n,humano:0});return waTexto(cfg,pid,de,s)}
+  if(botao==='info'){const l=[`📍 *${loja}*`];if(c.endereco)l.push('Endereço: '+c.endereco);if(w.horario)l.push('Horário: '+w.horario);if(c.fone)l.push('Telefone: '+c.fone);
+    if(l.length===1)l.push('Responda "atendente" que a equipe te passa o horário e o endereço.');l.push('\nCardápio: '+link);
+    await st.privPut('wa|ct|'+de,{...ct,menu:n,humano:0});return waTexto(cfg,pid,de,l.join('\n'))}
+  if(ct.menu&&n-ct.menu<60e3)return;                       // não repete o menu a cada mensagem
+  await st.privPut('wa|ct|'+de,{...ct,menu:n,humano:0});
+  return waEnviar(cfg,pid,{to:de,type:'interactive',interactive:{type:'button',
+    body:{text:String(w.boas||`Olá! 👋 Bem-vindo(a) ao ${loja}. Como podemos te ajudar?`).slice(0,1000)},footer:{text:'Toque numa opção'},
+    action:{buttons:[{type:'reply',reply:{id:'cardapio',title:'Cardápio e pedido'}},{type:'reply',reply:{id:'info',title:'Horário e endereço'}},{type:'reply',reply:{id:'humano',title:'Falar com atendente'}}]}}})};
+const waWebhook=async(base,e,h,q,m)=>{const cfg=await waCfg(base);
+  if(m==='GET'){if(q['hub.mode']==='subscribe'&&q['hub.verify_token']&&q['hub.verify_token']===cfg.verify)return{statusCode:200,headers:{'content-type':'text/plain'},body:String(q['hub.challenge']||'')};return J(403,{ok:false})}
+  if(!cfg.segredo||!cfg.token)return J(200,{ok:1});
+  const raw=waRaw(e),sig=String(h['x-hub-signature-256']||''),esp='sha256='+CR.createHmac('sha256',cfg.segredo).update(raw).digest('hex');
+  if(sig.length!==esp.length||!CR.timingSafeEqual(Buffer.from(sig),Buffer.from(esp))){console.log('wa assinatura recusada');return J(401,{ok:false})}
+  let b;try{b=JSON.parse(raw.toString('utf8'))}catch(x){return J(400,{ok:false})}
+  const tr=[],agora=Date.now();for(const [k,t] of WAID)if(agora-t>600e3)WAID.delete(k);
+  for(const en of b.entry||[])for(const ch of en.changes||[]){const v=ch.value||{},pid=v.metadata&&v.metadata.phone_number_id;if(!pid)continue;
+    const cli=(cfg.numeros||{})[pid]||cfg.padrao||LEGADO;
+    for(const msg of v.messages||[]){if(!msg||!msg.from||WAID.has(msg.id))continue;WAID.set(msg.id,agora);
+      let texto='',botao='';if(msg.type==='text')texto=(msg.text||{}).body;
+      else if(msg.type==='interactive'){const r=msg.interactive.button_reply||msg.interactive.list_reply||{};botao=String(r.id||'')}
+      else if(msg.type==='button')texto=(msg.button||{}).text;
+      tr.push(waResponder(base,cfg,pid,cli,String(msg.from).replace(/\D/g,''),texto,botao).catch(x=>console.log('wa resp',String(x).slice(0,300))))}}
+  await Promise.all(tr);return J(200,{ok:1})};
+const WAORIG=new Set(['https://central.grsoftware.com.br','https://central.legislagov.com.br','https://teste.legislagov.com.br']);
+const waCfgRota=async(base,e,h,m)=>{const o=h.origin||'',cors=WAORIG.has(o)?{'access-control-allow-origin':o,'access-control-allow-headers':'content-type,x-central','access-control-allow-methods':'GET,POST,OPTIONS',vary:'origin'}:{};
+  const R=(s,b)=>({statusCode:s,headers:{'content-type':'application/json','cache-control':'no-store',...cors},body:JSON.stringify(b)});
+  if(m==='OPTIONS')return{statusCode:204,headers:cors,body:''};
+  const r=await post('rest/socio',{token:String(h['x-central']||'')}).catch(()=>({s:0,b:{}}));if(r.s!==200||!r.b.ok)return R(403,{ok:false,erro:'Entre na Central de novo.'});
+  let cfg=await waCfg(base);
+  if(m==='POST'){const b=corpo(e),n={...cfg,numeros:{...(cfg.numeros||{})}};
+    if(b.segredo)n.segredo=String(b.segredo).trim().slice(0,120);if(b.token)n.token=String(b.token).trim().slice(0,800);
+    if(b.padrao&&CLI_RE.test(b.padrao))n.padrao=b.padrao;
+    if(b.numero&&/^\d{5,25}$/.test(b.numero)){if(b.cliente&&CLI_RE.test(b.cliente))n.numeros[b.numero]=b.cliente;else delete n.numeros[b.numero]}
+    if(b.novoVerify)n.verify=CR.randomBytes(18).toString('base64url');
+    await waGl(base).privPut('wa|cfg',n);WAC.delete('c');cfg=n}
+  return R(200,{ok:true,webhook:'https://restaurante.grsoftware.com.br/api/whatsapp',verify:cfg.verify,temSegredo:!!cfg.segredo,temToken:!!cfg.token,numeros:cfg.numeros||{},padrao:cfg.padrao||LEGADO})};
 const corpo=e=>{let b=e.body||'{}';if(e.isBase64Encoded)b=Buffer.from(b,'base64').toString();try{return JSON.parse(b)}catch(x){return{}}};
 const mk=base=>async e=>{
   const m=e.requestContext.http.method,p=(e.rawPath||'').replace(/^\/api/,''),h=e.headers||{},t=h['x-lg-token'],q=e.queryStringParameters||{};
   if(p==='/ping')return J(200,{ok:1});
+  if(p==='/whatsapp'&&(m==='GET'||m==='POST'))return waWebhook(base,e,h,q,m);
+  if(p==='/wa-cfg')return waCfgRota(base,e,h,m);
   // e-mail (código de confirmação etc.): a Central só manda o número; o conteúdo vem da própria Central (uma vez só)
   if(p==='/_email'&&m==='POST'){const b=corpo(e),id=String(b.id||'');if(!/^[A-Za-z0-9_-]{16,40}$/.test(id))return J(400,{ok:false});
     const r=await post('rest/saida',{id});if(r.s!==200||!r.b.para)return J(404,{ok:false});

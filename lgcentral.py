@@ -403,6 +403,11 @@ def rota(h, metodo):
             if metodo == "GET":
                 h.wfile.write(b)
             return True
+        if acao == "rest/socio" and metodo == "POST":
+            # o Lambda confere se quem mexe na configuração do WhatsApp da GR está logado na Central
+            with lgapi._trava:
+                u = sessao(_db(), str(corpo.get("token") or ""))
+            return _resp(h, 200 if u else 403, {"ok": bool(u), "nome": (u or {}).get("nome", "")})
         if acao.startswith("rest/") and metodo == "POST":
             # chamado pelo servidor do LegislaGov Restaurante (Lambda na Amazon)
             import lgacesso
