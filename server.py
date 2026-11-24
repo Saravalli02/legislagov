@@ -703,10 +703,11 @@ class Handler(SimpleHTTPRequestHandler):
             if ".." in caminho or (partes_h and partes_h[-1] in ("README.md", "robots.txt") and modo_h != "portfolio"):
                 self.send_error(404)
                 return
-            # legislagov.com.br agora é só a porta de entrada (login). O site institucional virou o da GR Software.
+            # legislagov.com.br (e www) leva para o site da GR Software (24/11). As Câmaras entram pela área
+            # restrita /cliente/, que é o menu "LegislaGov" do site da GR. /cliente/ e /atendimento/ continuam aqui.
             if modo_h == "portfolio" and caminho in ("/", "/index.html"):
                 self.send_response(302)
-                self.send_header("Location", "/cliente/")
+                self.send_header("Location", "https://grsoftware.com.br/")
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
                 return

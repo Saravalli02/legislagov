@@ -146,6 +146,33 @@ input,select{height:46px;border:1px solid var(--linha);border-radius:10px;paddin
 .sisq b{display:block;font-size:14.5px}.sisq small{display:block;color:var(--sub);font-size:12.5px}.sisq small.blq{color:var(--erro);font-weight:700}
 .sisq.act{outline:2px solid var(--cor);background:color-mix(in srgb,var(--cor) 9%,var(--papel))}
 .sisblk>header{border-left:5px solid var(--cor);padding-left:12px}
+/* quadros dos sistemas (24/11): abrir em cima, acessos em lista, ações embaixo */
+.g-tit{margin:34px 0 0}
+.sist{margin-top:12px}.sist>.card,.sites>a{min-width:0}
+@media(max-width:640px){.sist{grid-template-columns:minmax(0,1fr)}}
+.card{gap:12px}
+.card .cab p{min-height:calc(2 * 1.45em)}
+.card .abrir{margin-top:0}
+.acessos{list-style:none;margin:0;padding:0;border:1px solid var(--linha);border-radius:12px;overflow:hidden;background:var(--papel2)}
+.acessos li{display:flex;align-items:stretch}
+.acessos li+li{border-top:1px solid var(--linha)}
+.ac,.site-l{flex:1;min-width:0;display:flex;align-items:center;gap:11px;padding:10px 12px;text-decoration:none;color:var(--tinta)}
+.ac:hover,.site-l:hover{background:color-mix(in srgb,var(--cor) 7%,transparent)}
+.ac-ic{width:32px;height:32px;flex:0 0 32px;border-radius:9px;display:grid;place-items:center;color:var(--cor);background:color-mix(in srgb,var(--cor) 13%,transparent)}
+.ac-ic svg{width:18px;height:18px}
+.ac-tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.ac-tx b{font-size:14px;font-weight:600;color:var(--forte);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-tx small{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-seta{color:var(--sub);display:grid;place-items:center}.ac-seta svg{width:15px;height:15px}
+.ac:hover .ac-seta,.site-l:hover .ac-seta{color:var(--forte)}
+.ac-qr{flex:none;display:flex;align-items:center;gap:6px;padding:0 13px;border:0;border-left:1px solid var(--linha);background:transparent;color:var(--tinta);font-weight:650;font-size:12.5px;cursor:pointer}
+.ac-qr svg{width:17px;height:17px}.ac-qr:hover{background:color-mix(in srgb,var(--cor) 10%,transparent)}
+.ac:focus-visible,.ac-qr:focus-visible,.site-l:focus-visible{outline:3px solid color-mix(in srgb,var(--acento) 55%,transparent);outline-offset:-3px}
+.c-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}.c-acoes .btn{flex:1 1 auto;min-height:38px;font-size:13.5px}
+.sites{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.site-l{background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:12px 14px;box-shadow:var(--sombra)}
+.site-l .selo{width:42px;height:42px;flex:0 0 42px;border-radius:11px}.site-l .selo img{height:28px}
+@media(max-width:640px){.card .cab p{min-height:0}.sites{grid-template-columns:1fr}}
 .duplo{display:grid;grid-template-columns:1fr 1fr;gap:8px}.duplo .btn{width:100%;justify-content:center}
 .tptag{display:inline-block;font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 9px;margin-left:6px;vertical-align:2px}
 .tptag.restaurante{background:#fde7e7;color:#a11d1d}.tptag.acougue{background:#fff1c2;color:#7a5200}
@@ -189,26 +216,43 @@ function linkDemo(d){
 }
 function nomeSist(id){return (P&&P.sistemas.find(s=>s.id===id)||{nome:id}).nome}
 
+/* tela inicial: os sistemas em grupos, cada quadro com o mesmo desenho (abrir + acessos + ações) */
+const ICAC={site:'<path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/><circle cx="12" cy="12" r="9"/>',
+  celular:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+  cardapio:'<path d="M5 3.5h11a3 3 0 0 1 3 3v14H8a3 3 0 0 1-3-3z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  teste:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 15h9"/>',
+  caixa:'<rect x="3" y="9" width="18" height="11" rx="2"/><path d="M7 9V4h10v5M7 14h2M11 14h2M15 14h2"/>'};
+const icAc=t=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICAC[t]||ICAC.site}</svg>`;
+const ICQR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="6" height="6" rx="1"/><rect x="14.5" y="3.5" width="6" height="6" rx="1"/><rect x="3.5" y="14.5" width="6" height="6" rx="1"/><path d="M14.5 14.5h2.5v2.5M20.5 14.5v.01M14.5 20.5h6M20.5 17.5v3"/></svg>';
+const SETA='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
+const semHttp=u=>String(u).replace(/^https?:\/\//,'').replace(/\/$/,'');
+function cartaoSist(x){
+  const ac=(x.acessos||[]).map(a=>`<li><a class="ac" href="${esc(a.url)}" target="_blank" rel="noopener"><span class="ac-ic">${icAc(a.tipo)}</span><span class="ac-tx"><b>${esc(a.nome)}</b><small>${esc(a.dica||semHttp(a.url))}</small></span><span class="ac-seta">${SETA}</span></a>${a.qr?`<button class="ac-qr" data-qr="${esc(a.url)}" data-qrnome="${esc(a.nome)}" data-qrsis="${esc(x.nome)}" title="QR code: ${esc(a.nome)}" aria-label="QR code: ${esc(a.nome)}">${ICQR}<span>QR</span></button>`:''}</li>`).join('');
+  const acoes=[...(x.acoes||[]).map(t=>t==='clientes-rural'?`<button class="btn" data-clientes="rural">Clientes, senhas e acesso</button>`:t==='clientes-comercio'?`<button class="btn" data-adm="sistemas">Clientes e usuários</button>`:''),
+    x.demo?`<button class="btn demo" data-demo="${esc(x.id)}">Criar demonstração</button>`:''].filter(Boolean).join('');
+  return `<section class="card" style="--cor:${esc(x.cor)}" aria-labelledby="t-${esc(x.id)}">
+    <div class="cab"><div class="selo"><img src="${esc(x.icone)}" alt=""></div><div><h3 id="t-${esc(x.id)}">${esc(x.nome)}</h3><p>${esc(x.desc)}</p></div></div>
+    <a class="abrir" href="${esc(x.abrir[1])}" target="_blank" rel="noopener"><span>${esc(x.abrir[0])}</span>${SETA}</a>
+    ${ac?`<ul class="acessos">${ac}</ul>`:''}
+    ${acoes?`<div class="c-acoes">${acoes}</div>`:''}</section>`}
+function gruposSist(){
+  const G=[['camaras','LegislaGov · Câmaras'],['comercio','GR Software · Comércio'],['sites','Sites']];
+  return G.map(([g,t])=>{const l=P.sistemas.filter(x=>(x.grupo||'comercio')===g);if(!l.length)return'';
+    if(g==='sites')return `<h2 class="g-tit">${t}</h2><div class="sites">${l.map(x=>`<a class="site-l" href="${esc(x.abrir[1])}" target="_blank" rel="noopener" style="--cor:${esc(x.cor)}"><span class="selo"><img src="${esc(x.icone)}" alt=""></span><span class="ac-tx"><b>${esc(x.nome)}</b><small>${esc(semHttp(x.abrir[1]))} · ${esc(x.desc)}</small></span><span class="ac-seta">${SETA}</span></a>`).join('')}</div>`;
+    return `<h2 class="g-tit">${t}</h2><div class="sist">${l.map(cartaoSist).join('')}</div>`}).join('')}
+
 async function tela(){
   if(!TOKEN){telaEntrar();return}
   try{P=await api('eu')}catch(e){if(e.message!=='sessao'){$('#app').innerHTML=`<div class="entrar"><div class="vazio">Sem conexão com o servidor. <button class="btn" onclick="tela()">Tentar de novo</button></div></div>`}return}
   const s=P.sessao, nome=(s.nome||'').split(' ')[0];
   const ativas=P.demos.filter(d=>d.ativa), velhas=P.demos.filter(d=>!d.ativa).slice(0,15);
-  const seta='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
   $('#app').innerHTML=`<header class="topo"><div class="topo-in"><a class="marca" href="./" id="inicioBt" title="Voltar para a Central"><img src="gr-emblema.webp" alt=""><span>GR <b>Central</b><small>Área restrita</small></span></a><div class="esp"></div>
     <span class="quem">${esc(s.nome)}</span>${seletorTema()}<button class="tbtn" id="senhaBt">Senha</button><button class="tbtn" id="sairBt">Sair</button></div></header>
   <main>
     <h1>Olá, ${esc(nome)}.</h1>
     <p class="sub">Escolha o sistema. Cada um abre em outra aba. Para mostrar a um cliente, use “Criar demonstração”: tem prazo e para de funcionar sozinha.</p>
     ${faixaAdmin()}
-    <div class="sist">${P.sistemas.map(x=>`<section class="card" style="--cor:${esc(x.cor)}" aria-labelledby="t-${esc(x.id)}">
-      <div class="cab"><div class="selo"><img src="${esc(x.icone)}" alt=""></div><div><h3 id="t-${esc(x.id)}">${esc(x.nome)}</h3><p>${esc(x.desc)}</p></div></div>
-      ${x.id==='rural'?`<button class="btn" data-clientes="rural">Clientes, senhas e acesso</button>`:''}
-      ${x.demo?`<button class="btn demo" data-demo="${esc(x.id)}">Criar demonstração</button>`:''}
-      ${x.qr||x.baixar?`<div class="duplo">${x.qr?`<button class="btn" data-qr="${esc(x.qr[1])}" data-qrnome="${esc(x.qr[0])}" data-qrsis="${esc(x.nome)}">QR code do ${esc(x.qr[0].replace(/^App do /,'app do '))}</button>`:''}${x.baixar?`<button class="btn" data-qr="${esc(x.baixar[1])}" data-qrnome="App do açougue" data-qrsis="GR Açougue">${esc(x.baixar[0])}</button>`:''}</div>`:''}
-      <a class="abrir" href="${esc(x.abrir[1])}" target="_blank" rel="noopener"><span>${esc(x.abrir[0])}</span>${seta}</a>
-      ${(x.outros||[]).length?`<div class="outros">${x.outros.map(l=>`<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>`:''}
-    </section>`).join('')}</div>
+    ${gruposSist()}
     <h2>Administração</h2>
     ${cartaoAdmin()}
     <h2>Demonstrações ativas</h2>
