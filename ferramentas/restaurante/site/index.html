@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v56">
+<meta name="lg-versao" content="lg-v57">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -1420,7 +1420,7 @@ function vMesa(){
   ${(m.pedidos||[]).length?`<h3 style="margin-top:16px">🧑‍🍳 Pedidos enviados pelos garçons</h3>${m.pedidos.slice().reverse().map(p=>`<div class="pedlog"><b>${hr(p.hora)} · ${esc(p.por)}</b> — ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)+(i.obs?` <span class="obs-it">📝 ${esc(i.obs)}</span>`:'')).join(', ')}${p.obs?`<br><i>📝 ${esc(p.obs)}</i>`:''}</div>`).join('')}`:''}</section>
   <section class="card"><h3>➕ Lançar produto</h3>
   <input data-focus placeholder="🔎 Código, nome ou código de barras (Enter lança)" value="${esc(st.busca)}" oninput="st.busca=this.value;filtrarProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(lancarTexto(curMesa,this.value)){st.busca='';this._restore=1;render(true);const f=$('#view [data-focus]');if(f)f.focus()}}">
-  <div class="chips">${['Todas',...CATS].map(c=>`<button class="chip ${st.cat===c?'act':''}" onclick="st.cat='${c}';render(true)">${c==='Todas'?'Todas':CATIC[c]+' '+c}</button>`).join('')}</div>
+  <div class="chips">${['Todas',...CATS].filter(c=>c==='Todas'||Object.values(S.produtos||{}).some(p=>p&&p.cat===c)).map(c=>`<button class="chip ${st.cat===c?'act':''}" onclick="st.cat='${c}';render(true)">${c==='Todas'?'Todas':CATIC[c]+' '+c}</button>`).join('')}</div>
   <div class="prods" id="prods">${gridProds()}</div></section></div>`;
   return h;
 }
