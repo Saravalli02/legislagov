@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v52">
+<meta name="lg-versao" content="lg-v53">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -1895,7 +1895,7 @@ function formProduto(id){
   <div class="grid2">${ACG?`<div><label>Código na balança (se for outro)</label><input id="fplu" inputmode="numeric" value="${esc(p.plu||'')}" placeholder="Igual ao código do produto"></div>`:''}
   <div><label>Quantidade em estoque${ACG?' (kg ou un.)':''}</label><input id="fest" inputmode="${ACG?'decimal':'numeric'}" value="${p.estoque??''}" placeholder="Em branco = não controla"></div>
   <div><label>🔔 Avisar quando restar</label><input id="fmin" inputmode="numeric" value="${p.estoqueMin??3}" placeholder="3"></div></div>
-  ${ACG?'':`<label>Descrição no cardápio digital</label><input id="fdesc" maxlength="160" value="${esc(p.desc||'')}" placeholder="Ex.: 8 peças de salmão com cream cheese">`}</div>
+  ${ACG?'':`<label for="fdesc">Descrição no cardápio digital <small id="fdescn" style="color:var(--mut);font-weight:500">${(p.desc||'').length}/400</small></label><textarea id="fdesc" maxlength="400" rows="4" style="width:100%;min-height:96px;resize:vertical;font:inherit;line-height:1.4" oninput="$('#fdescn').textContent=this.value.length+'/400'" placeholder="Ex.: 8 peças de salmão com cream cheese, cebolinha e molho tarê. Serve 2 pessoas.">${esc(p.desc||'')}</textarea>`}</div>
   <div class="row" style="margin-top:14px"><button class="btn" style="flex:1" onclick="fecharModal()">Cancelar</button><button class="btn ok" style="flex:2" onclick="salvarProduto('${id||''}')">💾 Salvar</button></div>`);
   calcLucro();setTimeout(()=>{const n=$('#fnome');if(n&&!id)n.focus()},50);
 }
