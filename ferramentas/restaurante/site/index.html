@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v54">
+<meta name="lg-versao" content="lg-v55">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -1825,7 +1825,7 @@ function vProdutos(){
   const b=st.pbusca.trim().toLowerCase(),todos=prodList();
   const ps=todos.filter(p=>(st.pcat==='Todas'||p.cat===st.pcat)&&(!b||casa(p,b)));
   const pc=todos.filter(p=>+p.custo>0),pm=todos.length?todos.reduce((s,p)=>s+(+p.preco||0),0)/todos.length:0,lm=pc.length?pc.reduce((s,p)=>s+infoProd(p).l,0)/pc.length:0,alc=pc.filter(p=>infoProd(p).ok).length;
-  let h=`<div class="row" style="margin-bottom:12px"><h2 style="margin:0;flex:1">🥤 Produtos</h2><button class="btn" onclick="padronizarTodos()" title="Deixa todos os nomes no mesmo padrão">Aa Padronizar nomes</button><button class="btn acc" onclick="formProduto()">➕ Novo produto</button></div>
+  let h=`<div class="row" style="margin-bottom:12px"><h2 style="margin:0;flex:1">🥤 Produtos</h2><button class="btn" onclick="padronizarTodos()" title="Deixa todos os nomes no mesmo padrão">Aa Padronizar nomes</button>${Object.values(S.produtos).some(p=>p&&p.img&&!p.imgCentro)?`<button class="btn" onclick="centralizarFotos()" title="Acha o produto na foto e deixa ele no meio">🎯 Centralizar fotos</button>`:''}<button class="btn acc" onclick="formProduto()">➕ Novo produto</button></div>
   <div class="g-tops"><div class="g-top">${gIc('prod')}<div><small>Produtos cadastrados</small><b>${todos.length}</b></div></div>
   <div class="g-top">${gIc('din')}<div><small>Preço médio</small><b>${brl(pm)}</b></div></div>
   <div class="g-top g-bom">${gIc('subir','ok')}<div><small>Lucro médio por unidade</small><b>${pc.length?brl(lm):'—'}</b></div></div>
@@ -1849,7 +1849,7 @@ function vProdutos(){
     h+=`<div class="pager" role="navigation" aria-label="Páginas de produtos"><button ${pg?'':'disabled'} onclick="${ir(pg-1)}" aria-label="Página anterior">‹</button>${nums.map(k=>k==='…'?'<span>…</span>':`<button class="${k===pg?'act':''}" onclick="${ir(k)}">${k+1}</button>`).join('')}<button ${pg<np-1?'':'disabled'} onclick="${ir(pg+1)}" aria-label="Próxima página">›</button><span>${ps.length} produtos</span></div>`}
   return h;
 }
-let fImg=null;
+let fImg=null,fImgC=0;
 /* nomes padronizados: "CARNE moída" -> "Carne Moída"; "coca cola 2l" -> "Coca Cola 2L" */
 const MINUSC=new Set(['de','da','do','das','dos','e','com','sem','em','na','no','nas','nos','p/','c/','s/','a','o','ao']);
 function padNome(t){t=String(t||'').replace(/\s+/g,' ').trim();if(!t)return '';
@@ -1870,7 +1870,7 @@ function fpKg(v){$('#fkg').value=v;document.querySelectorAll('.fp-kg button').fo
   const l=$('#fprel');if(l)l.textContent=v==='kg'?'Preço do quilo R$ *':'Preço de venda R$ *';calcLucro()}
 function fpMais(){const m=$('#fmais'),ab=m.classList.toggle('hidden');$('#fmaisb').innerHTML=(ab?'➕ Mais opções':'➖ Menos opções')+$('#fmaisb').dataset.n}
 function formProduto(id){
-  const p=id?S.produtos[id]:{nome:'',unidade:'',cat:ACG?'':'Bebidas',estoque:'',custo:'',preco:''};fImg=p.img||null;
+  const p=id?S.produtos[id]:{nome:'',unidade:'',cat:ACG?'':'Bebidas',estoque:'',custo:'',preco:''};fImg=p.img||null;fImgC=p.imgCentro?1:0;
   const cats=TODAS_CATS.filter(c=>catsEscolhidas().includes(c)||p.cat===c),kg=ACG?(id?!!p.porKg:true):false;
   const preench=[+p.custo>0,p.margem!=null&&p.margem!=='',!!p.plu,controla(p),!!p.desc].filter(Boolean).length;
   const vit=id?fpVitrineTem(id):(!ACG);
@@ -1879,7 +1879,7 @@ function formProduto(id){
     <div style="flex:1;min-width:0"><label style="margin-top:0">Nome do produto *</label><input id="fnome" value="${esc(p.nome)}" placeholder="${ACG?'Ex.: Carne Moída':'Ex.: Coca-Cola'}" onblur="padCampo(this);avisoDup('${p.id||''}')" autocomplete="off"><div id="fdupw"></div>
     <div class="fp-cod">${codLivre()?`<span class="fp-codin">Código <input id="fcod" inputmode="numeric" value="${p.codigo||proxCodigo()}" data-v="${p.codigo||proxCodigo()}"></span><small>se já existir, troca com o outro</small>`:`<span>Código <b>${p.codigo||proxCodigo()}</b></span><small>${p.codigo?'fixo':'gerado sozinho'}</small>`}
       ${fImg?`<button class="lnk" onclick="fImg=null;$('#fprev').innerHTML='📷'">tirar foto</button>`:`<button class="lnk" onclick="fImg=fotoGenerica($('#fnome').value,$('#fcat').value);$('#fprev').innerHTML='<img src=&quot;'+fImg+'&quot;>'">✨ foto ilustrativa</button>`}</div></div></div>
-  <input type="file" id="fimg" accept="image/*" class="hidden" onchange="lerImg(this.files[0],240,u=>{fImg=u;$('#fprev').innerHTML='<img src='+u+'>'})">
+  <input type="file" id="fimg" accept="image/*" class="hidden" onchange="lerImgProduto(this.files[0],480,u=>{fImg=u;fImgC=1;$('#fprev').innerHTML='<img src='+u+'>'})">
   <label>Categoria *</label><input type="hidden" id="fcat" value="${esc(p.cat||'')}">
   <div class="fp-cats">${cats.map(c=>`<button type="button" data-c="${c}" class="${p.cat===c?'on':''}" onclick="fpCat('${c}')">${CATIC[c]||''} ${c}</button>`).join('')}</div>
   ${ACG?`<label>Vende por</label><input type="hidden" id="fkg" value="${kg?'kg':'un'}"><div class="fp-kg"><button type="button" data-v="kg" class="${kg?'on':''}" onclick="fpKg('kg')">⚖️ Quilo</button><button type="button" data-v="un" class="${kg?'':'on'}" onclick="fpKg('un')">📦 Unidade</button></div>`:''}
@@ -1919,7 +1919,7 @@ function salvarProduto(id){
   const plu=ACG?soDig(($('#fplu')||{value:''}).value):'';if(plu&&Object.values(S.produtos).some(x=>x.id!==id&&(String(+x.plu||'')===String(+plu)||(!x.plu&&String(x.codigo)===String(+plu)))))return toast('Esse código da balança já é de outro produto.');
   const codigo=(old&&+old.codigo)||proxCodigo(),barras=soDig($('#fbar').value);
   const dupb=barras&&Object.values(S.produtos).find(x=>x.id!==id&&x.barras===barras);if(dupb)return toast(`Esse código de barras já é do produto ${dupb.nome}.`);
-  const campos={codigo,barras,nome,unidade:padNome($('#fun').value),cat,custo:num($('#fcus').value),preco,estoqueMin:Math.max(0,Math.round(num($('#fmin').value))),img:fImg||'',desc:($('#fdesc')||{value:''}).value.trim(),...(ACG?{}:{pedeObs:($('#fpobs')||{getAttribute:()=>''}).getAttribute('aria-checked')==='true',obsDica:($('#fobsd')||{value:''}).value.trim()}),margem:($('#fmg').value.trim()?num($('#fmg').value):null),...(ACG?{porKg:kgp,plu}:{})};
+  const campos={codigo,barras,nome,unidade:padNome($('#fun').value),cat,custo:num($('#fcus').value),preco,estoqueMin:Math.max(0,Math.round(num($('#fmin').value))),img:fImg||'',imgCentro:fImg&&fImgC&&!String(fImg).startsWith('data:image/svg')?1:0,desc:($('#fdesc')||{value:''}).value.trim(),...(ACG?{}:{pedeObs:($('#fpobs')||{getAttribute:()=>''}).getAttribute('aria-checked')==='true',obsDica:($('#fobsd')||{value:''}).value.trim()}),margem:($('#fmg').value.trim()?num($('#fmg').value):null),...(ACG?{porKg:kgp,plu}:{})};
   const pid=id||uid(),oldE=old?(controla(old)?+old.estoque:''):null,mudouEst=!old||String(oldE)!==String(est);
   mutate('produtos',pid,cur=>{const p={...(cur||{}),...campos,id:pid};if(cur&&+cur.codigo)p.codigo=+cur.codigo;
     if(!cur){p.estoque=est;if(est!=='')p.hist=histEst(p,'cadastro',est)}
@@ -1930,6 +1930,27 @@ function salvarProduto(id){
   fecharModal();if(querCod&&querCod!==codigo)trocarCodigo(pid,codigo,querCod);else toast('✅ Produto salvo');if(est!=='')alertaEstoque([pid]);
 }
 function apagarProduto(id){const p=S.produtos[id];confirmar(`Apagar o produto <b>${esc(p.nome)}</b>?`,()=>{del('produtos',id);toast('Produto apagado')})}
+/* foto do produto: acha o prato/produto na foto e deixa ele no centro, num quadrado (fundo liso vira margem igual dos lados) */
+function centralizarImg(im,max){const W=im.naturalWidth||im.width,H=im.naturalHeight||im.height,a=Math.min(1,160/Math.max(W,H)),w=Math.max(1,Math.round(W*a)),h=Math.max(1,Math.round(H*a));
+  const c0=document.createElement('canvas');c0.width=w;c0.height=h;const x0=c0.getContext('2d',{willReadFrequently:true});x0.fillStyle='#fff';x0.fillRect(0,0,w,h);x0.drawImage(im,0,0,w,h);
+  const D=x0.getImageData(0,0,w,h).data,px=(i,j)=>{const k=(j*w+i)*4;return [D[k],D[k+1],D[k+2]]};
+  const bd=[];for(let i=0;i<w;i+=2){bd.push(px(i,0),px(i,1),px(i,h-1),px(i,h-2))}for(let j=0;j<h;j+=2){bd.push(px(0,j),px(1,j),px(w-1,j),px(w-2,j))}
+  const med=q=>{const v=bd.map(p=>p[q]).sort((x,y)=>x-y);return v[v.length>>1]},bg=[med(0),med(1),med(2)],dist=p=>Math.hypot(p[0]-bg[0],p[1]-bg[1],p[2]-bg[2]);
+  const liso=bd.filter(p=>dist(p)<38).length/bd.length;   // quanto da borda é "fundo"
+  let cx=W/2,cy=H/2,lado=Math.min(W,H),fundo=null;
+  if(liso>=0.6){const col=new Array(w).fill(0),lin=new Array(h).fill(0);let n=0;
+    for(let j=0;j<h;j++)for(let i=0;i<w;i++)if(dist(px(i,j))>=38){col[i]++;lin[j]++;n++}
+    if(n>w*h*0.03&&n<w*h*0.97){const corta=(v,tot)=>{let s=0,a1=0,b1=v.length-1;const lim=tot*0.02;for(;a1<v.length;a1++){s+=v[a1];if(s>lim)break}s=0;for(;b1>=0;b1--){s+=v[b1];if(s>lim)break}return [a1,b1]};
+      const [x1,x2]=corta(col,n),[y1,y2]=corta(lin,n);if(x2>x1&&y2>y1){cx=(x1+x2+1)/2/a;cy=(y1+y2+1)/2/a;lado=Math.max(x2-x1+1,y2-y1+1)/a*1.16;fundo=`rgb(${bg.join(',')})`}}}
+  lado=Math.max(16,Math.min(lado,fundo?Math.max(W,H)*1.2:Math.min(W,H)));
+  const t=Math.min(max,Math.max(240,Math.round(lado))),c=document.createElement('canvas');c.width=c.height=t;const x=c.getContext('2d'),e=t/lado;
+  x.fillStyle=fundo||'#fff';x.fillRect(0,0,t,t);x.imageSmoothingQuality='high';x.drawImage(im,(t/2)-cx*e,(t/2)-cy*e,W*e,H*e);return c.toDataURL('image/jpeg',.8)}
+function lerImgProduto(file,max,cb){if(!file)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{let u;try{u=centralizarImg(im,max)}catch(e){u=null}
+  if(u)cb(u);else lerImg(file,max,cb)};im.src=r.result};r.readAsDataURL(file)}
+function centralizarFotos(){const ps=Object.values(S.produtos).filter(p=>p&&p.img&&!p.imgCentro);if(!ps.length)return toast('Todas as fotos já estão centralizadas.');
+  confirmar(`Centralizar as fotos de <b>${ps.length}</b> produto(s)? O sistema acha o produto na foto e deixa ele no meio, em quadrado.`,async()=>{let k=0;
+    for(const p of ps){await new Promise(ok=>{const im=new Image();im.onload=()=>{try{const u=centralizarImg(im,480);mutate('produtos',p.id,x=>x?{...x,img:u,imgCentro:1}:ABORT);k++}catch(e){}ok()};im.onerror=ok;im.src=p.img})}
+    toast(`🎯 ${k} foto(s) centralizada(s)`)})}
 function lerImg(file,max,cb){if(!file)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
   const s=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
   const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.78))};im.src=r.result};r.readAsDataURL(file)}
@@ -2798,7 +2819,7 @@ const linkCardapio=()=>{const c=lsGet('lg-cli','');if(/grsoftware\.com\.br$/.tes
 function salvarCdp(m){return mutate('config','geral',c=>({...(c||{}),cardapio:{...cdp(),...((c&&c.cardapio)||{}),...m}}))}
 function cdpTem(id){return cdp().ids.includes(id)}
 function cdpFoto(id){const i=document.createElement('input');i.type='file';i.accept='image/*';
-  i.onchange=()=>lerImg(i.files[0],600,u=>{mutate('produtos',id,x=>x?{...x,img:u}:ABORT);toast('✅ Foto do produto salva — já aparece no cardápio')});i.click()}
+  i.onchange=()=>lerImgProduto(i.files[0],480,u=>{mutate('produtos',id,x=>x?{...x,img:u,imgCentro:1}:ABORT);toast('✅ Foto do produto salva — já aparece no cardápio')});i.click()}
 function cdpTrocar(id,on){const ids=cdp().ids.filter(x=>x!==id);if(on)ids.push(id);salvarCdp({ids})}
 function vCardapio(){const c=cdp(),ps=prodList(),noc=ps.filter(p=>c.ids.includes(p.id)).length;
   const cats=[...new Set(ps.map(p=>p.cat||'Outros'))];
