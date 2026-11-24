@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v55">
+<meta name="lg-versao" content="lg-v56">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -905,6 +905,7 @@ input,select,textarea{border-radius:12px}
 .sab-rec{margin-left:auto;align-self:center}
 @media(max-width:760px){.sabs{gap:8px;flex-wrap:nowrap}.sab{flex:1 1 0;flex-direction:column;gap:6px;padding:10px 6px;text-align:center;min-width:0}.sab-ic{width:38px;height:38px}.sab-tx small{display:none}.sab-tx b{font-size:.92rem}.sab-rec{display:none}}
 body.gmode{background:var(--v2-bg)!important}
+.pc2-img[role=button]:hover img{transform:scale(1.04)}.pc2-img img{transition:transform .2s}.pc2-img[role=button]:hover::after{content:'✏️ Editar';position:absolute;bottom:8px;right:8px;background:#000a;color:#fff;font-size:.78rem;font-weight:700;padding:3px 9px;border-radius:8px}
 table.crel{width:100%;border-collapse:collapse;font-size:.9rem}table.crel th{position:sticky;top:0;background:var(--card);text-align:left;padding:8px;border-bottom:1px solid var(--line)}table.crel td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}table.crel .n{text-align:right;white-space:nowrap}table.crel tr.cpg td{background:color-mix(in srgb,#1f8a4c 7%,transparent)}
 .dup-av{margin-top:8px;background:#fff3d6;color:#6b4300;border:1.5px solid #f0c060;border-radius:12px;padding:10px 12px;font-size:.92rem}
 body.gmode .gtop,body.gmode .gcab{background:var(--v2-bar)!important;color:#fff!important}
@@ -1836,8 +1837,8 @@ function vProdutos(){
   const por=st.pPor||12,np=Math.max(1,Math.ceil(ps.length/por)),pg=Math.min(st.pPag||0,np-1);st.pPag=pg;
   h+='<div class="pc2-grid">';
   ps.slice(pg*por,pg*por+por).forEach(p=>{const x=infoProd(p),kg=ehKg(p),est=p.estoque===''||p.estoque==null?'':kg?kg3(p.estoque)+' kg':p.estoque+' un.';
-    h+=`<article class="pc2"><div class="pc2-img"><img src="${fotoP(p)}" alt="" loading="lazy">${p.codigo?`<span class="pc2-cod">${p.codigo}</span>`:''}</div>
-    <div class="pc2-c"><h4>${esc(p.nome)}</h4><small class="pc2-sub">${[p.unidade,p.cat].filter(Boolean).map(esc).join(' · ')}${p.barras?' · ▮▮ '+esc(p.barras):''}</small>
+    h+=`<article class="pc2"><div class="pc2-img" role="button" tabindex="0" title="Editar ${esc(p.nome)}" aria-label="Editar ${esc(p.nome)}" onclick="formProduto('${p.id}')" onkeydown="if(event.key==='Enter')formProduto('${p.id}')" style="cursor:pointer"><img src="${fotoP(p)}" alt="" loading="lazy">${p.codigo?`<span class="pc2-cod">${p.codigo}</span>`:''}</div>
+    <div class="pc2-c"><h4 style="cursor:pointer" onclick="formProduto('${p.id}')">${esc(p.nome)}</h4><small class="pc2-sub">${[p.unidade,p.cat].filter(Boolean).map(esc).join(' · ')}${p.barras?' · ▮▮ '+esc(p.barras):''}</small>
     ${x.tem?(x.ok?`<span class="pc2-st ok">${ICG.ok} Margem alcançada</span>`:`<span class="pc2-st baixa">${ICG.alerta} Abaixo da margem (${x.alvo}%)</span>`):`<span class="pc2-st sem">Sem custo cadastrado</span>`}
     <div class="pc2-pr"><span>${ICG.etq} Preço de venda${kg?' (kg)':''}</span><b>${brl(x.v)}</b></div>
     ${x.tem?`<div class="pc2-ls"><div class="pc2-l"><span>💰 Lucro</span><b class="${x.l>=0?'lucro':'prej'}">${brl(x.l)}</b></div><div class="pc2-l"><span>📊 Margem</span><b>${pct(x.mg)}</b></div>
