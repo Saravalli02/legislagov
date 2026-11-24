@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v53">
+<meta name="lg-versao" content="lg-v54">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -905,6 +905,7 @@ input,select,textarea{border-radius:12px}
 .sab-rec{margin-left:auto;align-self:center}
 @media(max-width:760px){.sabs{gap:8px;flex-wrap:nowrap}.sab{flex:1 1 0;flex-direction:column;gap:6px;padding:10px 6px;text-align:center;min-width:0}.sab-ic{width:38px;height:38px}.sab-tx small{display:none}.sab-tx b{font-size:.92rem}.sab-rec{display:none}}
 body.gmode{background:var(--v2-bg)!important}
+table.crel{width:100%;border-collapse:collapse;font-size:.9rem}table.crel th{position:sticky;top:0;background:var(--card);text-align:left;padding:8px;border-bottom:1px solid var(--line)}table.crel td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}table.crel .n{text-align:right;white-space:nowrap}table.crel tr.cpg td{background:color-mix(in srgb,#1f8a4c 7%,transparent)}
 .dup-av{margin-top:8px;background:#fff3d6;color:#6b4300;border:1.5px solid #f0c060;border-radius:12px;padding:10px 12px;font-size:.92rem}
 body.gmode .gtop,body.gmode .gcab{background:var(--v2-bar)!important;color:#fff!important}
 
@@ -1261,6 +1262,7 @@ function render(force){try{marcaTopo()}catch(e){}document.body.classList.toggle(
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('act',b.dataset.v===view||(view==='mesa'&&b.dataset.v==='mesas')));
   if(!force&&digitando()){pendente=true;return}
   pendente=false;
+  syncPags();if(view==='clientes'&&!usaCli())view=ACG?'pdv':'mesas';
   const V={pdv:vPdv,clientes:vClientes,pedidos:vPedidos,mesas:vMesas,mesa:vMesa,produtos:vProdutos,estoque:vEstoque,historico:vHistorico,relatorios:vRelatorios,movimento:vMovimento,cardapio:vCardapio,config:vConfig}[view];
   $('#view').innerHTML=V();lgEnfeitar($('#view'));
   if(emPdv()&&$('#modalBg').classList.contains('hidden')){const q=$('#pdq');if(q)q.focus()}
@@ -1512,9 +1514,9 @@ function modalVenda(){
   ${ACG&&curMesa===BAL?blocoDescVenda():''}
   <b>Forma de pagamento</b>
   <div class="pags">${PAGS.map(([p,i])=>`<button class="${st.pag===p?'act':''}" onclick="st.pag='${p}';modalVenda()"><i>${i}</i>${p}<kbd class="k">${PAGK[p]}</kbd></button>`).join('')}</div>
-  ${st.pag==='Dinheiro'?blocoTroco(tot):''}${ACG?blocoContaModal(tot):''}
+  ${st.pag==='Dinheiro'?blocoTroco(tot):''}${usaCli()?blocoContaModal(tot):''}
   ${blocoCPF()}
-  <button class="btn ok big" ${st.pag&&!(ACG&&contaBloqueada(tot))?'':'disabled'} onclick="finalizar()">✅ Pagamento aprovado — Finalizar <kbd class="k">F8</kbd></button>
+  <button class="btn ok big" ${st.pag&&!(usaCli()&&contaBloqueada(tot))?'':'disabled'} onclick="finalizar()">✅ Pagamento aprovado — Finalizar <kbd class="k">F8</kbd></button>
   <div class="row" style="margin-top:10px"><button class="btn" style="flex:1" onclick="fecharModal()">Voltar <kbd class="k">Esc</kbd></button></div>`,'venda');
 }
 /* fecha a comanda: usado pelo caixa e pelo app do garçom */
@@ -1539,7 +1541,7 @@ async function fecharComanda(n,{pag,cpf,nota,por}){
 }
 async function finalizar(){
   const n=curMesa;if(!st.pag)return;
-  if(ACG&&contaBloqueada(totItens(mesa(n).itens||[])))return toast(cliDoCaixa()?'Crédito insuficiente do cliente. Aumente o limite ou escolha outra forma.':'Escolha o cliente para vender na conta.');
+  if(usaCli()&&contaBloqueada(totItens(mesa(n).itens||[])))return toast(cliDoCaixa()?'Crédito insuficiente do cliente. Aumente o limite ou escolha outra forma.':'Escolha o cliente para vender na conta.');
   if(st.pag==='Dinheiro'&&st.receb>0&&st.receb+0.001<totItens(mesa(n).itens||[]))return toast('O valor recebido é menor que o total. Confira o dinheiro ou apague o campo.');
   const v=await fecharComanda(n,{pag:st.pag,cpf:st.cpf,nota:st.nota});if(!v)return;
   const baixados=Object.keys(v._baixa).map(pid=>{const p=S.produtos[pid];return p&&controla(p)?`${ehKg(p)?kg3(v._baixa[pid])+' kg':v._baixa[pid]+'x'} ${esc(nomeP(p))} → ficou ${ehKg(p)?kg3(p.estoque)+' kg':p.estoque}`:null}).filter(Boolean);
@@ -2225,7 +2227,8 @@ function avisoCli(c,valor){const u=usoCli(c),apos=u.disp-valor;
   if(u.lim&&apos<=Math.max(20,u.lim*0.1))return {cl:'alerta',tx:`Limite de crédito de ${c.nome} está acabando: depois desta compra sobram ${brl(apos)}.`};
   if(u.dias<=5)return {cl:'info',tx:`Faltam ${u.dias} dia(s) para fechar o mês de ${c.nome}. Disponível: ${u.lim?brl(u.disp):'sem limite'}.`};
   return null}
-const cliDoCaixa=()=>{const id=(mesa(BAL)||{}).cliId;return id&&S.clientes[id]?S.clientes[id]:null};
+const cliMesa=()=>ACG?BAL:(curMesa||BAL);
+const cliDoCaixa=()=>{const id=(mesa(cliMesa())||{}).cliId;return id&&S.clientes[id]?S.clientes[id]:null};
 function barraCli(c){const u=usoCli(c);if(!u.lim)return '';const p=Math.min(100,Math.max(0,u.usado/u.lim*100));
   return `<div class="clibar"><i style="width:${p}%;background:${p>=90?'var(--bad)':p>=70?'#d99a00':'var(--ok)'}"></i></div>`}
 /* bloco do cliente no caixa */
@@ -2244,7 +2247,7 @@ function cliEnter(inp){const l=cliBusca($('#'+inp).value);if(l[0]&&(l.length===1
 let cliVolta=null;
 function cliEscolher(id){fecharModalSe('cli');cliDoCaixaSet(id);if(cliVolta){const f=cliVolta;cliVolta=null;setTimeout(f,60)}}
 function fecharModalSe(t){if(modalTipo===t)fecharModal()}
-function cliDoCaixaSet(id){mutate('mesas',BAL,m=>{m=m||{itens:[]};m.itens=m.itens||[];if(id)m.cliId=id;else delete m.cliId;return m.itens.length||m.cliId?m:null});
+function cliDoCaixaSet(id){mutate('mesas',cliMesa(),m=>{m=m||{itens:[]};m.itens=m.itens||[];if(id)m.cliId=id;else delete m.cliId;return m.itens.length||m.cliId?m:null});
   const c=id&&S.clientes[id];if(c){const a=avisoCli(c,totItens(pdvIts()));toast(a?a.tx:`👤 ${c.nome} na venda`)}}
 function cliPedir(depois){cliVolta=depois||null;
   abrirModal(`<h2>👤 Cliente da venda</h2><label for="mcli">Código ou nome</label><input id="mcli" autocomplete="off" oninput="cliSugerir('mcli','mclis')" onkeydown="if(event.key==='Enter'){event.preventDefault();cliEnter('mcli')}">
@@ -2277,7 +2280,7 @@ function cliVer(id){const c=S.clientes[id];if(!c)return;const u=usoCli(c),a=avis
   <div class="stats" style="margin:10px 0"><div class="stat"><small>Limite no mês</small><b>${u.lim?brl(u.lim):'—'}</b></div><div class="stat"><small>Usado no mês</small><b>${brl(u.usado)}</b></div>
   <div class="stat"><small>Disponível</small><b class="${u.lim&&u.disp<=0?'prej':'lucro'}">${u.lim?brl(u.disp):'sem limite'}</b></div><div class="stat"><small>Fecha o mês em</small><b>${u.dias} dia(s)</b></div></div>
   ${barraCli(c)}<p style="color:var(--mut);font-size:.9rem;margin:8px 0">Mês de ${u.ini.toLocaleDateString('pt-BR')} a ${new Date(u.fim-864e5).toLocaleDateString('pt-BR')}. Total em aberto na conta: <b>${brl(u.devendo)}</b></p>
-  <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn acc" onclick="cliLimite('${id}')">➕ Aumentar limite</button><button class="btn ok" onclick="cliReceber('${id}')">💰 Receber pagamento</button><button class="btn" onclick="cliBloq('${id}')">${c.bloqueado?'✅ Liberar compras':'⛔ Barrar compras'}</button><button class="btn" onclick="formCliente('${id}')">✏️ Cadastro</button></div>
+  <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn acc" onclick="cliLimite('${id}')">➕ Aumentar limite</button><button class="btn ok" onclick="cliReceber('${id}')">💰 Receber pagamento</button><button class="btn pri" onclick="st.crel=null;cliRelatorio('${id}')">📄 Consumo e fechamento</button><button class="btn" onclick="cliBloq('${id}')">${c.bloqueado?'✅ Liberar compras':'⛔ Barrar compras'}</button><button class="btn" onclick="formCliente('${id}')">✏️ Cadastro</button></div>
   <h3 style="margin-top:16px">Compras na conta</h3>${vs.length?`<table>${vs.map(v=>`<tr><td>${dt(v.data)}</td><td>${(v.itens||[]).filter(i=>i.pid!=='desconto').length} item(ns)</td><td class="n">${brl(v.total)}</td></tr>`).join('')}</table>`:'<p style="color:var(--mut)">Nenhuma compra na conta ainda.</p>'}
   ${ps.length?`<h3 style="margin-top:16px">Pagamentos recebidos</h3><table>${ps.map(p=>`<tr><td>${dt(p.d)}</td><td>${esc(p.forma)}</td><td class="n lucro">${brl(p.valor)}</td></tr>`).join('')}</table>`:''}
   <div class="row" style="margin-top:14px"><button class="btn pri" style="flex:1" onclick="fecharModal()">Fechar</button></div>`,'cliver')}
@@ -2297,6 +2300,72 @@ function cliSalvarReceb(id){const v=r2(num($('#rv').value)),f=$('#rf').value;if(
   if(!movAberto())return toast('Abra o movimento do dia para registrar o recebimento.');
   mutate('clientes',id,x=>x?{...x,pagamentos:[...(x.pagamentos||[]),{d:new Date().toISOString(),valor:v,forma:f,movId:S.estado.movId}].slice(-300)}:ABORT);
   toast(`✅ Recebido ${brl(v)}`);setTimeout(()=>cliVer(id),60)}
+/* ===== Clientes também no restaurante (opcional nos Ajustes), relatório de consumo e fechamento com cobrança Pix ===== */
+const usaCli=()=>ACG||!!(S.config||{}).usaClientes;
+function syncPags(){if(ACG)return;const on=usaCli(),i=PAGS.findIndex(x=>x[0]==='Conta do cliente');
+  if(on&&i<0){PAGS.push(['Conta do cliente','📒']);PAGK['Conta do cliente']='O'}else if(!on&&i>=0){PAGS.splice(i,1);delete PAGK['Conta do cliente']}
+  const b=document.querySelector('#nav [data-v=clientes]');if(b)b.style.display=on?'':'none'}
+/* Pix copia e cola (BR Code estático, padrão do Banco Central) */
+function pixPayload(valor,txid){const c=S.config||{},px=c.pix||{};if(!px.chave)return '';
+  const lim=(t,n)=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9 ]/g,'').toUpperCase().trim().slice(0,n);
+  const f=(id,v)=>id+String(v.length).padStart(2,'0')+v,ch=String(px.chave).trim();
+  let p=f('00','01')+f('26',f('00','br.gov.bcb.pix')+f('01',ch))+f('52','0000')+f('53','986')+(valor>0?f('54',(+valor).toFixed(2)):'')+f('58','BR')+f('59',lim(px.nome||c.razao||'RECEBEDOR',25)||'RECEBEDOR')+f('60',lim(px.cidade||'NEVES PAULISTA',15)||'BRASIL')+f('62',f('05',lim(txid,25).replace(/ /g,'')||'***'))+'6304';
+  let crc=0xFFFF;for(let i=0;i<p.length;i++){crc^=p.charCodeAt(i)<<8;for(let k=0;k<8;k++)crc=crc&0x8000?((crc<<1)^0x1021)&0xFFFF:(crc<<1)&0xFFFF}
+  return p+crc.toString(16).toUpperCase().padStart(4,'0')}
+function periodoCli(c,tipo,de,ate){const h=new Date(),d0=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate());
+  if(tipo==='semana'){const ini=d0(h);ini.setDate(ini.getDate()-((ini.getDay()+6)%7));return {ini,fim:new Date(ini.getTime()+7*864e5),nome:'esta semana'}}
+  if(tipo==='mes')return {ini:new Date(h.getFullYear(),h.getMonth(),1),fim:new Date(h.getFullYear(),h.getMonth()+1,1),nome:h.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})};
+  if(tipo==='mesant'){const ini=new Date(h.getFullYear(),h.getMonth()-1,1);return {ini,fim:new Date(h.getFullYear(),h.getMonth(),1),nome:ini.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}}
+  if(tipo==='periodo'&&de&&ate){const ini=new Date(de+'T00:00:00'),fim=new Date(ate+'T00:00:00');fim.setDate(fim.getDate()+1);return {ini,fim,nome:`${ini.toLocaleDateString('pt-BR')} a ${new Date(fim-864e5).toLocaleDateString('pt-BR')}`}}
+  const u=cicloCli(c);return {ini:u.ini,fim:u.fim,nome:`mês da conta (${u.ini.toLocaleDateString('pt-BR')} a ${new Date(u.fim-864e5).toLocaleDateString('pt-BR')})`}}
+function dadosRelCli(id){const c=S.clientes[id],r=st.crel||{},p=periodoCli(c,r.tipo||'conta',r.de,r.ate),dentro=t=>{t=new Date(t);return t>=p.ini&&t<p.fim};
+  const vs=Object.values(S.vendas||{}).filter(v=>v.cliId===id&&dentro(v.data)).sort((a,b)=>a.data.localeCompare(b.data));
+  const pg=(c.pagamentos||[]).filter(x=>dentro(x.d)).sort((a,b)=>a.d.localeCompare(b.d));
+  const compras=r2(vs.reduce((s,v)=>s+v.total,0)),naConta=r2(vs.filter(v=>v.pagamento===CONTA).reduce((s,v)=>s+v.total,0)),pagos=r2(pg.reduce((s,x)=>s+(+x.valor||0),0));
+  return {c,p,vs,pg,compras,naConta,pagos,devendo:usoCli(c).devendo}}
+const itTxt=v=>(v.itens||[]).filter(i=>i.pid!=='desconto').map(i=>`${ehKg(S.produtos[i.pid]||{})?kg3(i.qtd)+' kg':i.qtd+'x'} ${i.nome}`).join(', ');
+function cliRelatorio(id){const c=S.clientes[id];if(!c)return;st.crel=st.crel&&st.crel.id===id?st.crel:{id,tipo:'conta'};const r=st.crel,d=dadosRelCli(id);
+  const bt=(k,t)=>`<button class="${r.tipo===k?'act':''}" onclick="st.crel.tipo='${k}';cliRelatorio('${id}')">${t}</button>`;
+  abrirModal(`<h2>📄 Consumo de ${esc(c.nome)}</h2>
+  <div class="g-abas" style="margin:4px 0 10px">${bt('semana','Esta semana')}${bt('mes','Este mês')}${bt('conta','Mês da conta')}${bt('mesant','Mês passado')}${bt('periodo','Escolher datas')}</div>
+  ${r.tipo==='periodo'?`<div class="grid2"><div><label>De</label><input type="date" value="${r.de||''}" onchange="st.crel.de=this.value;cliRelatorio('${id}')"></div><div><label>Até</label><input type="date" value="${r.ate||''}" onchange="st.crel.ate=this.value;cliRelatorio('${id}')"></div></div>`:''}
+  <p style="color:var(--mut);margin:6px 0">Período: <b>${esc(d.p.nome)}</b></p>
+  <div class="stats" style="margin:8px 0"><div class="stat"><small>Comprou no período</small><b>${brl(d.compras)}</b></div><div class="stat"><small>Na conta</small><b>${brl(d.naConta)}</b></div><div class="stat"><small>Pagou no período</small><b class="lucro">${brl(d.pagos)}</b></div><div class="stat"><small>Total em aberto hoje</small><b class="${d.devendo>0?'prej':''}">${brl(d.devendo)}</b></div></div>
+  <div style="max-height:min(42vh,380px);overflow:auto;border:1px solid var(--line);border-radius:12px">
+  ${d.vs.length||d.pg.length?`<table class="crel"><thead><tr><th>Data e hora</th><th>O que levou</th><th>Pagamento</th><th class="n">Valor</th></tr></thead><tbody>
+    ${[...d.vs.map(v=>({t:v.data,h:`<tr><td>${dt(v.data)}</td><td>${esc(itTxt(v))}</td><td>${esc(v.pagamento)}</td><td class="n">${brl(v.total)}</td></tr>`})),...d.pg.map(x=>({t:x.d,h:`<tr class="cpg"><td>${dt(x.d)}</td><td>💰 Pagamento recebido</td><td>${esc(x.forma)}</td><td class="n lucro">− ${brl(x.valor)}</td></tr>`}))].sort((a,b)=>a.t.localeCompare(b.t)).map(x=>x.h).join('')}
+  </tbody></table>`:'<p style="color:var(--mut);padding:14px;margin:0">Nada neste período.</p>'}</div>
+  <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn" onclick="cliVer('${id}')">Voltar</button><span style="flex:1"></span>
+  <button class="btn" onclick="cliImprimirRel('${id}')">🖨️ Imprimir</button>${c.fone?`<button class="btn" onclick="cliZapRel('${id}')">💬 Mandar extrato</button>`:''}<button class="btn ok" onclick="cliFechar('${id}')">📒 Fechamento e cobrança</button></div>`,'crel')}
+function cliTextoRel(id){const d=dadosRelCli(id),cfg=S.config||{};
+  return `*${cfg.razao||(ACG?'Açougue':'Restaurante')}* — consumo de ${d.c.nome}\nPeríodo: ${d.p.nome}\n\n`+d.vs.map(v=>`${dt(v.data)} — ${itTxt(v)} — ${brl(v.total)}${v.pagamento===CONTA?' (na conta)':' ('+v.pagamento+')'}`).join('\n')+
+    (d.pg.length?'\n\nPagamentos:\n'+d.pg.map(x=>`${dt(x.d)} — ${x.forma} — ${brl(x.valor)}`).join('\n'):'')+`\n\nTotal no período: ${brl(d.compras)}\nEm aberto hoje: ${brl(d.devendo)}`}
+const zapCli=(c,t)=>window.open('https://wa.me/'+(soDig(c.fone).length<=11?'55':'')+soDig(c.fone)+'?text='+encodeURIComponent(t),'_blank');
+function cliZapRel(id){zapCli(S.clientes[id],cliTextoRel(id))}
+function cliImprimirRel(id){const d=dadosRelCli(id);
+  imprimir(`<div class="cupom">${cupomCab()}<hr><div class="c"><b>CONSUMO DO CLIENTE</b><br>${esc(d.c.nome)} · cód. ${d.c.codigo}<br>${esc(d.p.nome)}</div><hr>
+  ${d.vs.map(v=>`<div>${dt(v.data)}</div><div>${esc(itTxt(v))}</div><div class="l"><span>${esc(v.pagamento)}</span><span>${brl(v.total)}</span></div><hr>`).join('')||'<div>Nada no período.</div><hr>'}
+  ${d.pg.map(x=>`<div class="l"><span>${dt(x.d)} pagou (${esc(x.forma)})</span><span>-${brl(x.valor)}</span></div>`).join('')}
+  <div class="l"><b>TOTAL NO PERÍODO</b><b>${brl(d.compras)}</b></div><div class="l"><b>EM ABERTO HOJE</b><b>${brl(d.devendo)}</b></div></div>`,'Consumo '+d.c.nome,`cliRelatorio('${id}')`)}
+function cliFechar(id){const d=dadosRelCli(id),c=d.c,px=(S.config||{}).pix||{},val=Math.max(0,d.devendo),cod=px.chave&&val>0?pixPayload(val,'C'+c.codigo+new Date().toISOString().slice(2,10).replace(/-/g,'')):'';
+  const msg=`Olá, ${c.nome.split(' ')[0]}! 😊\nSegue o fechamento da sua conta no *${(S.config||{}).razao||(ACG?'açougue':'restaurante')}*.\nPeríodo: ${d.p.nome}\nConsumo no período: ${brl(d.compras)}\n*Total a pagar: ${brl(val)}*`+
+    (cod?`\n\nPague pelo Pix copia e cola (já vem com o valor):\n${cod}`:px.chave?`\n\nChave Pix: ${px.chave}`:'')+`\n\nObrigado pela preferência!`;
+  st.cfechaMsg=msg;
+  abrirModal(`<h2>📒 Fechamento de ${esc(c.nome)}</h2><div class="stats" style="margin:6px 0 10px"><div class="stat"><small>Consumo no período</small><b>${brl(d.compras)}</b></div><div class="stat"><small>Total a pagar</small><b class="prej">${brl(val)}</b></div></div>
+  ${px.chave?(cod?`<label>Pix copia e cola (com o valor)</label><textarea readonly rows="3" style="width:100%;font-family:monospace;font-size:.8rem" onclick="this.select()">${esc(cod)}</textarea>`:''):`<div class="aviso" style="margin:0 0 10px">💡 Para mandar o código Pix junto, cadastre a chave Pix em <b>Ajustes › Clientes e cobrança</b>. É opcional.</div>`}
+  <label>Mensagem de cobrança</label><textarea id="cfmsg" rows="8" style="width:100%" oninput="st.cfechaMsg=this.value">${esc(msg)}</textarea>
+  <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn" onclick="cliRelatorio('${id}')">Voltar</button><span style="flex:1"></span>
+  <button class="btn" onclick="copiar(st.cfechaMsg,'Mensagem copiada')">📋 Copiar</button>${c.fone?`<button class="btn ok" onclick="cliCobrar('${id}',${val})">💬 Enviar cobrança no WhatsApp</button>`:'<span style="color:var(--mut);align-self:center">Cadastre o WhatsApp do cliente para enviar.</span>'}</div>`,'cfecha')}
+function cliCobrar(id,val){const c=S.clientes[id],d=dadosRelCli(id);
+  mutate('clientes',id,x=>x?{...x,fechamentos:[...(x.fechamentos||[]),{d:new Date().toISOString(),ini:d.p.ini.toISOString(),fim:d.p.fim.toISOString(),consumo:d.compras,cobrado:val}].slice(-60)}:ABORT);
+  zapCli(c,st.cfechaMsg||'');toast('💬 Cobrança aberta no WhatsApp')}
+function cartaoClientesCfg(){const c=S.config||{},px=c.pix||{};
+  return `<div class="card"><h3>👤 Clientes e cobrança</h3>
+  ${ACG?'':`<label class="chk"><input type="checkbox" ${c.usaClientes?'checked':''} onchange="mutate('config','geral',x=>({...(x||{}),usaClientes:this.checked}));toast(this.checked?'👤 Menu Clientes ligado':'Menu Clientes desligado')"><span><b>Vender na conta do cliente</b> (liga o menu Clientes e a forma de pagamento "Conta do cliente")</span></label>`}
+  <p style="color:var(--mut);margin:8px 0">Opcional: com a chave Pix, o fechamento do cliente já sai com o <b>Pix copia e cola</b> no valor certo.</p>
+  <div class="grid2"><div style="grid-column:1/-1"><label>Chave Pix</label><input id="pxc" value="${esc(px.chave||'')}" placeholder="CPF, CNPJ, celular (+55…), e-mail ou chave aleatória"></div>
+  <div><label>Nome de quem recebe</label><input id="pxn" maxlength="25" value="${esc(px.nome||'')}" placeholder="Como está no banco"></div><div><label>Cidade</label><input id="pxd" maxlength="15" value="${esc(px.cidade||'')}" placeholder="Neves Paulista"></div></div>
+  <button class="btn ok" style="margin-top:10px" onclick="mutate('config','geral',x=>({...(x||{}),pix:{chave:$('#pxc').value.trim(),nome:$('#pxn').value.trim(),cidade:$('#pxd').value.trim()}}));toast('✅ Dados do Pix salvos')">💾 Salvar Pix</button></div>`}
 /* tela Clientes */
 function vClientes(){const q=(st.cq||'').trim(),l=q?cliBusca(q).concat([]):cliList();
   const tot=cliList().reduce((s,c)=>s+Math.max(0,usoCli(c).devendo),0);
@@ -2449,6 +2518,9 @@ if(ACG){
   const at=$('#atalhos');if(at)at.innerHTML='<b>Atalhos:</b> <kbd>F2</kbd> Caixa · <kbd>F3</kbd> Produtos · <kbd>F4</kbd> Estoque · <kbd>Ins</kbd> Lançar valor · <kbd>F5</kbd> Desconto · <kbd>Del</kbd> Tirar último item · <kbd>F10</kbd> Guardar · <kbd>F9</kbd> Recuperar · <kbd>F8</kbd> Receber · <kbd>Enter</kbd> Finalizar · <kbd>1</kbd>–<kbd>6</kbd> Dinheiro/Pix/Débito/Crédito/Ticket/Conta · <kbd>Esc</kbd> Voltar';
   if(view==='mesas')view='pdv';
 }
+if(!ACG){const nav=$('#nav'),ms=nav&&nav.querySelector('[data-v=mesas]');if(nav&&ms&&!nav.querySelector('[data-v=clientes]')){const cb=document.createElement('button');cb.dataset.v='clientes';cb.style.display='none';
+  cb.innerHTML='<i><svg class="nico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.7.8 2.7 2.5 3 5.2"/></svg></i>Clientes';
+  cb.onclick=()=>go('clientes');nav.insertBefore(cb,ms.nextSibling)}}
 /* ---------- ATALHOS ---------- */
 let numBuf='';
 function ajuda(){abrirModal(`<h2>⌨️ Teclas de atalho</h2><table>
@@ -2752,7 +2824,7 @@ function vConfig(){const c=S.config||{},l=c.logo,gs=c.garcons||[];
   return `<h2>⚙️ Ajustes</h2><div class="cfg">
   <div class="card"><h3>🗂️ Menus (categorias dos produtos)</h3><p style="color:var(--mut);margin:0 0 8px">Marque os menus que o restaurante usa. Eles aparecem no cadastro de produtos, no app do garçom e no cardápio digital.</p>
   <div class="grid2">${TODAS_CATS.map(x=>`<label class="chk"><input type="checkbox" ${catsEscolhidas().includes(x)?'checked':''} onchange="trocarCat('${x}',this.checked)"><span>${CATIC[x]} ${x}${Object.values(S.produtos||{}).some(p=>p.cat===x)?' <small style="color:var(--mut)">('+Object.values(S.produtos).filter(p=>p.cat===x).length+' produtos)</small>':''}</span></label>`).join('')}</div></div>
-  ${ACG?'':cartaoMesas()}  ${cartaoCodigos()}${ACG?cartaoBalanca():''}<div class="card" ${ACG?'style="display:none"':''}><h3>🧑‍🍳 Garçons (app do celular)</h3>
+  ${ACG?'':cartaoMesas()}${cartaoClientesCfg()}  ${cartaoCodigos()}${ACG?cartaoBalanca():''}<div class="card" ${ACG?'style="display:none"':''}><h3>🧑‍🍳 Garçons (app do celular)</h3>
   ${gs.length?gs.map(g=>`<div class="it"><div class="thumb">👤</div><div class="nm"><b>${esc(g.nome)}</b><small>PIN ••••</small></div><button class="btn" onclick="trocarPin('${g.id}')">🔑 PIN</button><button class="btn" onclick="removerGarcom('${g.id}')">🗑️</button></div>`).join(''):'<p style="color:var(--mut)">Nenhum garçom cadastrado.</p>'}
   <div class="grid2" style="margin-top:6px"><div><label>Nome</label><input id="gn" placeholder="Ex.: João"></div><div><label>PIN (4 números)</label><input id="gp" inputmode="numeric" maxlength="4" placeholder="1234"></div></div>
   <button class="btn ok" style="margin-top:10px" onclick="addGarcom()">➕ Cadastrar garçom</button>
