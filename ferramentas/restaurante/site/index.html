@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v50">
+<meta name="lg-versao" content="lg-v51">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -874,6 +874,17 @@ input,select,textarea{border-radius:12px}
  .g-tops{margin-bottom:10px;gap:10px}.g-top{padding:10px 12px}.g-top .g-ic{width:36px;height:36px}.g-top b{font-size:1.1rem}
  .pc2-grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))!important;gap:14px}.pc2-img{aspect-ratio:auto;height:100px}.pc2-img img[src^="data:image/svg"]{object-fit:contain}.pc2-pr span{font-size:.75rem!important}.pc2-l{gap:6px}.pc2-l b{white-space:nowrap}.pc2-sub{display:none}.pc2-ls{display:grid;grid-template-columns:1fr 1fr;column-gap:12px}.pc2-l span{white-space:nowrap}.pc2-st{font-size:.75rem;padding:3px 8px}.pc2-c{padding:10px 12px 12px;gap:4px}.pc2-c h4{font-size:1rem}.pc2-pr{padding:7px 10px}.pc2-pr b{font-size:1.25rem}.pc2-l{padding:4px 0;font-size:.85rem}.pc2-ac{padding-top:4px}.pc2-ac .btn{min-height:36px;padding:6px 10px}
  main:has(.pc2-grid){max-width:1560px!important}
+ .est-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:10px;align-items:start}.est-grid .erow{margin:0!important}
+ #view .cfg{display:block!important;columns:3 400px;column-gap:14px}#view .cfg>*{break-inside:avoid;margin:0 0 14px!important;display:block}
+ .cdp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));column-gap:16px}
+ .hist .hrow{margin-bottom:6px!important}
+ main:has(.est-grid),main:has(.cfg),main:has(.cdp-grid){max-width:1560px!important}
+ .g-ger{grid-auto-flow:dense}
+ .g-card{padding:14px 16px}.g-card>.g-hd{margin-bottom:10px}.g-cols{height:200px}.g-rosca{width:150px;height:150px;margin:0 auto 8px}.g-leg{padding:5px 0}.g-kpi{padding:7px 10px;margin-bottom:6px}.g-kpi b{font-size:1.02rem}
+ .g-barl{margin:6px 0 4px}.g-bar{height:14px}.g-res{margin-top:10px;padding-top:8px}.g-op b{font-size:1.2rem}.g-op>div{padding:10px}
+}
+@media(min-width:1200px){.g-ger{grid-template-columns:repeat(4,minmax(0,1fr))!important}.g-ger .g-opc{grid-column:span 1!important}.g-ger .g-op{grid-template-columns:1fr;gap:6px}.g-ger .g-op>div{padding:6px 8px;display:flex;justify-content:space-between;align-items:center;text-align:left}.g-ger .g-op b{margin:0}.g-ger .g-op em{display:none}
+ main:has(.g-ger){max-width:1560px!important}
  .prod-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.prod-top>input{flex:1 1 240px;margin:0!important}.prod-top .g-cats{margin:0!important}
 }
 .pager{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
@@ -1255,12 +1266,21 @@ function render(force){try{marcaTopo()}catch(e){}document.body.classList.toggle(
   if(view==='mesa'||view==='produtos'||view==='historico'){const f=$('#view [data-focus]');if(f&&f._restore)f.focus()}
   ajustarTela();
 }
+/* páginas automáticas: cada lista mostra só o que cabe na tela (st['por_'+k]) */
+function pagina(k,lista,def){const por=Math.max(1,st['por_'+k]||def||12),np=Math.max(1,Math.ceil(lista.length/por)),pg=Math.min(Math.max(0,st['pg_'+k]||0),np-1);st['pg_'+k]=pg;
+  return {itens:lista.slice(pg*por,pg*por+por),pager:np>1?pagerHtml(`st['pg_${k}']`,pg,np,lista.length):''}}
+function pagerHtml(v,pg,np,tot){const ir=k=>`${v}=${k};render(true);scrollTo(0,0)`,nums=[];for(let k=0;k<np;k++)if(np<=9||k===0||k===np-1||Math.abs(k-pg)<=2)nums.push(k);else if(nums[nums.length-1]!=='…')nums.push('…');
+  return `<div class="pager" role="navigation" aria-label="Páginas"><button ${pg?'':'disabled'} onclick="${ir(pg-1)}" aria-label="Página anterior">‹</button>${nums.map(k=>k==='…'?'<span>…</span>':`<button class="${k===pg?'act':''}" onclick="${ir(k)}">${k+1}</button>`).join('')}<button ${pg<np-1?'':'disabled'} onclick="${ir(pg+1)}" aria-label="Próxima página">›</button><span>${tot} no total</span></div>`}
 /* tela fixa: o caixa ocupa a altura que sobra; produtos em páginas do tamanho da tela */
 const telaGrande=()=>innerWidth>900&&innerHeight>=520;
 function ajustarTela(){try{
   const at=$('#atalhos'),rod=at&&getComputedStyle(at).display!=='none'?at.offsetHeight:0;
   document.querySelectorAll('#view [data-fit]').forEach(el=>{if(!telaGrande()){el.style.height='';return}
     const h=Math.max(380,Math.floor(innerHeight-el.getBoundingClientRect().top-rod-14));el.style.height=h+'px'});
+  document.querySelectorAll('#view [data-pgk]').forEach(g=>{const k=g.dataset.pgk,c=g.firstElementChild;let n=20;
+    if(c&&telaGrande()){const cs=getComputedStyle(g),cols=cs.display==='grid'?cs.gridTemplateColumns.split(' ').length:1,gap=parseFloat(cs.rowGap)||10,ch=c.offsetHeight||60,
+      livre=innerHeight-g.getBoundingClientRect().top-rod-66;n=cols*Math.max(2,Math.floor((livre+gap)/(ch+gap)))}
+    if(n!==st['por_'+k]&&!(st['_aj_'+k]>3)){st['por_'+k]=n;st['_aj_'+k]=(st['_aj_'+k]||0)+1;setTimeout(()=>{render(true);st['_aj_'+k]=0},0)}});
   if(view==='produtos'){const g=$('#view .pc2-grid'),c=g&&g.querySelector('.pc2');let n=12;
     if(g&&c&&telaGrande()){const cols=getComputedStyle(g).gridTemplateColumns.split(' ').length,gap=14,ch=c.offsetHeight,
       livre=innerHeight-g.getBoundingClientRect().top-rod-66;n=cols*Math.max(1,Math.floor((livre+gap)/(ch+gap)))}
@@ -1916,20 +1936,21 @@ function vEstoque(){
   let h=`<div class="row" style="margin-bottom:12px"><h2 style="margin:0;flex:1">📦 Controle de estoque</h2><button class="btn" onclick="imprimirEstoqueDia()">🖨️ Estoque do dia</button><button class="btn acc" onclick="formProduto()">➕ Cadastrar produto</button></div>${ACG?cartaoFornecedores():''}
   <div class="stats"><div class="stat"><small>${ACG?'Estoque (kg + unidades)':'Unidades em estoque'}</small><b>${ACG?fmtQ(Math.round(un*1000)/1000):un}</b></div><div class="stat"><small>Valor pago (custo)</small><b>${brl(vc)}</b></div>
   <div class="stat"><small>Valor se vender tudo</small><b>${brl(vv)}</b></div><div class="stat"><small>Lucro previsto</small><b class="lucro">${brl(vv-vc)}</b></div></div>
-  <div class="chips"><button class="chip ${st.ef==='todos'?'act':''}" onclick="st.ef='todos';render(true)">Todos (${all.length})</button>
-  <button class="chip ${st.ef==='baixo'?'act':''}" onclick="st.ef='baixo';render(true)">⚠️ Acabando (${nb})</button>
-  <button class="chip ${st.ef==='esg'?'act':''}" onclick="st.ef='esg';render(true)">⛔ Esgotados (${ne})</button>
-  <button class="chip ${st.ef==='ok'?'act':''}" onclick="st.ef='ok';render(true)">✅ OK</button></div>`;
+  <div class="chips"><button class="chip ${st.ef==='todos'?'act':''}" onclick="st.ef='todos';st.pg_est=0;render(true)">Todos (${all.length})</button>
+  <button class="chip ${st.ef==='baixo'?'act':''}" onclick="st.ef='baixo';st.pg_est=0;render(true)">⚠️ Acabando (${nb})</button>
+  <button class="chip ${st.ef==='esg'?'act':''}" onclick="st.ef='esg';st.pg_est=0;render(true)">⛔ Esgotados (${ne})</button>
+  <button class="chip ${st.ef==='ok'?'act':''}" onclick="st.ef='ok';st.pg_est=0;render(true)">✅ OK</button></div>`;
   if(!all.length)return h+`<div class="card vazio">Nenhum produto cadastrado.<br><br><button class="btn acc" onclick="formProduto()">➕ Cadastrar o primeiro</button></div>`;
   if(!ps.length)return h+`<div class="card vazio">Nenhum produto nesta situação. 👍</div>`;
-  h+='<div class="hist">';
-  ps.forEach(p=>{const nv=nivel(p),d=disponivel(p),r=reservado(p.id);
+  const PG=pagina('est',ps,12);
+  h+='<div class="hist est-grid" data-pgk="est">';
+  PG.itens.forEach(p=>{const nv=nivel(p),d=disponivel(p),r=reservado(p.id);
     h+=`<div class="erow ${nv}"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div>
     <div style="min-width:0"><b>${esc(nomeP(p))}</b><br><span style="font-size:.88rem">Custo ${brl(p.custo)} · Venda <b>${brl(p.preco)}${ehKg(p)?'/kg':''}</b> · <span class="lucro">lucro ${brl(p.preco-(p.custo||0))}${p.preco>0?' ('+((p.preco-(p.custo||0))/p.preco*100).toFixed(0)+'%)':''}</span></span>${ACG&&p.forn&&p.forn.nome?`<br><small style="color:var(--mut)">🚚 ${esc(p.forn.nome)}${(p.forn.dias||[]).length?' · vem '+p.forn.dias.map(d=>DIAS[d]).join(', '):''}</small>`:''}<br>
     <small style="color:var(--mut)">${controla(p)?`Valor em estoque: ${brl((+p.estoque||0)*p.preco)} · 🔔 avisa com ${estMin(p)}${r?` · ${r} em mesas abertas`:''}`:'Estoque não informado'}</small></div>
     <div class="enum"><b class="st-${nv}">${controla(p)?(ehKg(p)?kg3(p.estoque)+'<small style="display:inline;font-size:.6em"> kg</small>':p.estoque):'—'}</b><small>${nv==='esg'?'ESGOTADO':nv==='baixo'?'ACABANDO':'em estoque'}</small>${r&&controla(p)?`<small style="display:block">livre: ${Math.max(0,d)}</small>`:''}</div>
     <div class="eacts"><button class="btn ok" onclick="entrada('${p.id}')">➕ Entrada</button><button class="btn" onclick="ajuste('${p.id}')">✏️ Ajustar</button><button class="btn" onclick="formProduto('${p.id}')">📝 Cadastro</button>${ACG?`<button class="btn" onclick="fornecedor('${p.id}')">🚚 Fornecedor</button>`:''}</div></div>`});
-  return h+'</div>';
+  return h+'</div>'+PG.pager;
 }
 function histHtml(p){const h=(p.hist||[]).slice().reverse();if(!h.length)return '';
   const T={venda:'🍽️ Venda',entrada:'➕ Entrada',ajuste:'✏️ Ajuste',cadastro:'🆕 Cadastro'};
@@ -2475,16 +2496,17 @@ function vHistorico(){
   if(st.hNota==='emitida')vs=vs.filter(v=>v.nota&&v.nota.status==='emitida');
   if(st.hNota==='cpf')vs=vs.filter(v=>v.cpf);
   let h=`<div class="row" style="margin-bottom:6px"><h2 style="margin:0;flex:1">📜 Histórico de ${ACG?'vendas':'mesas'}</h2>
-  <select style="width:auto" onchange="st.hMesa=this.value;render(true)"><option value="">Todas as mesas</option><option value="d" ${st.hMesa==='d'?'selected':''}>🛵 Retirada/Delivery</option><option value="balcao" ${st.hMesa==='balcao'?'selected':''}>Venda no balcão</option>${Array.from({length:NM()},(_,i)=>`<option ${st.hMesa==String(i+1)?'selected':''} value="${i+1}">Mesa ${i+1}</option>`).join('')}</select></div>
-  <div class="chips">${[['','Todas as vendas'],['pendente',`🧾 Notas a emitir (${npn})`],['emitida','✅ Notas emitidas'],['cpf','🪪 Com CPF']].map(([k,t])=>`<button class="chip ${st.hNota===k?'act':''}" onclick="st.hNota='${k}';render(true)">${t}</button>`).join('')}</div>`;
+  <select style="width:auto" onchange="st.hMesa=this.value;st.pg_hist=0;render(true)"><option value="">Todas as mesas</option><option value="d" ${st.hMesa==='d'?'selected':''}>🛵 Retirada/Delivery</option><option value="balcao" ${st.hMesa==='balcao'?'selected':''}>Venda no balcão</option>${Array.from({length:NM()},(_,i)=>`<option ${st.hMesa==String(i+1)?'selected':''} value="${i+1}">Mesa ${i+1}</option>`).join('')}</select></div>
+  <div class="chips">${[['','Todas as vendas'],['pendente',`🧾 Notas a emitir (${npn})`],['emitida','✅ Notas emitidas'],['cpf','🪪 Com CPF']].map(([k,t])=>`<button class="chip ${st.hNota===k?'act':''}" onclick="st.hNota='${k}';st.pg_hist=0;render(true)">${t}</button>`).join('')}</div>`;
   if(!vs.length)return h+`<div class="card vazio">${st.hNota==='pendente'?'✅ Nenhuma nota pendente.':'Nenhuma venda encontrada.'}</div>`;
-  h+='<div class="hist">';
-  vs.slice(0,300).forEach(v=>{const ab=st.hAbertos[v.id];
+  const PG=pagina('hist',vs,15);
+  h+='<div class="hist" data-pgk="hist">';
+  PG.itens.forEach(v=>{const ab=st.hAbertos[v.id];
     h+=`<div class="hrow"><div class="top" onclick="st.hAbertos['${v.id}']=!st.hAbertos['${v.id}'];render(true)">
     <div><b>${isDel(v.mesa)?'':'🍽️ '}${esc(rotV(v))}</b>${v.garcom?` <small style="color:var(--mut)">👤 ${esc(v.garcom)}</small>`:''} <span style="color:var(--mut)">· ${dt(v.data)}</span><br><span class="tag">${esc(v.pagamento)}</span>${v.cliNome?`<span class="tag">👤 ${esc(v.cliNome)}</span>`:''}${v.cpf?`<span class="tag">🪪 ${v.cpf}</span>`:''}${v.nota?(v.nota.status==='pendente'?`<span class="tag" style="background:#fde2c8;color:#a04a00">🧾 nota a emitir</span>`:`<span class="tag" style="background:#d9f0e1;color:#1f6b3e">✅ NFC-e ${esc(v.nota.numero||'')}</span>`):''}<span style="color:var(--mut);font-size:.85rem">${v.itens.reduce((s,i)=>s+i.qtd,0)} itens</span></div>
     <div style="text-align:right"><b>${brl(v.total)}</b><br><small>${ab?'▲ fechar':'▼ ver itens'}</small></div></div>
     ${ab?`<div class="det">${tabelaItens(v.itens)}<div class="row" style="margin-top:8px"><button class="btn" onclick="imprimir(cupomVenda(S.vendas['${v.id}']),'recibo-${v.id}')">🖨️ Reimprimir recibo</button>${ACG?`<button class="btn bad" onclick="pdvExcluirVenda('${v.id}')">🗑️ Excluir venda</button>`:''}<button class="btn ${v.nota&&v.nota.status==='pendente'?'acc':''}" onclick="${v.nota?`notaModal('${v.id}')`:`pedirNota('${v.id}')`}">🧾 ${v.nota?(v.nota.status==='pendente'?'Emitir nota':'Ver nota'):'Pedir nota'}</button></div></div>`:''}</div>`});
-  return h+'</div>';
+  return h+'</div>'+PG.pager;
 }
 
 /* ---------- MOVIMENTO ---------- */
@@ -2621,7 +2643,7 @@ function vGerencial(){
     <div class="g-top">${gIc('pizza')}<div><small>Custos fixos</small><b>${brl0(fix)}</b></div></div>
     <div class="g-top">${gIc('calc')}<div><small>Ponto de equilíbrio</small><b>${pe?brl0(pe):'—'}</b></div></div>
     <div class="g-top ${res>=0?'g-bom':'g-mau'}">${gIc('subir',res>=0?'ok':'')}<div><small>Resultado do mês</small><b>${brl0(res)}</b></div></div></div>
-  <div class="g-grid">
+  <div class="g-grid g-ger">
     <section class="g-card g-w2"><div class="g-hd">${gIc('fat')}<h3>Faturamento × custos fixos</h3><small>${nomeMes(ym)}</small></div>
       <div class="g-barl"><span>Faturamento (${vnd.length} vendas)</span><b>${brl0(fat)}</b></div><div class="g-bar"><i style="width:${fat/maxB*100}%;background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 80%,#f60),var(--acc))"></i></div>
       <div class="g-barl"><span>Custo dos produtos vendidos (CMV)</span><b>${brl0(cmv)}</b></div><div class="g-bar"><i style="width:${cmv/maxB*100}%;background:color-mix(in srgb,var(--acc) 45%,var(--card))"></i></div>
@@ -2634,7 +2656,7 @@ function vGerencial(){
     <section class="g-card"><div class="g-hd">${gIc('pizza')}<h3>Custos fixos</h3></div>
       <div class="g-rosca" style="background:conic-gradient(${cone})"><div><b>${brl0(fix)}</b><small>por mês</small></div></div>
       ${fat2.map(([k,v],i)=>`<div class="g-leg"><i style="background:${tons[i]}"></i><span>${esc(k)}</span><b>${pct(v/fix*100)}</b></div>`).join('')||'<p class="g-vazio">Nenhuma despesa cadastrada.</p>'}</section>
-    <section class="g-card g-w2"><div class="g-hd">${gIc('relo')}<h3>Custo operacional</h3><small>quanto custa manter aberto</small></div>
+    <section class="g-card g-w2 g-opc"><div class="g-hd">${gIc('relo')}<h3>Custo operacional</h3><small>quanto custa manter aberto</small></div>
       <div class="g-op">${[['Por dia',dia,fdia],['Por hora',hora,fdia/(G.horasDia||10)],['Por minuto',hora/60,fdia/(G.horasDia||10)/60]].map(([t,v,f])=>`<div><small>${t}</small><b>${brl(v)}</b>${folha?`<em>folha: ${brl(f)}</em>`:''}</div>`).join('')}</div>
       <p class="g-nota">Com base nas despesas do mês, ${G.diasMes} dias abertos e ${G.horasDia} horas por dia (muda em Despesas e custos).</p></section>
     <section class="g-card"><div class="g-hd">${gIc('calc')}<h3>Cálculo com base nas despesas</h3></div>
@@ -2717,8 +2739,8 @@ function vCardapio(){const c=cdp(),ps=prodList(),noc=ps.filter(p=>c.ids.includes
   <label>Aviso no topo do cardápio (opcional)</label><input value="${esc(c.aviso)}" maxlength="140" placeholder="Ex.: Entregamos das 18h às 23h" onchange="salvarCdp({aviso:this.value.trim()})"></div></div>
   <div class="card" style="margin-top:14px"><div class="row"><h3 style="margin:0;flex:1">🍽️ Produtos no cardápio (${noc} de ${ps.length})</h3><button class="btn" onclick="salvarCdp({ids:prodList().map(p=>p.id)})">Mostrar todos</button><button class="btn" onclick="salvarCdp({ids:[]})">Tirar todos</button></div>
   <p style="color:var(--mut)">Ligue os produtos que aparecem para o cliente. Foto, preço e descrição vêm do cadastro: toque em ✏️ para mudar.</p>
-  ${ps.length?cats.map(ct=>`<h3 style="margin:16px 0 6px">${esc(ct)}</h3>${ps.filter(p=>(p.cat||'Outros')===ct).map(p=>`<div class="it cdp-it"><div class="thumb">${p.img?`<img src="${p.img}" alt="">`:c.genericas!==false?`<img src="${fotoGenerica(p.nome,p.cat)}" alt=""><span class="ilu">Ilustração</span>`:'🍽️'}</div><div class="nm"><b>${esc(nomeP(p))}</b><small>${brl(p.preco)}${p.desc?' · '+esc(p.desc):' · sem descrição'}</small><small>${p.img?'📷 Foto do restaurante':c.genericas!==false?'✨ Foto ilustrativa (troque pela sua quando quiser)':'Sem foto'}</small></div>
-    <button class="btn" onclick="cdpFoto('${p.id}')">📷 ${p.img?'Trocar foto':'Pôr foto'}</button>${p.img?`<button class="btn" title="Tirar a foto" onclick="mutate('produtos','${p.id}',x=>x?{...x,img:''}:ABORT)">🗑️</button>`:''}<button class="btn" onclick="formProduto('${p.id}')">✏️</button><label class="sw"><input type="checkbox" ${c.ids.includes(p.id)?'checked':''} onchange="cdpTrocar('${p.id}',this.checked)"><i></i></label></div>`).join('')}`).join(''):'<div class="vazio">Cadastre produtos primeiro em Produtos.</div>'}</div>`}
+  ${ps.length?(()=>{const cc=cats.includes(st.cdpCat)?st.cdpCat:'',lista=cc?ps.filter(p=>(p.cat||'Outros')===cc):ps,PG=pagina('cdp',lista,10);return `<div class="g-abas g-cats" style="margin:8px 0 10px">${['',...cats].map(k=>`<button class="${cc===k?'act':''}" onclick="st.cdpCat='${k}';st.pg_cdp=0;render(true)">${k?esc(k):'Todos'}<em>${k?ps.filter(p=>(p.cat||'Outros')===k).length:ps.length}</em></button>`).join('')}</div><div class="cdp-grid" data-pgk="cdp">${PG.itens.map(p=>`<div class="it cdp-it"><div class="thumb">${p.img?`<img src="${p.img}" alt="">`:c.genericas!==false?`<img src="${fotoGenerica(p.nome,p.cat)}" alt=""><span class="ilu">Ilustração</span>`:'🍽️'}</div><div class="nm"><b>${esc(nomeP(p))}</b><small>${brl(p.preco)}${p.desc?' · '+esc(p.desc):' · sem descrição'}</small><small>${p.img?'📷 Foto do restaurante':c.genericas!==false?'✨ Foto ilustrativa (troque pela sua quando quiser)':'Sem foto'}</small></div>
+    <button class="btn" onclick="cdpFoto('${p.id}')">📷 ${p.img?'Trocar foto':'Pôr foto'}</button>${p.img?`<button class="btn" title="Tirar a foto" onclick="mutate('produtos','${p.id}',x=>x?{...x,img:''}:ABORT)">🗑️</button>`:''}<button class="btn" onclick="formProduto('${p.id}')">✏️</button><label class="sw"><input type="checkbox" ${c.ids.includes(p.id)?'checked':''} onchange="cdpTrocar('${p.id}',this.checked)"><i></i></label></div>`).join('')}</div>${PG.pager}`})():'<div class="vazio">Cadastre produtos primeiro em Produtos.</div>'}</div>`}
 function vConfig(){const c=S.config||{},l=c.logo,gs=c.garcons||[];
   return `<h2>⚙️ Ajustes</h2><div class="cfg">
   <div class="card"><h3>🗂️ Menus (categorias dos produtos)</h3><p style="color:var(--mut);margin:0 0 8px">Marque os menus que o restaurante usa. Eles aparecem no cadastro de produtos, no app do garçom e no cardápio digital.</p>
