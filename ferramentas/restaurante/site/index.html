@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v51">
+<meta name="lg-versao" content="lg-v52">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -905,6 +905,7 @@ input,select,textarea{border-radius:12px}
 .sab-rec{margin-left:auto;align-self:center}
 @media(max-width:760px){.sabs{gap:8px;flex-wrap:nowrap}.sab{flex:1 1 0;flex-direction:column;gap:6px;padding:10px 6px;text-align:center;min-width:0}.sab-ic{width:38px;height:38px}.sab-tx small{display:none}.sab-tx b{font-size:.92rem}.sab-rec{display:none}}
 body.gmode{background:var(--v2-bg)!important}
+.dup-av{margin-top:8px;background:#fff3d6;color:#6b4300;border:1.5px solid #f0c060;border-radius:12px;padding:10px 12px;font-size:.92rem}
 body.gmode .gtop,body.gmode .gcab{background:var(--v2-bar)!important;color:#fff!important}
 
 /* ===== menu colorido (modelo aprovado 24/11): cada módulo com a sua cor ===== */
@@ -1873,7 +1874,7 @@ function formProduto(id){
   const vit=id?fpVitrineTem(id):(!ACG);
   abrirModal(`<h2>${id?'✏️ Editar':'➕ Novo'} produto</h2>
   <div class="fp-top"><div class="imgprev fp-foto" id="fprev" onclick="$('#fimg').click()" title="Foto (opcional)">${fImg?`<img src="${fImg}">`:'📷'}</div>
-    <div style="flex:1;min-width:0"><label style="margin-top:0">Nome do produto *</label><input id="fnome" value="${esc(p.nome)}" placeholder="${ACG?'Ex.: Carne Moída':'Ex.: Coca-Cola'}" onblur="padCampo(this)" autocomplete="off">
+    <div style="flex:1;min-width:0"><label style="margin-top:0">Nome do produto *</label><input id="fnome" value="${esc(p.nome)}" placeholder="${ACG?'Ex.: Carne Moída':'Ex.: Coca-Cola'}" onblur="padCampo(this);avisoDup('${p.id||''}')" autocomplete="off"><div id="fdupw"></div>
     <div class="fp-cod">${codLivre()?`<span class="fp-codin">Código <input id="fcod" inputmode="numeric" value="${p.codigo||proxCodigo()}" data-v="${p.codigo||proxCodigo()}"></span><small>se já existir, troca com o outro</small>`:`<span>Código <b>${p.codigo||proxCodigo()}</b></span><small>${p.codigo?'fixo':'gerado sozinho'}</small>`}
       ${fImg?`<button class="lnk" onclick="fImg=null;$('#fprev').innerHTML='📷'">tirar foto</button>`:`<button class="lnk" onclick="fImg=fotoGenerica($('#fnome').value,$('#fcat').value);$('#fprev').innerHTML='<img src=&quot;'+fImg+'&quot;>'">✨ foto ilustrativa</button>`}</div></div></div>
   <input type="file" id="fimg" accept="image/*" class="hidden" onchange="lerImg(this.files[0],240,u=>{fImg=u;$('#fprev').innerHTML='<img src='+u+'>'})">
@@ -1902,9 +1903,15 @@ function calcLucro(){const el=$('#fcalc');if(!el)return;const c=num($('#fcus').v
   if(!(c>0)){el.innerHTML='🧮 Coloque quanto pagou para ver o lucro. Com a margem, o preço de venda é calculado sozinho.';el.style.background='var(--chip)';return}
   el.innerHTML=`🧮 Lucro por ${ACG&&$('#fkg')&&$('#fkg').value==='kg'?'quilo':'unidade'}: <span class="${l>=0?'lucro':'prej'}">${brl(l)}</span> · margem ${m.toFixed(1)}% · markup ${(l/c*100).toFixed(0)}%`;
   el.style.background=l>=0?'#eef7f1':'#fde8e6'}
+/* produto repetido: mesmo nome (sem ligar para maiúsculas e acentos) e mesma unidade/tamanho */
+const nomeChave=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'');
+function prodDup(id,nome,un){const k=nomeChave(nome),u=nomeChave(un);if(!k)return null;return Object.values(S.produtos).find(x=>x&&x.id!==id&&nomeChave(x.nome)===k&&nomeChave(x.unidade)===u)||null}
+function avisoDup(id){const w=$('#fdupw');if(!w)return null;const d=prodDup(id,$('#fnome').value,($('#fun')||{value:''}).value);
+  w.innerHTML=d?`<div class="dup-av" role="alert">⚠️ Já existe o produto <b>${esc(nomeP(d))}</b> (cód. ${d.codigo||'—'}, ${brl(d.preco)}).<div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap"><button type="button" class="btn" onclick="formProduto('${d.id}')">📝 Abrir o que já existe</button>${id?'':`<button type="button" class="btn" onclick="window._dupOk=1;salvarProduto('')">Cadastrar mesmo assim</button>`}</div></div>`:'';return d}
 function salvarProduto(id){
   const nome=padNome($('#fnome').value),preco=num($('#fpre').value),cat=$('#fcat').value;
   if(!nome)return toast('Informe o nome do produto.');if(!cat)return toast('Escolha a categoria.');if(preco<=0)return toast('Informe o preço de venda.');
+  if(!window._dupOk&&avisoDup(id||'')){const w=$('#fdupw');if(w)w.scrollIntoView({block:'center',behavior:'smooth'});return toast('⚠️ Já existe um produto com esse nome.')}window._dupOk=0;
   const e=$('#fest').value.trim();
   const kgp=ACG&&$('#fkg')&&$('#fkg').value==='kg',old=id?S.produtos[id]:null,est=e===''?'':Math.max(0,kgp?Math.round(num(e)*1000)/1000:Math.round(num(e)));
   const plu=ACG?soDig(($('#fplu')||{value:''}).value):'';if(plu&&Object.values(S.produtos).some(x=>x.id!==id&&(String(+x.plu||'')===String(+plu)||(!x.plu&&String(x.codigo)===String(+plu)))))return toast('Esse código da balança já é de outro produto.');
