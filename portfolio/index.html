@@ -3,159 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LegislaGov — Sistema completo para Câmaras Municipais</title>
-<meta name="description" content="Processo legislativo, sessão plenária com voto nominal, assinatura digital, Portal do Vereador, Portal da Transparência e site da Câmara em um sistema só, 100% online, com servidores no Brasil.">
-<meta name="robots" content="noindex, nofollow"><!-- versão de amostra: remover quando os contatos estiverem publicados -->
-<link rel="canonical" href="https://legislagov.com.br/">
-<meta name="theme-color" content="#0a1222">
-<meta property="og:url" content="https://legislagov.com.br/">
-<meta property="og:title" content="LegislaGov — A Câmara inteira em um sistema só">
-<meta property="og:description" content="Do protocolo ao telão do plenário. Online, no celular, com servidores no Brasil.">
-<meta property="og:image" content="img/telas/painel-plenario.webp">
-<link rel="icon" href="img/icone.png">
-<link rel="apple-touch-icon" href="img/icone-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="estilo.css?v=4">
+<meta name="robots" content="noindex">
+<title>GR Software</title>
+<!-- legislagov.com.br agora leva para o site da GR Software (24/11/2026). As Câmaras entram pela área
+     restrita /cliente/, que fica no menu "LegislaGov" do site da GR. -->
+<link rel="canonical" href="https://grsoftware.com.br/">
+<meta http-equiv="refresh" content="0; url=https://grsoftware.com.br/">
+<script>location.replace('https://grsoftware.com.br/');</script>
+<style>html,body{margin:0;height:100%;background:#000;color:#c9c9d1;font:15px/1.5 Inter,system-ui,sans-serif}body{display:grid;place-items:center;text-align:center;padding:16px}a{color:#fff}</style>
 </head>
 <body>
-<a class="pular" href="#conteudo">Pular para o conteúdo</a>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
-  <symbol id="i-escudo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
-  <symbol id="i-nuvem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9z"/></symbol>
-  <symbol id="i-cel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
-  <symbol id="i-assina" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M15.5 3.5a2.1 2.1 0 0 1 3 3L8 17l-4 1 1-4z"/></symbol>
-  <symbol id="i-pessoas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></symbol>
-  <symbol id="i-migrar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3M20 17H7l3 3"/></symbol>
-  <symbol id="i-suporte" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0 1 16 0"/><rect x="2.5" y="13" width="4" height="6" rx="1.5"/><rect x="17.5" y="13" width="4" height="6" rx="1.5"/></symbol>
-  <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
-  <symbol id="i-plenario" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 10l2 2 4-4"/></symbol>
-  <symbol id="i-transp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></symbol>
-  <symbol id="i-site" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5a14 14 0 0 1 0 19M12 2.5a14 14 0 0 0 0 19"/></symbol>
-  <symbol id="i-ouvidoria" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
-  <symbol id="i-tv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="13" rx="2"/><path d="m10 9 5 2.5-5 2.5z"/></symbol>
-  <symbol id="i-sino" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10.5 21a1.8 1.8 0 0 0 3 0"/></symbol>
-  <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
-  <symbol id="i-pacote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></symbol>
-  <symbol id="i-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-  <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></symbol>
-</svg>
-
-<header class="topo">
-  <div class="cx">
-    <a class="marca" href="index.html" aria-label="LegislaGov, início"><img src="img/logo.png" alt="LegislaGov" width="160" height="36"></a>
-    <button class="menu-bt" type="button" aria-expanded="false" aria-controls="nav" aria-label="Abrir menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <nav class="nav" id="nav" aria-label="Principal">
-      <ul class="menu"><li><a class="m-link" href="index.html" aria-current="page">Início</a></li><li class="tem-sub"><button class="m-link" type="button" aria-expanded="false" aria-controls="sub1">Produtos<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="sub" id="sub1"><a href="produtos.html#sistema"><b>Sistema Legislativo</b><span>Protocolo, sessão, voto e assinatura</span></a><a href="produtos.html#site"><b>Site e Transparência</b><span>Site da Câmara e portal no padrão PNTP</span></a><a href="produtos.html#email"><b>E-mail institucional</b><span>Caixas com o domínio da Câmara</span></a><a href="produtos.html#app"><b>App no celular</b><span>Android e iPhone, sem loja</span></a><a href="produtos.html#rural"><b>LegislaGov Rural</b><span>Gestão da horta no celular</span></a><a href="produtos.html#pacote"><b>Pacote completo</b><span>Tudo junto, um só atendimento</span></a><a href="solucoes.html"><b>Telas reais do sistema</b><span>Veja cada parte funcionando</span></a><a href="solucoes.html#modulos"><b>Todos os módulos</b><span>A lista completa</span></a></div></li><li class="tem-sub"><button class="m-link" type="button" aria-expanded="false" aria-controls="sub2">Planos<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="sub" id="sub2"><a href="planos.html#planos"><b>Planos e pacotes</b><span>Contrate só o que precisa</span></a><a href="planos.html#comparar"><b>O que muda no dia a dia</b><span>Antes e depois na prática</span></a><a href="planos.html#implantacao"><b>Implantação</b><span>Os quatro passos</span></a></div></li><li class="tem-sub"><button class="m-link" type="button" aria-expanded="false" aria-controls="sub3">Segurança<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="sub" id="sub3"><a href="seguranca.html#infra"><b>Amazon Web Services</b><span>Servidores em São Paulo</span></a><a href="seguranca.html#seguranca"><b>Segurança e legislação</b><span>LGPD, LAI, PNTP e assinatura</span></a></div></li><li class="tem-sub"><button class="m-link" type="button" aria-expanded="false" aria-controls="sub4">Clientes<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="sub" id="sub4"><a href="clientes.html#neves"><b>Câmara de Neves Paulista</b><span>O sistema em uso</span></a><a href="clientes.html#historico"><b>Migração do histórico</b><span>O que trouxemos do sistema antigo</span></a></div></li><li class="tem-sub"><button class="m-link" type="button" aria-expanded="false" aria-controls="sub5">Sobre<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="sub" id="sub5"><a href="sobre.html#quem-somos"><b>Quem somos</b><span>Os sócios da LegislaGov</span></a><a href="sobre.html#perguntas"><b>Perguntas frequentes</b><span>Antes de conversar</span></a><a href="sobre.html#contato"><b>Contato</b><span>Agende uma demonstração</span></a></div></li></ul>
-      <a class="m-cliente" href="cliente/">Área do cliente</a>
-      <a class="btn btn-pri" href="#contato">Agendar demonstração</a>
-    </nav>
-  </div>
-</header>
-
-<main id="conteudo">
-<section class="capa">
-  <div class="cx">
-    <div>
-      <h1>A Câmara inteira<br>em <em>um sistema só</em>.</h1>
-      <p class="sub">Do protocolo ao telão do plenário: processo legislativo, sessão com voto nominal, assinatura digital, Portal do Vereador, Transparência e o site da Câmara, tudo ligado. Abre no navegador e vira app no celular. Contrate o sistema, o site ou o e-mail separados, ou tudo junto.</p>
-      <div class="acoes">
-        <a class="btn btn-pri" href="#contato">Agendar demonstração <svg><use href="#i-seta"/></svg></a>
-        <a class="btn btn-sec" href="https://teste.legislagov.com.br" target="_blank" rel="noopener"><svg><use href="#i-play"/></svg> Ver funcionando agora</a>
-      </div>
-      <p class="nota">Em uso na Câmara Municipal de Neves Paulista (SP).</p>
-    </div>
-
-    <figure class="telao" aria-label="Exemplo do telão de votação do sistema">
-      <div class="telao-cab"><span class="ao-vivo">Votação nominal em andamento</span><span>18ª Sessão Ordinária</span></div>
-      <h2>Projeto de Lei nº 27/2026</h2>
-      <p class="ementa">Altera o quadro de cargos efetivos da Guarda Municipal. Quórum: maioria simples.</p>
-      <div class="placar" aria-live="polite">
-        <div class="sim"><b id="n-sim">0</b><span>Sim</span></div>
-        <div class="nao"><b id="n-nao">0</b><span>Não</span></div>
-        <div class="abs"><b id="n-falta">9</b><span>Aguardando</span></div>
-      </div>
-      <div class="bancada" id="bancada"></div>
-      <div class="resultado"><span>Cada voto aparece no telão e entra na ata sozinho.</span><strong id="res">Aprovado</strong></div>
-    </figure>
-  </div>
-  <div class="faixa">
-    <ul class="cx">
-      <li><svg><use href="#i-nuvem"/></svg> Amazon Web Services, em São Paulo</li>
-      <li><svg><use href="#i-assina"/></svg> Assinatura gov.br e ICP-Brasil</li>
-      <li><svg><use href="#i-transp"/></svg> Transparência no padrão do PNTP</li>
-      <li><svg><use href="#i-escudo"/></svg> LGPD e acesso por cargo</li>
-    </ul>
-  </div>
-</section>
-
-<section class="secao branca" id="porque">
-  <div class="cx">
-    <div class="cab-sec">
-      <span class="marcador">Por que a LegislaGov</span>
-      <h2>Feito para quem usa todo dia, não para quem vende o sistema.</h2>
-      <p>Trabalhamos mais de dez anos dentro do setor público. O sistema segue o caminho real de uma matéria na Câmara, com as palavras que o servidor já usa.</p>
-    </div>
-    <div class="porque">
-      <article><div class="ic"><svg><use href="#i-nuvem"/></svg></div><h3>100% online, nada para instalar</h3><p>Funciona no navegador. Atualizações chegam sozinhas, sem técnico na Câmara e sem servidor próprio.</p></article>
-      <article><div class="ic"><svg><use href="#i-cel"/></svg></div><h3>Pensado para o celular</h3><p>O vereador assina, vota e acompanha suas matérias pelo celular, de onde estiver.</p></article>
-      <article><div class="ic"><svg><use href="#i-pessoas"/></svg></div><h3>Cada cargo vê o que é seu</h3><p>Secretaria, Procuradoria, Tesouraria, vereadores e Presidência entram direto nas suas tarefas, com prazos e avisos.</p></article>
-      <article><div class="ic"><svg><use href="#i-assina"/></svg></div><h3>Validade jurídica</h3><p>Documentos assinados com gov.br ou certificado ICP-Brasil, conferidos pelo próprio sistema.</p></article>
-      <article><div class="ic"><svg><use href="#i-migrar"/></svg></div><h3>O histórico vem junto</h3><p>Trazemos proposituras, leis e notícias do sistema anterior. A Câmara não começa do zero.</p></article>
-      <article><div class="ic"><svg><use href="#i-suporte"/></svg></div><h3>Suporte de quem conhece a Câmara</h3><p>Implantação acompanhada, treinamento no próprio sistema e atendimento direto com os sócios.</p></article>
-    </div>
-  </div>
-</section>
-
-<section class="secao" id="produtos">
-  <div class="cx">
-    <div class="cab-sec"><span class="marcador">Nossos produtos</span><h2>Separados ou no pacote completo.</h2><p>Cada um funciona sozinho. Junte os que a sua Câmara precisar, com um atendimento só.</p></div>
-    <div class="atalhos produtos">
-      <a href="produtos.html#sistema"><svg><use href="#i-plenario"/></svg><b>Sistema Legislativo</b><span>Protocolo, sessão com voto nominal, assinatura digital e Portal do Vereador.</span><i>Conhecer o sistema</i></a>
-      <a href="produtos.html#site"><svg><use href="#i-site"/></svg><b>Site e Transparência</b><span>Site da Câmara, Portal da Transparência no padrão PNTP, Ouvidoria e e-SIC.</span><i>Conhecer o site</i></a>
-      <a href="produtos.html#email"><svg><use href="#i-mail"/></svg><b>E-mail institucional</b><span>Caixas com o domínio da Câmara, webmail e migração das mensagens atuais.</span><i>Conhecer o e-mail</i></a>
-      <a href="produtos.html#app"><svg><use href="#i-cel"/></svg><b>App no celular</b><span>O sistema na tela do celular, Android e iPhone. Incluso no Sistema Legislativo.</span><i>Ver como instalar</i></a>
-    </div>
-    <a class="pacote-faixa" href="produtos.html#pacote"><svg><use href="#i-pacote"/></svg><div><b>Câmara Digital: tudo junto</b><span>Sistema, site, e-mail e app, com a migração do que a Câmara já tem.</span></div><i>Montar o pacote</i></a>
-  </div>
-</section>
-
-<section class="secao" id="atalhos" style="padding-top:0">
-  <div class="cx">
-    <div class="cab-sec"><h2>Por onde você quer começar?</h2></div>
-    <div class="atalhos">
-      <a href="solucoes.html"><b>Telas reais</b><span>Cada parte do sistema funcionando.</span><i>Ver as telas</i></a>
-      <a href="planos.html"><b>Planos</b><span>Sistema, site, e-mail ou tudo junto.</span><i>Ver planos</i></a>
-      <a href="seguranca.html"><b>Segurança</b><span>Amazon Web Services em São Paulo, cópia diária e LGPD.</span><i>Ver segurança</i></a>
-      <a href="clientes.html"><b>Câmara de Neves</b><span>O sistema em uso e o histórico migrado.</span><i>Ver o caso</i></a>
-    </div>
-  </div>
-</section>
-
-<section class="secao" id="contato" style="padding-top:0">
-  <div class="cx">
-    <div class="contato">
-      <div>
-        <h2>Vamos mostrar o sistema para a sua Câmara?</h2>
-        <p>Uma demonstração ao vivo, com a rotina da sua Câmara. Sem compromisso.</p>
-      </div>
-      <div class="acoes">
-        <a class="btn btn-pri" href="https://teste.legislagov.com.br" target="_blank" rel="noopener">Ver o ambiente de demonstração <svg><use href="#i-seta"/></svg></a>
-        <small>Telefone, WhatsApp e e-mail para agendar: em breve.</small>
-      </div>
-    </div>
-  </div>
-</section>
-</main>
-
-<footer class="rodape">
-  <div class="cx">
-    <img src="img/logo.png" alt="LegislaGov" width="124" height="28">
-    <nav class="rod-links" aria-label="Rodapé"><a href="https://grsoftware.com.br/">Uma solução GR Software</a><a href="produtos.html#sistema">Sistema Legislativo</a><a href="produtos.html#site">Site e Transparência</a><a href="produtos.html#email">E-mail institucional</a><a href="produtos.html#app">App no celular</a><a href="produtos.html#rural">LegislaGov Rural</a><a href="planos.html">Planos</a><a href="seguranca.html">Segurança</a><a href="sobre.html">Sobre</a><a href="cliente/">Área do cliente</a><a href="https://central.legislagov.com.br/" rel="nofollow">Área restrita</a></nav>
-    <span>© 2026 LegislaGov · CNPJ 70.200.706/0001-82 · legislagov.com.br · Tecnologia para Câmaras Municipais</span>
-    <p class="rod-aviso">Este site não é governamental. A LegislaGov é uma empresa privada que fornece tecnologia para Câmaras e Prefeituras.</p>
-  </div>
-</footer>
-<script src="base.js?v=2"></script>
+<p>Abrindo o site da GR Software…<br><a href="https://grsoftware.com.br/">grsoftware.com.br</a> · <a href="/cliente/">Área restrita LegislaGov</a></p>
 </body>
 </html>

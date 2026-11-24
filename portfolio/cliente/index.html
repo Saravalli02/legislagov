@@ -9,6 +9,10 @@
 <link rel="icon" href="../atendimento/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>/* legislagov.com.br ainda aponta para o site estático (Render), onde o login não funciona: leva para o servidor
+  das Câmaras. Quando o domínio apontar para o servidor, a API responde e nada muda. */
+(function(){if(!/^(www\.)?legislagov\.com\.br$/.test(location.hostname))return;
+  fetch('/api/whatsapp/conversas',{headers:{'X-LG':'1'},cache:'no-store'}).then(function(r){if(r.status===404)location.replace('https://teste.legislagov.com.br/cliente/'+location.search)}).catch(function(){})})();</script>
 <script>try{if(localStorage.getItem("lgw_tema")==="claro")document.documentElement.dataset.tema="claro"}catch(e){}</script>
 <style>
 /* Área do cliente: mesmo padrão do painel LegislaGov (preto, Inter, cantos arredondados) */
