@@ -18,6 +18,7 @@ Rotas:
   GET  /api/mudancas?desde=N       o que mudou desde a última conferida
   POST /api/publico/enviar         envios do site (ouvidoria, e-SIC, fale conosco, inscrições)
 """
+import base64
 import hashlib
 import hmac
 import json
@@ -343,6 +344,201 @@ def proximo_protocolo(camara, tipo, ano, manual=None):
         n += 1
     c.execute("INSERT INTO contador(nome, valor) VALUES(?, ?) ON CONFLICT(nome) DO UPDATE SET valor=excluded.valor", (nome, n))
     return n
+
+
+# ---------------------------------------------------------------- protocolo travado (25/11/2026)
+# Depois de protocolado, o registro não muda: número, data, assunto, quem apresentou, anexos e andamentos
+# antigos ficam como estavam. Só entram andamentos novos, anexos novos e a situação (com quem está).
+# Vale para o livro de protocolo (lgv9_numeracao_v1) e para as matérias em tramitação (legislagov_protocolos_v2_*).
+CHAVE_MATERIAS = "legislagov_protocolos_v2"
+PROT_FIXOS = ("id", "type", "year", "sequence", "number", "subject", "from", "pessoa", "contato", "description",
+              "user", "login", "cargo", "createdAt", "antigo", "registradoEm", "registradoPor")
+PROT_FIXOS_RESERVA = ("id", "type", "year", "sequence", "number", "createdAt", "registradoEm", "registradoPor")
+PROT_LISTAS = ("andamento", "anexos")
+MAT_FIXOS = ("id", "numero", "full", "autor", "ementa", "data", "unidade", "texto", "justificativa", "origem", "autorId",
+             "tipo", "registradoEm", "registradoPor")
+MAT_LISTAS = ("timeline", "anexos", "docs", "assinaturas")
+CARIMBOS = ("registradoEm", "registradoPor")
+
+
+def eh_chave_protocolo(chave):
+    return chave == CHAVE_PROTOCOLO or chave.startswith(CHAVE_MATERIAS)
+
+
+def _norm_arquivos(txt):
+    """Para comparar: o arquivo embutido (data:) vira o endereço que o servidor vai dar a ele."""
+    if not isinstance(txt, str) or "base64," not in txt:
+        return txt
+
+    def troca(m):
+        if len(m.group(2)) < MIN_B64:
+            return m.group(0)
+        try:
+            return "/api/arquivo/" + hashlib.sha256(base64.b64decode(m.group(2))).hexdigest()[:40]
+        except Exception:
+            return m.group(0)
+    return DATA_RE.sub(troca, txt)
+
+
+def _rotulo_prot(x):
+    return str(x.get("numero") or (f'{x.get("type", "")} {x.get("number", "")}'.strip()) or x.get("id"))
+
+
+def protocolo_ok(chave, antigo, novo):
+    """(ok, motivo). Confere que nada do que já foi protocolado mudou."""
+    if novo is None:
+        return False, "o protocolo não pode ser apagado"
+    if not isinstance(novo, list):
+        return False, "valor inválido"
+    materia = chave.startswith(CHAVE_MATERIAS)
+    por_id = {}
+    for x in novo:
+        if isinstance(x, dict) and x.get("id") is not None:
+            if str(x["id"]) in por_id:
+                return False, "protocolo repetido"
+            por_id[str(x["id"])] = x
+    antigos = [a for a in (antigo if isinstance(antigo, list) else []) if isinstance(a, dict) and a.get("id") is not None]
+    for a in antigos:
+        n = por_id.get(str(a["id"]))
+        if n is None:
+            return False, f"{_rotulo_prot(a)} já foi protocolado e não pode ser apagado"
+        st = a.get("status")
+        if materia:
+            if st in ("rascunho", "devolvido"):
+                continue   # ainda com quem enviou (correção pedida pela Câmara)
+            fixos, listas = MAT_FIXOS, MAT_LISTAS
+        else:
+            if st == "rascunho":
+                continue
+            fixos, listas = (PROT_FIXOS_RESERVA, ()) if st == "reservado" else (PROT_FIXOS, PROT_LISTAS)
+            if st != "reservado" and n.get("status") in ("reservado", "rascunho"):
+                return False, f"{_rotulo_prot(a)} já foi protocolado e não volta a ser reserva"
+        for k in fixos:
+            if k in a and k in n and a[k] != n[k]:
+                return False, f"{_rotulo_prot(a)} já foi protocolado: o campo \"{k}\" não pode ser alterado (registre um andamento)"
+        for k in listas:
+            va, vn = a.get(k), n.get(k)
+            if isinstance(va, list) and va:
+                if not isinstance(vn, list) or len(vn) < len(va) or vn[:len(va)] != va:
+                    return False, f"{_rotulo_prot(a)} já foi protocolado: o que já está em \"{k}\" não pode ser alterado nem apagado"
+    if not materia:   # número dado pelo servidor: o mesmo número nunca aparece em dois registros
+        vistos = set()
+        for x in novo:
+            if not isinstance(x, dict) or x.get("sequence") is None:
+                continue
+            chave_n = (str(x.get("type")), str(x.get("year")), str(x.get("sequence")))
+            if chave_n in vistos:
+                return False, f"o número {x.get('type')} {x.get('number')} já foi usado"
+            vistos.add(chave_n)
+    return True, ""
+
+
+def carimbar_protocolo(antigo_txt, valor_txt, u):
+    """Hora e usuário do servidor nos registros novos (não dependem do relógio do computador).
+    Registros antigos guardam o carimbo que já tinham. Devolve o texto a gravar."""
+    try:
+        novo = json.loads(valor_txt)
+        antigo = json.loads(antigo_txt) if antigo_txt else []
+    except Exception:
+        return valor_txt
+    if not isinstance(novo, list):
+        return valor_txt
+    velhos = {str(a.get("id")): a for a in (antigo if isinstance(antigo, list) else []) if isinstance(a, dict)}
+    t = time.time()
+    hora = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(t)) + ".%03dZ" % (int(t * 1000) % 1000)
+    mudou = False
+    for x in novo:
+        if not isinstance(x, dict) or x.get("id") is None:
+            continue
+        a = velhos.get(str(x["id"]))
+        if a is None:
+            if "registradoEm" not in x:
+                x["registradoEm"] = hora
+                x["registradoPor"] = (u or {}).get("usuario", "")
+                mudou = True
+        elif a.get("status") == "reservado" and x.get("status") in ("registrado", "encaminhado"):
+            x["registradoEm"] = hora   # número reservado que agora foi usado: vale a hora em que protocolou
+            x["registradoPor"] = (u or {}).get("usuario", "")
+            mudou = True
+        else:
+            for k in CARIMBOS:
+                if k in a and x.get(k) != a[k]:
+                    x[k] = a[k]
+                    mudou = True
+    return json.dumps(novo, ensure_ascii=False, separators=(",", ":")) if mudou else valor_txt
+
+
+def _segredo_protocolo():
+    """Chave do código de conferência. Fica no banco (vai junto nas cópias de segurança)."""
+    c = _db()
+    q = "SELECT valor FROM dados WHERE camara='__servidor__' AND chave='segredo_protocolo'"
+    r = c.execute(q).fetchone()
+    if r and r["valor"]:
+        return r["valor"]
+    c.execute("INSERT OR IGNORE INTO dados(camara, chave, valor, versao, seq, quando, por) VALUES('__servidor__','segredo_protocolo',?,1,0,?,?)",
+              (secrets.token_hex(32), agora(), "servidor"))
+    return c.execute(q).fetchone()["valor"]
+
+
+def codigo_protocolo(camara, r):
+    """Código de conferência do recibo: só o servidor calcula (ninguém inventa um recibo válido)."""
+    base = "|".join(str(r.get(k, "")) for k in ("id", "type", "number", "createdAt", "subject"))
+    h = hmac.new(_segredo_protocolo().encode(), (camara + "|" + base).encode(), hashlib.sha256).digest()
+    t = base64.b32encode(h).decode().replace("=", "")[:10]
+    return t[:5] + "-" + t[5:]
+
+
+def _protocolos(camara):
+    r = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, CHAVE_PROTOCOLO)).fetchone()
+    try:
+        lst = json.loads(r["valor"]) if r and r["valor"] else []
+    except Exception:
+        lst = []
+    return [x for x in lst if isinstance(x, dict) and x.get("id")] if isinstance(lst, list) else []
+
+
+def codigo_do_protocolo(camara, pid):
+    for x in _protocolos(camara):
+        if str(x["id"]) == str(pid):
+            if x.get("status") in ("reservado", "rascunho"):
+                return None
+            return codigo_protocolo(camara, x)
+    return None
+
+
+_conferencias = {}
+
+
+def conferir_protocolo(camara, codigo, ip):
+    """Página pública de conferência: o código do recibo mostra o que foi protocolado (sem dados pessoais)."""
+    hist = [t for t in _conferencias.get(ip, []) if time.time() - t < 60]
+    if len(hist) >= 20:
+        return 429, {"ok": False, "erro": "Muitas consultas seguidas. Espere um minuto e tente de novo."}
+    hist.append(time.time())
+    _conferencias[ip] = hist
+    if len(_conferencias) > 5000:
+        _conferencias.clear()
+    cod = re.sub(r"[^A-Z2-7]", "", str(codigo or "").upper())
+    if len(cod) != 10:
+        return 400, {"ok": False, "erro": "O código tem 10 letras e números, como no recibo (ex.: ABCDE-23456)."}
+    cod = cod[:5] + "-" + cod[5:]
+    for x in _protocolos(camara):
+        if x.get("status") in ("reservado", "rascunho"):
+            continue
+        if hmac.compare_digest(codigo_protocolo(camara, x), cod):
+            anexos = []
+            for a in (x.get("anexos") or []):
+                if isinstance(a, dict):
+                    m = re.search(r"/api/arquivo/([0-9a-f]{40})", str(a.get("url", "")))
+                    anexos.append({"nome": str(a.get("nome", ""))[:120], "resumo": m.group(1) if m else ""})
+            situ = "Concluído" if x.get("status") == "concluido" else "Em andamento"
+            return 200, {"ok": True, "protocolo": {
+                "tipo": x.get("type", ""), "numero": x.get("number", ""), "assunto": str(x.get("subject", ""))[:300],
+                "protocoladoEm": x.get("registradoEm") or x.get("createdAt") or "", "horaDoServidor": bool(x.get("registradoEm")),
+                "apresentadoPor": "Pessoa ou órgão de fora da Câmara" if x.get("pessoa") else (x.get("from") or ""),
+                "encaminhadoPara": "" if x.get("status") == "concluido" else x.get("to", ""), "situacao": situ, "anexos": anexos,
+                "andamentos": len(x.get("andamento") or []), "codigo": cod}}
+    return 404, {"ok": False, "erro": "Nenhum protocolo com este código. Confira as letras e os números do recibo."}
 
 
 def definir_senha(login_, senha, camara=None):
@@ -1082,6 +1278,9 @@ def _regra(chave, q):
         return False   # só o servidor escreve
     if chave == AUDITORIA:
         return "auditoria" if q.edita_algo else False   # todos acrescentam; ninguém apaga nem muda
+    if eh_chave_protocolo(chave):
+        # protocolo travado: nem o administrador muda o que foi protocolado (só andamentos)
+        return "protocolo" if (q.adm or q.edita_algo) else False
     if q.adm:
         return True
     if chave in ("lg_seed_perfis_v2", "legislagov_users_v1"):
@@ -1197,6 +1396,12 @@ def pode_gravar_valor(camara, chave, u, valor_txt):
         return (_so_automaticos(antigo, novo), "só quem publica na Transparência altera os documentos")
     if r == "manuais":
         return (_manuais_ok(antigo, novo, q), "só o Presidente ou a Procuradoria autorizam assinaturas à mão")
+    if r == "protocolo":
+        try:
+            novo = json.loads(_norm_arquivos(valor_txt)) if valor_txt is not None else None
+        except Exception:
+            return False, "valor inválido"
+        return protocolo_ok(chave, antigo, novo)
     return False, "sem permissão"
 
 

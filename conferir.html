@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Conferir recibo de protocolo</title>
+<meta name="description" content="Confira se um recibo de protocolo da Câmara é autêntico, digitando o código de conferência impresso no recibo.">
+<!-- Página pública: confere o código do recibo de protocolo (lgpr-protocolo.js). O servidor calcula o código
+     (lgapi.codigo_protocolo) e só ele sabe dizer se o recibo é verdadeiro. Não mostra dados pessoais. -->
+<style>
+:root{--fundo:#f3f4f6;--papel:#fff;--tinta:#1d2430;--sub:#5b6573;--linha:#e2e5ea;--azul:#1f4e79;--ok:#17703f;--okf:#e7f6ee;--erro:#b42318;--errof:#fdeceb;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--fundo:#0f1216;--papel:#171b21;--tinta:#e8ebef;--sub:#9aa3ae;--linha:#2a3038;--azul:#8db8e3;--ok:#6fd49c;--okf:#13261c;--erro:#ff9b93;--errof:#2c1513;color-scheme:dark}}
+*{box-sizing:border-box}
+html{caret-color:transparent}input{caret-color:auto}
+body{margin:0;background:var(--fundo);color:var(--tinta);font:16px/1.5 Inter,"Segoe UI",system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 16px}
+main{width:min(620px,100%)}
+h1{font-size:clamp(23px,4vw,29px);line-height:1.2;letter-spacing:-.02em;margin:0 0 8px}
+.sub{color:var(--sub);margin:0 0 24px}
+form{display:flex;gap:10px;flex-wrap:wrap}
+label{flex:1 1 260px;display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
+input{height:56px;border-radius:12px;border:1.5px solid var(--linha);background:var(--papel);color:var(--tinta);padding:0 16px;font:700 22px/1 ui-monospace,"Cascadia Mono",Consolas,monospace;letter-spacing:.08em;text-transform:uppercase}
+input:focus{outline:3px solid color-mix(in srgb,var(--azul) 40%,transparent);outline-offset:1px;border-color:var(--azul)}
+button{align-self:flex-end;height:56px;padding:0 26px;border-radius:12px;border:0;background:var(--azul);color:#fff;font-weight:700;font-size:16px;font-family:inherit;cursor:pointer}
+@media (prefers-color-scheme:dark){button{color:#0f1216}}
+button:focus-visible{outline:3px solid color-mix(in srgb,var(--azul) 45%,transparent);outline-offset:2px}
+.res{margin-top:22px}
+.card{background:var(--papel);border:1px solid var(--linha);border-radius:16px;overflow:hidden}
+.selo{display:flex;gap:14px;align-items:center;padding:18px 20px}
+.selo svg{width:34px;height:34px;flex:none}
+.selo b{display:block;font-size:18px}.selo span{color:var(--sub);font-size:14px}
+.ok .selo{background:var(--okf);color:var(--ok)}.ok .selo span{color:inherit;opacity:.85}
+.erro{padding:16px 18px;border-radius:14px;background:var(--errof);color:var(--erro);font-weight:600}
+dl{margin:0;padding:6px 20px 14px;display:grid;grid-template-columns:150px 1fr;gap:0 16px}
+dt,dd{padding:10px 0;border-top:1px solid var(--linha);margin:0}
+dt:first-of-type,dt:first-of-type+dd{border-top:0}
+dt{color:var(--sub);font-size:14px;font-weight:600}
+dd{font-size:15px;word-break:break-word}
+.num{font-size:22px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.anx{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.anx small{display:block;color:var(--sub);font:12px/1.4 ui-monospace,Consolas,monospace;word-break:break-all}
+.nota{color:var(--sub);font-size:13.5px;margin:18px 2px 0}
+footer{margin-top:auto;padding-top:40px;color:var(--sub);font-size:13px}
+@media(max-width:560px){dl{grid-template-columns:1fr}dt{padding-bottom:0}dd{border-top:0;padding-top:2px}button{flex:1 1 100%}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Conferir recibo de protocolo</h1>
+  <p class="sub">Digite o código de conferência impresso no recibo. Se o recibo for verdadeiro, aparecem aqui o número, a data e o assunto do documento protocolado.</p>
+  <form id="f" novalidate>
+    <label for="c">Código de conferência<input id="c" name="c" autocomplete="off" spellcheck="false" maxlength="13" placeholder="ABCDE-23456" inputmode="text" aria-describedby="dica"></label>
+    <button type="submit">Conferir</button>
+  </form>
+  <p class="nota" id="dica">O código tem 10 letras e números e fica no rodapé de cada via do recibo, ao lado do QR code.</p>
+  <div class="res" id="res" aria-live="polite"></div>
+</main>
+<footer>LegislaGov · <span id="host"></span></footer>
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  $('#host').textContent = location.host;
+  function quando(iso) { var d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+  async function conferir(cod) {
+    var res = $('#res'); res.innerHTML = '<p class="nota">Conferindo…</p>';
+    try {
+      var r = await fetch('/api/protocolo/conferir?c=' + encodeURIComponent(cod), { cache: 'no-store' });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok || !d.ok) { res.innerHTML = '<div class="erro" role="alert">' + esc(d.erro || 'Não foi possível conferir agora. Tente de novo em instantes.') + '</div>'; return; }
+      var p = d.protocolo;
+      res.innerHTML = '<div class="card ok"><div class="selo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5 4 6v6c0 4.6 3.4 8.4 8 9.5 4.6-1.1 8-4.9 8-9.5V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><div><b>Recibo autêntico</b><span>Este protocolo está registrado no sistema da Câmara.</span></div></div>' +
+        '<dl><dt>Protocolo</dt><dd><span class="num">' + esc(p.tipo) + ' ' + esc(p.numero) + '</span></dd>' +
+        '<dt>Protocolado em</dt><dd>' + esc(quando(p.protocoladoEm)) + (p.horaDoServidor ? ' <small>(hora do servidor)</small>' : '') + '</dd>' +
+        '<dt>Assunto</dt><dd>' + esc(p.assunto) + '</dd>' +
+        (p.apresentadoPor ? '<dt>Apresentado por</dt><dd>' + esc(p.apresentadoPor) + '</dd>' : '') +
+        '<dt>Situação</dt><dd>' + esc(p.situacao) + (p.encaminhadoPara ? ' — com ' + esc(p.encaminhadoPara) : '') + (p.andamentos ? ' · ' + p.andamentos + ' andamento(s)' : '') + '</dd>' +
+        '<dt>Anexos</dt><dd>' + (p.anexos.length ? '<ul class="anx">' + p.anexos.map(function (a) { return '<li>' + esc(a.nome) + (a.resumo ? '<small>Impressão digital (SHA-256): ' + esc(a.resumo) + '…</small>' : '') + '</li>'; }).join('') + '</ul>' : 'Nenhum') + '</dd>' +
+        '<dt>Código</dt><dd>' + esc(p.codigo) + '</dd></dl></div>' +
+        '<p class="nota">Os dados de contato de quem apresentou o documento não aparecem aqui (LGPD). A impressão digital de cada anexo muda se o arquivo for alterado em qualquer ponto.</p>';
+    } catch (e) { res.innerHTML = '<div class="erro" role="alert">Sem conexão. Confira a internet e tente de novo.</div>'; }
+  }
+  var f = $('#f'), c = $('#c');
+  c.addEventListener('input', function () { var v = c.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10); c.value = v.length > 5 ? v.slice(0, 5) + '-' + v.slice(5) : v; });
+  f.addEventListener('submit', function (e) { e.preventDefault(); var v = c.value.replace(/[^A-Za-z0-9]/g, ''); if (v.length !== 10) { $('#res').innerHTML = '<div class="erro" role="alert">O código tem 10 letras e números, como no recibo (ex.: ABCDE-23456).</div>'; c.focus(); return; } history.replaceState(null, '', '?c=' + c.value); conferir(c.value); });
+  var q = new URLSearchParams(location.search).get('c');
+  if (q) { c.value = q; c.dispatchEvent(new Event('input')); conferir(c.value); } else c.focus();
+})();
+</script>
+</body>
+</html>

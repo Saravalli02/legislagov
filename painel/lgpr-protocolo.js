@@ -248,7 +248,7 @@
     UI().abrirModal(`<div class="lgt-form lgpr-feito"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Protocolado</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
       <div class="lgpr-selo" role="status"><span>${esc(r.type)}</span><b>${esc(r.number)}</b><small>${esc(quando(r.createdAt))}</small></div>
       <p class="lgt-p" style="text-align:center;padding:0 22px">${esc(r.subject)}<br>Enviado para <b>${esc(r.to)}</b>. ${/^projeto de lei$/i.test(r.type) ? 'Também entrou na caixa de matérias da Câmara.' : ''}</p>
-      <div class="lgt-modal-rod lgpr-rod3"><button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Imprimir recibo</button><button type="button" class="lgt-btn" onclick="lgprNovo()">Protocolar outro</button><button type="button" class="lgt-btn primario" onclick="lgtFechar();lgprVer('${esc(r.id)}')">Ver protocolo</button></div></div>`);
+      <div class="lgt-modal-rod lgpr-rod3"><button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Recibo (PDF)</button><button type="button" class="lgt-btn" onclick="lgprNovo()">Protocolar outro</button><button type="button" class="lgt-btn primario" onclick="lgtFechar();lgprVer('${esc(r.id)}')">Ver protocolo</button></div></div>`);
   }
 
   /* ================= detalhe e andamento ================= */
@@ -264,12 +264,13 @@
       <div class="lgpr-det-corpo">
         <p class="lgpr-det-assunto">${esc(r.subject)} <span class="lgpr-st ${cls}">${st}</span></p>
         <dl class="lgpr-dl">
-          <div><dt>Protocolado em</dt><dd>${esc(quando(r.createdAt))}</dd></div>
+          <div><dt>Protocolado em</dt><dd>${esc(quando(r.registradoEm || r.createdAt))}</dd></div>
           <div><dt>Por</dt><dd>${esc(r.user || '—')}</dd></div>
           <div><dt>Veio de</dt><dd>${esc(r.pessoa ? r.pessoa + ' (fora da Câmara)' : (r.from || '—'))}${r.contato ? '<br><small>' + esc(r.contato) + '</small>' : ''}</dd></div>
           <div><dt>Está com</dt><dd>${esc(r.status === 'concluido' ? 'Concluído' : (r.to || '—'))}</dd></div>
         </dl>
         ${r.description ? `<p class="lgpr-desc">${esc(r.description).replace(/\n/g, '<br>')}</p>` : ''}
+        ${reservado ? '' : `<p class="lgpr-trava">${ic('cadeado')}<span><b>Protocolo travado.</b> ${r.registradoEm ? 'Registrado no servidor em ' + esc(quando(r.registradoEm)) + '. ' : ''}Número, data, assunto, quem apresentou e anexos não podem ser alterados nem apagados. Correções entram como andamento.</span></p>`}
         <h3>Anexos</h3>
         <ul class="lgpr-anexos">${anexos.map(a => `<li><a href="${esc(a.url)}" target="_blank" rel="noopener" download="${esc(a.nome)}">${esc(a.nome)}</a></li>`).join('')}${antigo}${!anexos.length && !antigo ? '<li class="lgpr-dica">Nenhum anexo.</li>' : ''}</ul>
         <label class="lgt-btn lgpr-mais-anexo" ${ro ? 'hidden' : ''}>Anexar arquivo<input type="file" id="lgpr-add" multiple accept=".pdf,.doc,.docx,.odt,.xls,.xlsx,.jpg,.jpeg,.png,image/*" hidden></label>
@@ -279,12 +280,13 @@
           <h3>Encaminhar ou concluir</h3>
           <label>Para<select id="lgpr-para">${setores().map(s => `<option ${s === r.to ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
           <label>Observação (opcional)<input id="lgpr-nota" maxlength="300" placeholder="Ex.: Para parecer até sexta-feira"></label>
+          <button type="button" class="lgt-btn lgpr-corrigir" onclick="lgprMover('${esc(r.id)}','corrigir')">Registrar correção</button>
         </div>`}
       </div>
       <div class="lgt-modal-rod lgpr-rod3">
         ${ro ? '<button type="button" class="lgt-btn primario" onclick="lgtFechar()">Fechar</button>' : reservado ? `<button type="button" class="lgt-btn perigo" onclick="lgprCancelarReserva('${esc(r.id)}')">Cancelar reserva</button><button type="button" class="lgt-btn primario" onclick="lgprNovo('${esc(r.id)}')">Usar este número</button>`
-        : r.status === 'concluido' ? `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Imprimir recibo</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','reabrir')">Reabrir</button>`
-        : `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Recibo</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','concluir')">Concluir</button><button type="button" class="lgt-btn primario" onclick="lgprMover('${esc(r.id)}','encaminhar')">Encaminhar</button>`}
+        : r.status === 'concluido' ? `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Recibo (PDF)</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','reabrir')">Reabrir</button>`
+        : `<button type="button" class="lgt-btn" onclick="lgprComprovante('${esc(r.id)}')">Recibo (PDF)</button><button type="button" class="lgt-btn" onclick="lgprMover('${esc(r.id)}','concluir')">Concluir</button><button type="button" class="lgt-btn primario" onclick="lgprMover('${esc(r.id)}','encaminhar')">Encaminhar</button>`}
       </div></div>`);
     const add = $('#lgpr-add');
     if (add) add.onchange = async e => {
@@ -297,14 +299,16 @@
   };
   window.lgprMover = function (id, acao) {
     const para = $('#lgpr-para')?.value, nota = ($('#lgpr-nota')?.value || '').trim(), agora = new Date().toISOString();
+    if (acao === 'corrigir' && !nota) { aviso('Escreva na observação o que está errado e qual é a informação certa. O registro original continua como está.', 'erro', 'Correção não registrada'); $('#lgpr-nota')?.focus(); return; }
     const r = atualizar(id, x => {
       if (acao === 'encaminhar') { x.to = para; x.status = 'encaminhado'; x.andamento = (x.andamento || []).concat([{ em: agora, por: meuNome(), acao: 'Encaminhado', para, nota }]); }
       if (acao === 'concluir') { x.status = 'concluido'; x.andamento = (x.andamento || []).concat([{ em: agora, por: meuNome(), acao: 'Concluído', nota }]); }
+      if (acao === 'corrigir') { x.andamento = (x.andamento || []).concat([{ em: agora, por: meuNome(), acao: 'Correção registrada', nota }]); }
       if (acao === 'reabrir') { x.status = 'registrado'; x.andamento = (x.andamento || []).concat([{ em: agora, por: meuNome(), acao: 'Reaberto', para: x.to }]); }
     });
     if (!r) return;
     if (acao === 'encaminhar') { try { window.lgv10Notify && lgv10Notify('setor:' + para, 'Protocolo encaminhado para ' + para, numero(r) + ' • ' + r.subject + (nota ? ' • ' + nota : ''), 'protocolo:' + r.id); } catch (e) { } }
-    aviso(acao === 'encaminhar' ? 'Encaminhado para ' + para + '.' : acao === 'concluir' ? 'Protocolo concluído.' : 'Protocolo reaberto.');
+    aviso(acao === 'encaminhar' ? 'Encaminhado para ' + para + '.' : acao === 'concluir' ? 'Protocolo concluído.' : acao === 'corrigir' ? 'Correção registrada no andamento. O registro original foi mantido.' : 'Protocolo reaberto.');
     lgprVer(id); desenhar();
   };
 
@@ -345,28 +349,112 @@
       @media print{button{display:none}}</style></head><body>${corpo}<p><button onclick="print()">Imprimir</button></p></body></html>`);
     w.document.close(); setTimeout(() => { try { w.print(); } catch (e) { } }, 400);
   }
-  const codigo = r => { let h = 2166136261; for (const c of String(r.id) + r.createdAt + r.number) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } const t = (h >>> 0).toString(36).toUpperCase().padStart(7, '0'); return t.slice(0, 4) + '-' + t.slice(4, 8); };
-  window.lgprComprovante = function (id) {
-    const r = registros().find(x => x.id === id); if (!r) return;
-    const d = new Date(r.createdAt), data = isNaN(d) ? '—' : d.toLocaleDateString('pt-BR'), hr = isNaN(d) ? '—' : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const anexos = (r.anexos || []).map(a => a.nome).filter(Boolean); if (!anexos.length && r.fileName) anexos.push(r.fileName);
-    const por = (r.user || '—') + (r.login ? ` (usuário: ${r.login})` : '') + (r.cargo ? ` — ${r.cargo}` : '');
-    const via = nome => `<section class="via"><div class="cab"><div><h1>Câmara Municipal de ${esc(municipio())}</h1><div class="p">Estado de São Paulo</div><div class="tit">Recibo de protocolo</div></div><div class="num"><small>${esc(r.type)}</small>${esc(r.number)}</div></div>
-      <table><tr><th>Número do protocolo</th><td><b>${esc(numero(r))}</b></td><th>Data</th><td>${esc(data)}</td><th>Hora</th><td>${esc(hr)}</td></tr>
-      <tr><th>Assunto</th><td colspan="5">${esc(r.subject)}</td></tr>
-      ${r.description ? `<tr><th>Detalhes</th><td colspan="5">${esc(r.description.length > 400 ? r.description.slice(0, 400) + '…' : r.description)}</td></tr>` : ''}
-      <tr><th>Apresentado por</th><td colspan="5">${esc(r.pessoa || r.from || '—')}${r.contato ? ' — ' + esc(r.contato) : ''}</td></tr>
-      <tr><th>Encaminhado para</th><td colspan="5">${esc(r.to || '—')}</td></tr>
-      <tr><th>Anexos</th><td colspan="5">${anexos.length ? anexos.length + ' — ' + anexos.map(esc).join('; ') : 'Nenhum'}</td></tr>
-      <tr><th>Protocolado por</th><td colspan="5">${esc(por)}</td></tr></table>
-      <div class="ass"><div>Quem recebeu (Câmara)</div><div>Quem entregou</div></div>
-      <div class="pe"><span>${nome}</span><span>Código de conferência: <b>${codigo(r)}</b></span><span>Emitido em ${esc(quando(new Date().toISOString()))}</span></div></section>`;
-    janela('Recibo ' + numero(r), `<style>body{max-width:800px}.via{padding:6px 0}.via .cab{margin-bottom:10px}.tit{font-weight:700;margin-top:6px;font-size:14px}.num small{display:block;font-size:12px;font-weight:600;color:#444}
-      .via th{width:18%;white-space:nowrap}.via td,.via th{font-size:12px;padding:5px 7px}.ass{margin-top:44px}.pe{display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-size:11px;color:#444}
-      .corte{border:0;border-top:1px dashed #555;margin:22px 0 16px;position:relative;overflow:visible}.corte::after{content:'recorte aqui';position:absolute;left:50%;top:-8px;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:10px;color:#555}
-      @media print{body{margin:0;max-width:none}.via{break-inside:avoid}}</style>
-      ${via('1ª via — Câmara')}<hr class="corte">${via('2ª via — Interessado')}`);
-    try { window.registrarLog && registrarLog('Recibo de protocolo impresso', numero(r)); } catch (e) { }
+  /* ---------- recibo de protocolo em PDF (2 vias numa folha A4), com código de conferência e QR code ----------
+     O código só o servidor calcula (HMAC): quem tiver o recibo confere em <endereço>/conferir.html. */
+  const codigoLocal = r => { let h = 2166136261; for (const c of String(r.id) + r.createdAt + r.number) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } const t = (h >>> 0).toString(36).toUpperCase().padStart(7, '0'); return t.slice(0, 4) + '-' + t.slice(4, 8); };
+  async function codigoDoServidor(id) {
+    if (!(window.LG_SYNC && LG_SYNC.ativo)) return { codigo: codigoLocal(registros().find(x => x.id === id) || { id }), demo: true };
+    for (let i = 0; i < 10; i++) {   // o protocolo acabou de ser gravado: espera chegar ao servidor
+      try {
+        const r = await fetch('/api/protocolo/codigo?id=' + encodeURIComponent(id), { credentials: 'same-origin', headers: { 'X-LG': '1' } });
+        if (r.ok) { const d = await r.json(); if (d.codigo) return { codigo: d.codigo }; }
+        else if (r.status !== 404) break;
+      } catch (e) { break; }
+      await new Promise(ok => setTimeout(ok, 800));
+    }
+    return { codigo: '' };
+  }
+  function pdfRecibo(r, codigo, demo) {
+    const K = window.lgsPdfKit; if (!K) throw new Error('gerador de PDF não carregou');
+    const PW = 595.28, PH = 841.89, M = 40, LW = PW - 2 * M, ops = [];
+    const T = (x, y, t, f, tam, cor) => ops.push(`${cor || '0'} g BT /${f === 'B' ? 'F2' : 'F1'} ${tam} Tf ${x.toFixed(2)} ${y.toFixed(2)} Td ${K.lit(String(t))} Tj ET 0 g`);
+    const TD = (xd, y, t, f, tam, cor) => T(xd - K.largura(String(t), f || 'H', tam), y, t, f, tam, cor);
+    const L = (x1, y1, x2, y2, w, cor, tr) => ops.push(`${cor || '0'} G ${w || .6} w ${tr ? '[3 3] 0 d ' : ''}${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y2.toFixed(2)} l S [] 0 d 0 G`);
+    const quando2 = r.registradoEm || r.createdAt, d = new Date(quando2);
+    const dataHora = isNaN(d) ? '—' : d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + (r.registradoEm ? ' (hora do servidor)' : '');
+    const anexos = (r.anexos || []).map(a => a && a.nome).filter(Boolean); if (!anexos.length && r.fileName) anexos.push(r.fileName);
+    const url = location.origin + '/conferir.html?c=' + encodeURIComponent(codigo || '');
+    const linhas = [
+      ['Protocolo nº', `${r.type} ${r.number}`],
+      ['Data e hora', dataHora],
+      ['Assunto', r.subject || '—', 3],
+      ['Apresentado por', (r.pessoa || r.from || '—') + (r.contato ? ' — ' + r.contato : ''), 2],
+      ['Encaminhado para', r.to || '—'],
+      ['Anexos', anexos.length ? anexos.length + ' — ' + anexos.join('; ') : 'Nenhum', 2],
+      ['Protocolado por', (r.user || '—') + (r.login ? ` (usuário: ${r.login})` : '') + (r.cargo ? ` — ${r.cargo}` : ''), 2],
+    ];
+    const qr = codigo && !demo && window.LGQR && LGQR.matriz ? LGQR.matriz(url) : null;
+    const via = (top, nome) => {
+      T(M, top - 14, 'CÂMARA MUNICIPAL DE ' + municipio().toUpperCase(), 'B', 12);
+      T(M, top - 27, 'Estado de São Paulo', 'H', 8.5, '0.35');
+      T(M, top - 42, 'RECIBO DE PROTOCOLO', 'B', 10);
+      TD(PW - M, top - 14, nome, 'H', 8, '0.35');
+      TD(PW - M, top - 30, r.type, 'B', 9.5, '0.3');
+      TD(PW - M, top - 50, r.number, 'B', 21);
+      L(M, top - 58, PW - M, top - 58, 1.2);
+      let y = top - 74; const LAB = 104, VX = M + LAB, VW = LW - LAB;
+      linhas.forEach(([lab, val, max], i) => {
+        let ls = K.quebrar(val, i === 0 ? 'B' : 'H', 9.5, VW); if (max && ls.length > max) { ls = ls.slice(0, max); ls[max - 1] = ls[max - 1].replace(/.{0,3}$/, '…'); }
+        T(M, y, lab, 'B', 8.5, '0.35');
+        ls.forEach((l, k) => T(VX, y - k * 12, l, i === 0 ? 'B' : 'H', 9.5));
+        y -= Math.max(1, ls.length) * 12 + 5; L(M, y + 8.5, PW - M, y + 8.5, .4, '0.82');
+      });
+      const ys = Math.min(y - 34, top - 250);
+      L(M, ys, M + 220, ys, .6); L(PW - M - 220, ys, PW - M, ys, .6);
+      T(M, ys - 11, 'Quem recebeu (Câmara)', 'H', 8, '0.35'); T(PW - M - 220, ys - 11, 'Quem entregou', 'H', 8, '0.35');
+      const yb = ys - 30, Q = 78;
+      if (qr) {
+        const n = qr.n, b = 2, m = Q / (n + 2 * b), x0 = PW - M - Q, y0 = yb - Q; let ret = '';
+        for (let rr = 0; rr < n; rr++) for (let c = 0; c < n; c++) if (qr.escuro(rr, c)) ret += `${(x0 + (c + b) * m).toFixed(2)} ${(y0 + Q - (rr + b + 1) * m).toFixed(2)} ${m.toFixed(3)} ${m.toFixed(3)} re `;
+        ops.push('0 g ' + ret + 'f');
+      }
+      T(M, yb - 10, 'Código de conferência', 'B', 8.5, '0.35');
+      T(M, yb - 28, codigo ? codigo + (demo ? '  (demonstração)' : '') : 'indisponível (sem conexão com o servidor)', 'B', codigo ? 17 : 10);
+      if (codigo && !demo) {
+        T(M, yb - 44, 'Confira a autenticidade deste recibo em ' + location.host + '/conferir.html', 'H', 8.5);
+        T(M, yb - 56, 'digitando o código acima, ou aponte a câmera do celular para o QR code.', 'H', 8.5);
+      }
+      T(M, yb - 74, `Emitido em ${quando(new Date().toISOString())} · LegislaGov`, 'H', 7.5, '0.45');
+    };
+    via(PH - 34, '1ª via — Câmara');
+    L(M - 10, PH / 2 + 2, PW - M + 10, PH / 2 + 2, .6, '0.5', true);
+    TD(PW / 2 + K.largura('recorte aqui', 'H', 7) / 2, PH / 2 + 6, 'recorte aqui', 'H', 7, '0.5');
+    via(PH / 2 - 18, '2ª via — Interessado');
+    const conteudo = ops.join('\n'), dd = new Date(), p2 = v => String(v).padStart(2, '0');
+    const objs = [];
+    objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+    objs[2] = '<< /Type /Pages /Kids [6 0 R] /Count 1 >>';
+    objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+    objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+    objs[5] = `<< /Title ${K.lit('Recibo de protocolo ' + r.type + ' ' + r.number)} /Subject ${K.lit('Código de conferência ' + (codigo || '-'))} /Producer (LegislaGov) /CreationDate (D:${dd.getFullYear()}${p2(dd.getMonth() + 1)}${p2(dd.getDate())}${p2(dd.getHours())}${p2(dd.getMinutes())}${p2(dd.getSeconds())}) >>`;
+    objs[6] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 7 0 R >>`;
+    objs[7] = `<< /Length ${conteudo.length} >>\nstream\n${conteudo}\nendstream`;
+    let s = '%PDF-1.7\n%âãÏÓ\n'; const off = [];
+    for (let i = 1; i < objs.length; i++) { off[i] = s.length; s += `${i} 0 obj\n${objs[i]}\nendobj\n`; }
+    const xref = s.length; s += `xref\n0 ${objs.length}\n0000000000 65535 f \n` + off.slice(1).map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+    s += `trailer\n<< /Size ${objs.length} /Root 1 0 R /Info 5 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    const out = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 255; return out;
+  }
+  let urlRecibo = null;
+  window.lgprComprovante = async function (id) {
+    const r0 = registros().find(x => x.id === id); if (!r0) return;
+    const vai = async () => {
+      const { codigo, demo } = await codigoDoServidor(id);
+      const r = registros().find(x => x.id === id) || r0;   // já com a hora do servidor
+      return { r, codigo, demo, pdf: pdfRecibo(r, codigo, demo) };
+    };
+    let res;
+    try { res = window.lgCarregando ? await lgCarregando('Gerando o recibo…', vai, 'Recibo pronto') : await vai(); }
+    catch (e) { aviso('Motivo: ' + (e.message || 'erro desconhecido'), 'erro', 'Recibo não gerado'); return; }
+    const { r, codigo, demo, pdf } = res;
+    if (urlRecibo) URL.revokeObjectURL(urlRecibo);
+    urlRecibo = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }));
+    const nomeArq = ('Recibo-protocolo-' + r.type + '-' + r.number).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w-]+/g, '-') + '.pdf';
+    UI().abrirModal(`<div class="lgt-form lgpr-feito"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Recibo de protocolo</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
+      <div class="lgpr-selo" role="status"><span>${esc(r.type)}</span><b>${esc(r.number)}</b><small>${codigo ? 'Código de conferência <strong>' + esc(codigo) + '</strong>' + (demo ? ' (demonstração)' : '') : 'Sem código: o servidor não respondeu'}</small></div>
+      <p class="lgt-p" style="text-align:center;padding:0 22px">PDF em uma folha A4, com a via da Câmara e a via de quem entregou o documento.${codigo && !demo ? ' Quem recebe o recibo confere em <b>' + esc(location.host) + '/conferir.html</b> ou pelo QR code.' : ''}</p>
+      <div class="lgt-modal-rod lgpr-rod3"><a class="lgt-btn" href="${urlRecibo}" target="_blank" rel="noopener">Abrir e imprimir</a><a class="lgt-btn primario" href="${urlRecibo}" download="${esc(nomeArq)}">Baixar PDF</a></div></div>`);
+    try { window.registrarLog && registrarLog('Recibo de protocolo emitido', numero(r) + (codigo ? ' · código ' + codigo : '')); } catch (e) { }
   };
   window.lgprRelacao = function () {
     const l = registros().filter(r => (!filtro.tipo || r.type === filtro.tipo) && (!filtro.ano || String(r.year) === filtro.ano)).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
@@ -457,6 +545,10 @@
   .lgpr-encaminhar{display:flex;flex-direction:column;gap:8px}.lgpr-encaminhar label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600}
   .lgpr-encaminhar select,.lgpr-encaminhar input{height:44px;border-radius:9px;border:1px solid var(--lg28-stroke);padding:0 10px;font-size:15px;background:var(--lg28-panel);color:var(--lg28-ink)}
   .lgpr-mais-anexo{align-self:flex-start}
+  .lgpr-trava{display:flex;gap:10px;align-items:flex-start;margin:2px 0 0;padding:10px 12px;border-radius:10px;background:#eef4fb;color:#1f3b57;font-size:13px;line-height:1.45}
+  .lgpr-trava .lgv31-ic{width:18px;height:18px;flex:0 0 18px;margin-top:1px;color:#1f4e79}
+  html[data-lgv31-layout] .lgpr-trava{background:color-mix(in srgb,#1f4e79 14%,var(--lg28-panel));color:var(--lg28-ink)}
+  .lgpr-corrigir{align-self:flex-start}
   @media(max-width:760px){
     .lgpr-item{grid-template-columns:1fr auto;grid-template-areas:"num st" "assunto assunto" "meta meta" "onde onde"}
     .lgpr-onde{justify-self:start}.lgpr-grade{grid-template-columns:1fr 1fr}.lgpr-2col,.lgpr-dl{grid-template-columns:1fr}

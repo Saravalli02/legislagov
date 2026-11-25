@@ -46,7 +46,7 @@
   const AREAS_KEY = 'lgt_areas_v1';
   /* Painéis travados e escondidos de todos (nem aparecem com cadeado). Para reativar, tire da lista.
      Financeiro: travado em 11/11/2026 a pedido do Ricardo (não será usado por enquanto). */
-  const PAINEIS_OCULTOS = ['financeiro'];
+  const PAINEIS_OCULTOS = ['financeiro'].concat(window.lgPlano === 'protocolo' ? ['vereador', 'transparencia', 'site'] : []);   // pacote só Protocolo e Tramitação: um painel
   window.lgPainelOculto = k => PAINEIS_OCULTOS.includes(k);
   const ACESSO_TOTAL_PADRAO = ['ricardo'];
   const AREAS_INFO = [

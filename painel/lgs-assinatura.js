@@ -355,6 +355,7 @@
   window.lgsAssinar = assinar;
   window.lgsDocumento = documentoCamara;
   window.lgsGerarPDF = gerarPDF;
+  window.lgsPdfKit = { largura, lit, quebrar };   // usado pelo recibo de protocolo (lgpr-protocolo.js)
   window.lgsConferir = conferir;
   window.lgsLerPDF = lerPDF;
 

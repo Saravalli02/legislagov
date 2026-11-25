@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<script src="../assets/sincronia.js?v=202611211730"></script>
-<script src="../assets/carregando.js?v=202611211700"></script>
+<script src="../assets/sincronia.js?v=202611251036"></script>
+<script src="../assets/carregando.js?v=202611251036"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="app/app-192.png">
@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="LegislaGov">
-<script src="app/instalar.js?v=202611190749" defer></script>
+<script src="app/instalar.js?v=202611251036" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LegislaGov — Câmara Municipal</title>
 <link rel="icon" type="image/png" href="logo-legislagov.png">
@@ -2433,6 +2433,7 @@ html[data-lgv31-font="grande"] body{zoom:1.12}
 .lgv33-area-menu button.lgv33-bloq{opacity:.55;cursor:not-allowed}.lgv33-area-menu button.lgv33-bloq .lgv33-area-ic{background:rgba(255,255,255,.08)!important;color:#c9ccd2!important}
 .lgv35-site{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;margin:0 0 8px;border-radius:10px;border:1px solid rgba(226,170,28,.45);background:rgba(226,170,28,.1);color:var(--v31-side-ink,#e8e9eb)!important;text-decoration:none;font-weight:600;font-size:13.5px}
 .lg-marca-p{margin:12px 0 0;text-align:center;font-size:11.5px;line-height:1.5;color:var(--lg28-muted,#8e9198)}.lg-marca a{color:inherit;text-decoration:none}.lg-marca a:hover{text-decoration:underline}.lg-marca b{font-weight:800;color:var(--lg28-ink,#f2f3f5)}.lg-marca b i{font-style:normal;color:#2bb3e8}
+html[data-lg-plano=protocolo] #lgv35-site{display:none!important}
 .lgv35-site:hover{background:rgba(226,170,28,.18)}.lgv35-site span{flex:1}.lgv35-site .lgv31-ic{width:18px;height:18px}.lgv35-site .lgv31-ext{width:14px;height:14px;opacity:.7}
 .lgv33-area-menu .lgv33-area-tx small{text-transform:none;letter-spacing:0;font-size:12px}
 :root[data-lg-area="financeiro"][data-lgv31-layout][data-lg27-theme]{--v31-side-bar:#e2aa1c}
@@ -2619,6 +2620,14 @@ html[data-lgv31-layout="simples"] .lgapp-bt{background:#fff!important;border-col
   </div>
 </div>
 <script id="lgv31-logic">
+/* Pacote contratado pela Câmara (dominios.txt, 4ª coluna): 'completo' ou 'protocolo' (só Protocolo e Tramitação).
+   No endereço de testes dá para ver como fica: /painel/?plano=protocolo (e ?plano=completo para voltar). */
+window.lgPlano=(function(){
+ const S=window.LG_SYNC||{};let p=S.plano||'completo';
+ try{const teste=!S.ativo||S.camara==='teste',q=new URLSearchParams(location.search).get('plano');
+  if(teste&&q)sessionStorage.setItem('lg_plano_previa',q);const pv=teste&&sessionStorage.getItem('lg_plano_previa');if(pv)p=pv;}catch(e){}
+ p=p==='protocolo'?'protocolo':'completo';document.documentElement.setAttribute('data-lg-plano',p);return p;
+})();
 (function(){
 const I={
  vereador:'<circle cx="12" cy="7.5" r="3.5"/><path d="M5 20.5c.8-3.9 3.6-6.3 7-6.3s6.2 2.4 7 6.3"/><path d="M12 14.2l-1.2 2.3 1.2 4 1.2-4z"/>',
@@ -2811,6 +2820,22 @@ window.LG_AREAS=AREAS;
 const ACTIONS={config:()=>gotoShared('config'),melhorias:()=>lgv11Open('melhorias')};
 const MODAIS=['sessoes','protocolo','editor','mensagens','avisos','ia','melhorias'];
 Object.values(AREAS).forEach(a=>a.menu.forEach(([,items])=>items.forEach(([key,,,fn])=>{if(fn)ACTIONS[key]=fn;})));
+/* Pacote só Protocolo e Tramitação: um painel só, com protocolo, matérias, expedientes, mensagens e gestão */
+if(window.lgPlano==='protocolo'){
+ Object.keys(AREAS).forEach(k=>{if(k!=='legislativo')delete AREAS[k];});
+ const L=AREAS.legislativo,todos={};L.menu.forEach(([,items])=>items.forEach(i=>todos[i[0]]=i));
+ const pega=(k,nome)=>{const i=todos[k];return i?(nome?[i[0],nome,...i.slice(2)]:i):null;};
+ L.nome='Protocolo e Tramitação';L.desc='Protocolo, tramitação, expedientes e mensagens';L.icone='protocolo';L.inicio='protocolo';
+ L.menu=[
+  ['Protocolo',[pega('protocolo','Protocolo'),pega('pendencias'),pega('prazos')]],
+  ['Tramitação',[pega('materias','Matérias em tramitação'),pega('comissoes')]],
+  ['Documentos',[pega('expedientes'),pega('editor'),pega('oficios')]],
+  ['Comunicação',[pega('mensagens'),pega('webmail')]],
+  ['Consultas',[pega('relatorios')]],
+  ['Gestão',[pega('admin'),pega('linhaTempo'),pega('usuarios','Usuários'),pega('acessos'),pega('usuariosProto')]],
+  ['Ajuda',[pega('treinamento')]]
+ ].map(([g,it])=>[g,it.filter(Boolean)]).filter(([,it])=>it.length);
+}
 const areasPermitidas=()=>{try{return window.lgtAreasPermitidas?lgtAreasPermitidas():['legislativo']}catch(e){return ['legislativo']}};
 let AREA='legislativo';
 function areaAtual(){const ok=areasPermitidas();let a='legislativo';try{a=sessionStorage.getItem('lg_area')||'legislativo'}catch(e){}return ok.includes(a)?a:(ok[0]||'legislativo');}
@@ -3175,25 +3200,26 @@ html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-msg{color:#c5
 html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-card:not(.bloq):hover,html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-card:not(.bloq):focus-visible{border-color:#1f4e79!important;background:#fff!important}
 </style>
 
-<script src="../assets/transparencia-catalogo.js?v=202611190749"></script>
-<script src="lgt-publicacoes.js?v=202611190749"></script>
-<script src="lgok-confirmar.js?v=202611190749"></script>
-<script src="lgf-financeiro.js?v=202611190749"></script>
-<script src="lgs-assinatura.js?v=202611190749"></script>
-<script src="lgvr-vereador.js?v=202611190749"></script>
-<script src="lgcm-comissoes.js?v=202611190749"></script>
-<script src="lgcg-cargos.js?v=202611190749"></script>
-<script src="lgux-facil.js?v=202611190749"></script>
-<script src="../assets/leis-comum.js?v=202611190749"></script>
-<script src="../assets/tv.js?v=202611190749"></script>
-<script src="lgpl-plenario.js?v=202611190749"></script>
-<script src="lgfx-funcoes.js?v=202611190749"></script>
-<script src="lgav-avisos.js?v=202611190749"></script>
-<script src="lgpr-protocolo.js?v=202611190749"></script>
-<script src="lgrl-relatorios.js?v=202611190749"></script>
-<script src="lglt-linha-tempo.js?v=202611190749"></script>
-<script src="lgct-conta.js?v=202611190749"></script>
-<script src="lgsg-seguranca.js?v=202611190749"></script>
-<script src="lgsc-site.js?v=202611190749"></script>
-<script src="lgtr-treinamento.js?v=202611190749"></script>
+<script src="../assets/transparencia-catalogo.js?v=202611251036"></script>
+<script src="lgt-publicacoes.js?v=202611251036"></script>
+<script src="lgok-confirmar.js?v=202611251036"></script>
+<script src="lgf-financeiro.js?v=202611251036"></script>
+<script src="lgs-assinatura.js?v=202611251036"></script>
+<script src="lgvr-vereador.js?v=202611251036"></script>
+<script src="lgcm-comissoes.js?v=202611251036"></script>
+<script src="lgcg-cargos.js?v=202611251036"></script>
+<script src="lgux-facil.js?v=202611251036"></script>
+<script src="../assets/leis-comum.js?v=202611251036"></script>
+<script src="../assets/tv.js?v=202611251036"></script>
+<script src="lgpl-plenario.js?v=202611251036"></script>
+<script src="lgfx-funcoes.js?v=202611251036"></script>
+<script src="lgav-avisos.js?v=202611251036"></script>
+<script src="../assets/qr.js?v=202611251036"></script>
+<script src="lgpr-protocolo.js?v=202611251036"></script>
+<script src="lgrl-relatorios.js?v=202611251036"></script>
+<script src="lglt-linha-tempo.js?v=202611251036"></script>
+<script src="lgct-conta.js?v=202611251036"></script>
+<script src="lgsg-seguranca.js?v=202611251036"></script>
+<script src="lgsc-site.js?v=202611251036"></script>
+<script src="lgtr-treinamento.js?v=202611251036"></script>
 </body></html>

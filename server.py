@@ -295,20 +295,29 @@ _dominios = {"lido": 0.0, "mapa": {}}
 
 
 def camara_do_host(host):
-    """dominios.txt: 'dominio  camara  modo' (modo = site ou sistema). Endereço desconhecido -> LG_CAMARA_PADRAO."""
+    """dominios.txt: 'dominio  camara  modo  [plano]' (modo = site ou sistema; plano = completo ou protocolo).
+    Endereço desconhecido -> LG_CAMARA_PADRAO."""
     if time.time() - _dominios["lido"] > 60:
-        mapa = {}
+        mapa, planos = {}, {}
         try:
             with open(ARQ_DOMINIOS, encoding="utf-8") as f:
                 for linha in f:
                     p = linha.split("#", 1)[0].split()
                     if len(p) >= 2:
                         mapa[p[0].lower()] = (p[1], p[2] if len(p) > 2 else "site")
+                        if len(p) > 3:
+                            planos[p[1]] = p[3]
         except OSError:
             pass
-        _dominios.update(lido=time.time(), mapa=mapa)
+        _dominios.update(lido=time.time(), mapa=mapa, planos=planos)
     h = (host or "").split(":")[0].lower()
     return _dominios["mapa"].get(h) or (os.environ.get("LG_CAMARA_PADRAO", "teste"), "site")
+
+
+def plano_da_camara(camara):
+    """Pacote contratado: 'completo' (padrão) ou 'protocolo' (só Protocolo e Tramitação)."""
+    camara_do_host("")
+    return "protocolo" if _dominios.get("planos", {}).get(camara) == "protocolo" else "completo"
 
 
 # ------------------------------------------------------------------ limite de pedidos por endereço (IP)
@@ -504,7 +513,7 @@ class Handler(SimpleHTTPRequestHandler):
                     u = None
                 dados, seq = lgapi.carregar(camara, u)
                 eu = {k: v for k, v in u.items() if k != "senha"} if u else None
-                return self._json(200, {"ok": True, "camara": camara, "modo": modo, "eu": eu, "dados": dados, "seq": seq,
+                return self._json(200, {"ok": True, "camara": camara, "modo": modo, "plano": plano_da_camara(camara), "eu": eu, "dados": dados, "seq": seq,
                                         "ocupados": lgapi.cargos_ocupados(camara)})
             if caminho == "/api/cargos" and metodo == "GET":
                 return self._json(200, {"ok": True, "ocupados": lgapi.cargos_ocupados(camara)})
@@ -545,8 +554,18 @@ class Handler(SimpleHTTPRequestHandler):
                 d = self._corpo(300_000)
                 erro = lgapi.envio_publico(camara, str(d.get("chave", "")), d.get("itens"), ip)
                 return self._json(400 if erro else 200, {"ok": not erro, "erro": erro})
+            if caminho == "/api/protocolo/conferir" and metodo == "GET":   # página pública de conferência do recibo
+                q = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+                st, corpo = lgapi.conferir_protocolo(camara, (q.get("c") or [""])[0], ip)
+                return self._json(st, corpo)
             if not u:
                 return self._json(401, {"ok": False, "erro": "Sua sessão terminou. Entre de novo."})
+            if caminho == "/api/protocolo/codigo" and metodo == "GET":   # código de conferência para o recibo
+                q = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+                cod = lgapi.codigo_do_protocolo(camara, (q.get("id") or [""])[0])
+                if not cod:
+                    return self._json(404, {"ok": False, "erro": "Este protocolo ainda não chegou ao servidor."})
+                return self._json(200, {"ok": True, "codigo": cod})
             if caminho == "/api/senha" and metodo == "POST":
                 d = self._corpo(20_000)
                 erro = lgapi.trocar_senha(u, d.get("atual", ""), d.get("nova", ""))
@@ -642,11 +661,14 @@ class Handler(SimpleHTTPRequestHandler):
                         if not pode:
                             lgapi.registrar(camara, u["usuario"], "Gravação recusada", f"{chave}: {motivo}", self._ip())
                             return self._json(403, {"ok": False, "erro": "Sem permissão: " + motivo, "valor": r0["valor"] if r0 else None, "versao": r0["versao"] if r0 else None})
+                        enviado = valor
+                        if lgapi.eh_chave_protocolo(chave):   # hora e usuário do servidor nos protocolos novos
+                            valor = lgapi.carimbar_protocolo(r0["valor"] if r0 else None, valor, u)
                         ok, atual, versao = lgapi.gravar(camara, chave, valor, d.get("versao"), u["usuario"])
                     if not ok:
                         return self._json(409, {"ok": False, "valor": atual, "versao": versao})
                     resp = {"ok": True, "versao": versao}
-                    if atual != valor:
+                    if atual != enviado:
                         resp["valor"] = atual   # arquivos embutidos viraram endereços
                     return self._json(200, resp)
             return self._json(404, {"ok": False, "erro": "Rota não encontrada."})
