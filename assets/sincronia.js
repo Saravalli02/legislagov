@@ -27,6 +27,7 @@
   const ver = {}, base = {};
   let seq = info.seq || 0, eu = info.eu || null;
   const SYNC = window.LG_SYNC = { ativo: true, camara: info.camara, modo: info.modo, plano: info.plano || 'completo', eu, ocupados: info.ocupados || [] };
+  try { document.documentElement.classList.add('lg-sincronizado'); } catch (e) { }
 
   function chavesLocais() { const out = []; for (let i = 0; i < LS.length; i++) out.push(orig.key.call(LS, i)); return out; }
   function aplicar(dados, limpar) {
