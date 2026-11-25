@@ -106,12 +106,20 @@ EOF
 echo ">> cópia diária do banco (03:30, guarda 14 dias)"
 cat > /usr/local/bin/legislagov-copia <<'EOF'
 #!/bin/bash
+# cópia diária: banco geral + banco de cada Câmara (copias/camaras/<câmara>-AAAA-MM-DD.db.gz); guarda 14 dias
 set -e
-D=/var/lib/legislagov
+D=/var/lib/legislagov; H=$(date +%F)
 [ -f "$D/legislagov.db" ] || exit 0
-sqlite3 "$D/legislagov.db" ".backup '$D/copias/legislagov-$(date +%F).db'"
-gzip -f "$D/copias/legislagov-$(date +%F).db"
-find "$D/copias" -name 'legislagov-*.db.gz' -mtime +14 -delete
+mkdir -p "$D/copias/camaras"
+sqlite3 "$D/legislagov.db" ".backup '$D/copias/legislagov-$H.db'"
+gzip -f "$D/copias/legislagov-$H.db"
+for f in "$D"/camaras/*.db; do
+  [ -f "$f" ] || continue
+  n=$(basename "$f" .db)
+  sqlite3 "$f" ".backup '$D/copias/camaras/$n-$H.db'"
+  gzip -f "$D/copias/camaras/$n-$H.db"
+done
+find "$D/copias" -name '*.db.gz' -mtime +14 -delete
 chown -R legislagov:legislagov "$D/copias"
 EOF
 chmod 755 /usr/local/bin/legislagov-copia

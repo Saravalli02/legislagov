@@ -51,10 +51,13 @@
   function comp() {
     let c = ler(COMP_KEY, null);
     if (!c || !Array.isArray(c.vereadores)) {
-      c = { vereadores: VEREADORES_PADRAO.map(([id, nome, completo, partido, sug]) => ({ id: 'v' + id, nome, completo, partido, sugestao: sug, usuario: '' })), presidente: 'v56', historico: [{ data: new Date().toISOString(), texto: 'Presidente inicial: Edenilson Roselli (Mesa 2025–2026)', por: 'Sistema' }] };
-      gravar(COMP_KEY, c);
+      // a composição de Neves Paulista só vale para Neves (e o ambiente de teste); Câmara nova começa vazia: a Procuradoria cadastra
+      const S = window.LG_SYNC, deNeves = !S || !S.ativo || ['neves-paulista-sp', 'teste'].includes(S.camara);
+      c = deNeves ? { vereadores: VEREADORES_PADRAO.map(([id, nome, completo, partido, sug]) => ({ id: 'v' + id, nome, completo, partido, sugestao: sug, usuario: '' })), presidente: 'v56', historico: [{ data: new Date().toISOString(), texto: 'Presidente inicial: Edenilson Roselli (Mesa 2025–2026)', por: 'Sistema' }] }
+        : { vereadores: [], presidente: '', historico: [] };
+      if (!S || !S.ativo || S.camara) gravar(COMP_KEY, c);   // na entrada única, antes de escolher a Câmara, não grava nada
     }
-    if (!c.vereadores.some(v => v.id === c.presidente)) { const de = c.presidente; c.presidente = c.vereadores.some(v => v.id === 'v56') ? 'v56' : (c.vereadores[0] || {}).id; c.historico = c.historico || []; c.historico.push({ data: new Date().toISOString(), texto: `Presidente “${de || '—'}” não existe mais na composição; voltou para ${(c.vereadores.find(v => v.id === c.presidente) || {}).nome || '—'}.`, por: 'Sistema' }); gravar(COMP_KEY, c); }
+    if (c.presidente && c.vereadores.length && !c.vereadores.some(v => v.id === c.presidente)) { const de = c.presidente; c.presidente = c.vereadores.some(v => v.id === 'v56') ? 'v56' : (c.vereadores[0] || {}).id; c.historico = c.historico || []; c.historico.push({ data: new Date().toISOString(), texto: `Presidente “${de || '—'}” não existe mais na composição; voltou para ${(c.vereadores.find(v => v.id === c.presidente) || {}).nome || '—'}.`, por: 'Sistema' }); gravar(COMP_KEY, c); }
     if (!Array.isArray(c.comissoes)) { c.comissoes = COMISSOES_PADRAO.map(x => ({ ...x })); c.historico = c.historico || []; c.historico.push({ data: new Date().toISOString(), texto: 'Comissões permanentes 2025–2026 carregadas conforme o site da Câmara', por: 'Sistema' }); gravar(COMP_KEY, c); }
     return c;
   }
@@ -677,11 +680,20 @@
   function criarUsuario(v) {
     if (typeof lgUsers !== 'function') return null; const a = lgUsers(); let login = v.sugestao || v.nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
     let n = 1, base = login; while (a.some(u => u.usuario.toLowerCase() === login.toLowerCase())) login = base + (++n);
-    a.push({ id: 'usr-' + login, usuario: login, senha: '123456', nome: v.completo, cargo: 'Vereador', setor: 'Gabinete', orgao: 'cam', perfil: 'usuario', municipio: 'Neves Paulista — SP', ativo: true, trocarSenha: true });
-    lgSaveUsers(a); v.usuario = login; return login;
+    const sn = senhaProv();
+    a.push({ id: 'usr-' + login + '-' + Date.now().toString(36), usuario: login, senha: sn, nome: v.completo, cargo: 'Vereador(a)', cargoId: 'vereador', setor: 'Gabinete', orgao: 'cam', perfil: 'usuario', ativo: true, trocarSenha: true });
+    lgSaveUsers(a); v.usuario = login; return { login, senha: sn, nome: v.completo };
   }
-  window.lgvrCriarUsuario = id => { if (!ehGestor()) return; const c = comp(); const v = c.vereadores.find(x => x.id === id); const l = criarUsuario(v); gravar(COMP_KEY, c); UI().aviso(`Usuário criado: ${l} · senha provisória 123456`); desenharComposicao(); };
-  window.lgvrCriarTodos = () => { if (!ehGestor()) return; const c = comp(); const feitos = c.vereadores.filter(v => !v.usuario).map(v => criarUsuario(v)); gravar(COMP_KEY, c); UI().aviso(feitos.length ? `${feitos.length} usuário(s) criado(s). Senha provisória: 123456` : 'Todos os vereadores já têm usuário.'); desenharComposicao(); };
+  const senhaProv = () => { const a = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const x = new Uint32Array(10); crypto.getRandomValues(x); return [...x].map(n => a[n % a.length]).join(''); };
+  function mostrarSenhas(lista) {
+    const S = window.LG_SYNC || {};
+    UI().abrirModal(`<div class="lgt-form"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">${lista.length > 1 ? 'Acessos criados' : 'Acesso criado'}</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
+      <p class="lgt-p" style="padding:6px 22px 4px">Passe a cada vereador pessoalmente ou por mensagem direta. As senhas aparecem só agora; no primeiro acesso cada um cria a própria senha.${S.entrada && S.camaraNome ? ` Na tela de entrada, escolher <b>${esc(S.camaraNome)}</b>.` : ''}</p>
+      <div class="lgt-tabela-wrap" style="margin:6px 22px 12px"><table class="lgt-tabela"><thead><tr><th>Vereador</th><th>Usuário</th><th>Senha provisória</th></tr></thead><tbody>${lista.map(x => `<tr><td>${esc(x.nome)}</td><td>${esc(x.login)}</td><td style="font-family:monospace">${esc(x.senha)}</td></tr>`).join('')}</tbody></table></div>
+      <div class="lgt-modal-rod"><button type="button" class="lgt-btn primario" onclick="lgtFechar()">Pronto</button></div></div>`);
+  }
+  window.lgvrCriarUsuario = id => { if (!ehGestor()) return; const c = comp(); const v = c.vereadores.find(x => x.id === id); const r = criarUsuario(v); gravar(COMP_KEY, c); desenharComposicao(); if (r) mostrarSenhas([r]); };
+  window.lgvrCriarTodos = () => { if (!ehGestor()) return; const c = comp(); const feitos = c.vereadores.filter(v => !v.usuario).map(v => criarUsuario(v)).filter(Boolean); gravar(COMP_KEY, c); desenharComposicao(); if (feitos.length) mostrarSenhas(feitos); else UI().aviso('Todos os vereadores já têm usuário.'); };
   window.lgvrRemoverVereador = id => { if (!ehGestor()) return; const c = comp(); if (id === c.presidente) return UI().aviso('Marque outro Presidente antes de remover este vereador.', 'erro'); const v = c.vereadores.find(x => x.id === id);
     UI().abrirModal(`<div class="lgt-form"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Remover ${esc(v.nome)}?</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><p class="lgt-p" style="padding:6px 22px 10px">O usuário dele perde o acesso ao Painel do Vereador. As proposituras já protocoladas continuam no sistema.</p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="button" class="lgt-btn perigo" id="lgvr-ok">Remover</button></div></div>`);
     $('#lgvr-ok').onclick = () => { const cc = comp(); cc.vereadores = cc.vereadores.filter(x => x.id !== id); cc.historico.push({ data: new Date().toISOString(), texto: `Vereador removido da composição: ${v.nome}`, por: (usuario() || {}).nome || '' }); gravar(COMP_KEY, cc); UI().fecharModal(); desenharComposicao(); }; };
@@ -883,10 +895,10 @@
       const w = function (v, ...r) {
         const u = usuario(), adm = !!(u && u.orgao === 'ambos');
         if (v === 'usuarios' && !adm && ehGestor(u)) {
-          // Procuradoria: abre só o quadro de vereadores/Presidente (a lista de toda a plataforma é do administrador)
+          // Procuradoria: quadro de vereadores/Presidente + usuários da Câmara (criar usuário, senha nova, link por e-mail)
           document.querySelectorAll('.view').forEach(x => { x.classList.remove('active'); x.style.display = 'none'; });
           const t = $('#view-usuarios'); t.classList.add('active'); t.style.display = 'block';
-          const lista = $('#usuarios-por-municipio'); if (lista) lista.hidden = true;
+          const lista = $('#usuarios-por-municipio'); if (lista) { lista.hidden = false; if (window.renderUsuarios) renderUsuarios(); }
           if (window.lgv31Mark) lgv31Mark('usuarios'); desenharComposicao(); return;
         }
         const x = gs.call(this, v, ...r);

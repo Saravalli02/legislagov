@@ -8,7 +8,7 @@ Junta, sem senhas e sem conteúdo de documentos:
     (para separar o que é exemplo do que é dado real antes de limpar).
 Grava em /var/lib/legislagov/relatorios/ e envia ao depósito legislagov-backup-sp em relatorios/.
 """
-import datetime as dt, json, os, shutil, sqlite3, subprocess, sys
+import datetime as dt, glob, json, os, shutil, sqlite3, subprocess, sys
 
 DADOS = os.environ.get("LG_DADOS", "/var/lib/legislagov")
 BANCO = os.path.join(DADOS, "legislagov.db")
@@ -79,10 +79,17 @@ def main():
         "tabelas": {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
                     for (t,) in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()},
     }
+    # cada Câmara tem o seu banco (camaras/<id>.db)
+    bancos_cam = {os.path.basename(a)[:-3]: sqlite3.connect(f"file:{a}?mode=ro", uri=True) for a in sorted(glob.glob(os.path.join(DADOS, "camaras", "*.db")))}
+    rel["bancos_camaras"] = {cam: {"integridade": c.execute("PRAGMA integrity_check").fetchone()[0],
+                                   "tamanho_mb": round(os.path.getsize(os.path.join(DADOS, "camaras", cam + ".db")) / 1048576, 2),
+                                   "tabelas": {t: c.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+                                               for (t,) in c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()}}
+                             for cam, c in bancos_cam.items()}
     try:
-        cols = [r[1] for r in con.execute("PRAGMA table_info(usuarios)")]
-        sel = ", ".join(c for c in ("camara", "usuario", "nome", "perfil", "cargo", "ativo") if c in cols)
-        rel["usuarios"] = [dict(zip(sel.split(", "), r)) for r in con.execute(f"SELECT {sel} FROM usuarios ORDER BY camara")]
+        rel["usuarios"] = []
+        for c in bancos_cam.values():
+            rel["usuarios"] += [{"camara": r[0], "usuario": r[1]} for r in c.execute("SELECT camara, usuario FROM usuarios ORDER BY camara")]
     except Exception as e:
         rel["usuarios"] = "erro: " + str(e)
     try:   # acessos do Rural (sem senha)
@@ -94,11 +101,13 @@ def main():
             "SELECT * FROM registro WHERE camara LIKE 'rural:%' ORDER BY rowid DESC LIMIT 15")]
     except Exception as e:
         rel["rural_usuarios"] = "erro: " + str(e)
-    rel["inventario"] = inventario(con)
+    rel["inventario"] = {}
+    for c in bancos_cam.values():
+        rel["inventario"].update(inventario(c))
     # diagnóstico do Portal do Vereador: perfis dos usuários (sem senha) e vínculos com a composição
     try:
         diag = {}
-        for cam, in con.execute("SELECT DISTINCT camara FROM usuarios").fetchall():
+        for cam, con in bancos_cam.items():
             us = []
             for login_, dados in con.execute("SELECT usuario, dados FROM usuarios WHERE camara=?", (cam,)):
                 d = json.loads(dados or "{}")
@@ -115,7 +124,8 @@ def main():
         rel["diagnostico_vereador"] = diag
     except Exception as e:
         rel["diagnostico_vereador"] = "erro: " + str(e)
-    con.close()
+    for c in bancos_cam.values():
+        c.close()
     os.makedirs(SAIDA, exist_ok=True)
     nome = "relatorio-" + dt.datetime.now().strftime("%Y%m%d-%H%M") + ".json"
     arq = os.path.join(SAIDA, nome)

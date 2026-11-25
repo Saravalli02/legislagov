@@ -126,7 +126,7 @@ def sessao(c, token):
 
 
 def _senha_da_camara(login):
-    r = lgapi._db().execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=?", (CAMARA_SENHA, login)).fetchone()
+    r = lgapi._cam(CAMARA_SENHA).execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=?", (CAMARA_SENHA, login)).fetchone()
     return r["senha"] if r and str(r["senha"]).startswith("pbkdf2$") else None
 
 
@@ -521,6 +521,11 @@ def rota(h, metodo):
                 cod, r = lgacesso.email_admin(lgacesso._db(), corpo)
                 if cod == 200:
                     _log(c, s["usuario"], "E-mail do usuário definido", f"{corpo.get('sistema')}/{corpo.get('id')}: {corpo.get('email') or '(sem e-mail)'}", ip)
+                return _resp(h, cod, r)
+            if acao == "admin/camara/salvar" and metodo == "POST":
+                cod, r = lgapi.salvar_camara(corpo, s["usuario"])
+                if cod == 200:
+                    _log(c, s["usuario"], "Câmara " + ("alterada" if corpo.get("id") else "cadastrada"), f"{r['camara']['nome']} ({r['camara']['id']})", ip)
                 return _resp(h, cod, r)
             if acao in ("admin/camara/usuario", "admin/camara/editar", "admin/camara/senha", "admin/rest/perfil") and metodo == "POST":
                 import lgacesso

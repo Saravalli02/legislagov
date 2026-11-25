@@ -44,7 +44,7 @@ CHAVE_USUARIOS = "lg_camara_local_users_v3"
 # só deste aparelho (aparência, rascunhos, caches): nunca vão para o servidor
 LOCAIS = re.compile(r"^(site_(tema|fonte|cookies|contraste)|lg_contraste|lgv31_.*|lgv27_theme_v1|lgtr_.*|lg_brasao_v1|lgtv_cache_v1|"
                     r"lg_previa_.*|legislagov_v7_rascunho_.*|lgc_seguindo_v1|lg_area|lgp_escolher|lgvr_como|legislagov_session_v1|"
-                    r"lg_camara_session_v3|lgsync_.*)$")
+                    r"lg_camara_session_v3|lg_camara_lembrar|lgsync_.*)$")
 # o site (sem login) pode ler
 PUBLICAS = re.compile(r"^(lg_seed_perfis_v2|lgv_camara_v1|lgv11_agenda_v1|lgt_site_noticias_v1|lgt_transp_v1|lgt_publicadores_v1|lgt_site_cfg_v1|"
                       r"lgs_site_[a-z]+_v1|lgpl_v1|lgll_v1|legislagov_protocolos_v2_.*|lgo_v1)$")
@@ -61,37 +61,267 @@ def ativo():
     return ATIVO
 
 
-def _db():
+PASTA_CAMARAS = os.path.join(PASTA_DADOS, "camaras")
+RE_CAMARA = re.compile(r"[a-z0-9][a-z0-9\-]{0,60}")
+_cons = {}
+ESQUEMA_CAMARA = """
+CREATE TABLE IF NOT EXISTS usuarios(id TEXT PRIMARY KEY, camara TEXT NOT NULL, usuario TEXT NOT NULL, senha TEXT NOT NULL,
+    dados TEXT NOT NULL, criado TEXT, UNIQUE(camara, usuario));
+CREATE TABLE IF NOT EXISTS sessoes(token TEXT PRIMARY KEY, usuario_id TEXT NOT NULL, camara TEXT NOT NULL, expira REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS dados(camara TEXT NOT NULL, chave TEXT NOT NULL, valor TEXT NOT NULL, versao INTEGER NOT NULL,
+    seq INTEGER NOT NULL, quando TEXT, por TEXT, PRIMARY KEY(camara, chave));
+CREATE TABLE IF NOT EXISTS historico(id INTEGER PRIMARY KEY AUTOINCREMENT, camara TEXT, chave TEXT, versao INTEGER, valor TEXT, quando TEXT, por TEXT);
+CREATE TABLE IF NOT EXISTS registro(id INTEGER PRIMARY KEY AUTOINCREMENT, camara TEXT, quando TEXT, usuario TEXT, acao TEXT, detalhe TEXT, ip TEXT);
+CREATE TABLE IF NOT EXISTS contador(nome TEXT PRIMARY KEY, valor INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS arquivos(camara TEXT NOT NULL, id TEXT NOT NULL, tipo TEXT, tamanho INTEGER, publico INTEGER DEFAULT 0,
+    criado TEXT, por TEXT, acesso TEXT, PRIMARY KEY(camara, id));
+CREATE TABLE IF NOT EXISTS redefinir(token TEXT PRIMARY KEY, usuario_id TEXT NOT NULL, camara TEXT NOT NULL, expira REAL NOT NULL, usado REAL);
+CREATE INDEX IF NOT EXISTS ix_dados_seq ON dados(camara, seq);
+CREATE INDEX IF NOT EXISTS ix_hist ON historico(camara, chave, id);
+"""
+TABELAS_CAMARA = ("usuarios", "sessoes", "dados", "historico", "registro", "arquivos", "redefinir")
+
+
+def _abrir(arq):
+    con = sqlite3.connect(arq, check_same_thread=False, isolation_level=None, timeout=15)
+    con.row_factory = sqlite3.Row
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA synchronous=NORMAL")
+    return con
+
+
+def _geral():
+    """Banco geral do servidor: GR Central, Rural, e-mails, WhatsApp, monitoramento, endereços bloqueados,
+    a lista de Câmaras e o índice usuário → Câmara. Os dados de cada Câmara ficam no banco dela (camaras/<id>.db)."""
     global _con
     if _con is None:
         os.makedirs(PASTA_DADOS, exist_ok=True)
-        _con = sqlite3.connect(ARQ, check_same_thread=False, isolation_level=None, timeout=15)
-        _con.row_factory = sqlite3.Row
-        _con.execute("PRAGMA journal_mode=WAL")
-        _con.execute("PRAGMA synchronous=NORMAL")
+        _con = _abrir(ARQ)
         _con.executescript("""
-        CREATE TABLE IF NOT EXISTS usuarios(id TEXT PRIMARY KEY, camara TEXT NOT NULL, usuario TEXT NOT NULL, senha TEXT NOT NULL,
-            dados TEXT NOT NULL, criado TEXT, UNIQUE(camara, usuario));
-        CREATE TABLE IF NOT EXISTS sessoes(token TEXT PRIMARY KEY, usuario_id TEXT NOT NULL, camara TEXT NOT NULL, expira REAL NOT NULL);
-        CREATE TABLE IF NOT EXISTS dados(camara TEXT NOT NULL, chave TEXT NOT NULL, valor TEXT NOT NULL, versao INTEGER NOT NULL,
-            seq INTEGER NOT NULL, quando TEXT, por TEXT, PRIMARY KEY(camara, chave));
-        CREATE TABLE IF NOT EXISTS historico(id INTEGER PRIMARY KEY AUTOINCREMENT, camara TEXT, chave TEXT, versao INTEGER, valor TEXT, quando TEXT, por TEXT);
-        CREATE TABLE IF NOT EXISTS registro(id INTEGER PRIMARY KEY AUTOINCREMENT, camara TEXT, quando TEXT, usuario TEXT, acao TEXT, detalhe TEXT, ip TEXT);
         CREATE TABLE IF NOT EXISTS contador(nome TEXT PRIMARY KEY, valor INTEGER NOT NULL);
-        CREATE TABLE IF NOT EXISTS arquivos(camara TEXT NOT NULL, id TEXT NOT NULL, tipo TEXT, tamanho INTEGER, publico INTEGER DEFAULT 0,
-            criado TEXT, por TEXT, PRIMARY KEY(camara, id));
-        CREATE INDEX IF NOT EXISTS ix_dados_seq ON dados(camara, seq);
-        CREATE INDEX IF NOT EXISTS ix_hist ON historico(camara, chave, id);
+        CREATE TABLE IF NOT EXISTS registro(id INTEGER PRIMARY KEY AUTOINCREMENT, camara TEXT, quando TEXT, usuario TEXT, acao TEXT, detalhe TEXT, ip TEXT);
+        CREATE TABLE IF NOT EXISTS camaras(id TEXT PRIMARY KEY, nome TEXT NOT NULL, cidade TEXT, uf TEXT, cnpj TEXT, ativo INTEGER NOT NULL DEFAULT 1,
+            criado TEXT, por TEXT);
+        CREATE TABLE IF NOT EXISTS usuario_camara(id TEXT PRIMARY KEY, camara TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS servidor_cfg(chave TEXT PRIMARY KEY, valor TEXT NOT NULL);
         """)
-        if "acesso" not in [r[1] for r in _con.execute("PRAGMA table_info(arquivos)")]:
-            _con.execute("ALTER TABLE arquivos ADD COLUMN acesso TEXT")   # quem pode abrir (expedientes e mensagens)
-        # 12/11/2026: a chave de sessão passa a ser guardada só como resumo (sha256), como as senhas.
-        # As sessões abertas continuam valendo: o valor antigo vira o resumo dele mesmo.
-        if not _con.execute("SELECT 1 FROM contador WHERE nome='sessoes_resumo_v1'").fetchone():
-            for r in _con.execute("SELECT token FROM sessoes").fetchall():
-                _con.execute("UPDATE sessoes SET token=? WHERE token=?", (_resumo(r[0]), r[0]))
-            _con.execute("INSERT INTO contador(nome, valor) VALUES('sessoes_resumo_v1', 1)")
+        try:
+            _separar_camaras(_con)
+        except Exception:
+            # não segue com bancos pela metade: o próximo pedido tenta de novo (a cópia é refeita sem duplicar)
+            c, _con = _con, None
+            c.close()
+            raise
     return _con
+
+
+_db = _geral   # os outros módulos (Central, Rural, e-mails, WhatsApp, acessos) usam o banco geral
+
+
+def _cam(camara):
+    """Banco da Câmara (um arquivo para cada Câmara: nada de uma Câmara fica no banco de outra)."""
+    camara = str(camara or "")
+    c = _cons.get(camara)
+    if c is not None:
+        return c
+    if not RE_CAMARA.fullmatch(camara):
+        raise ValueError("Câmara inválida: " + camara[:40])
+    _geral()
+    os.makedirs(PASTA_CAMARAS, exist_ok=True)
+    c = _abrir(os.path.join(PASTA_CAMARAS, camara + ".db"))
+    c.executescript(ESQUEMA_CAMARA)
+    _cons[camara] = c
+    return c
+
+
+def eh_camara(camara):
+    """Câmara cadastrada (ou com banco próprio já criado)."""
+    camara = str(camara or "")
+    if not RE_CAMARA.fullmatch(camara):
+        return False
+    if camara in _cons or os.path.exists(os.path.join(PASTA_CAMARAS, camara + ".db")):
+        return True
+    return bool(_geral().execute("SELECT 1 FROM camaras WHERE id=?", (camara,)).fetchone())
+
+
+def bancos_das_camaras():
+    """Câmaras com banco próprio (para a cópia diária, a Central e o relatório)."""
+    try:
+        return sorted(f[:-3] for f in os.listdir(PASTA_CAMARAS) if f.endswith(".db") and RE_CAMARA.fullmatch(f[:-3]))
+    except OSError:
+        return []
+
+
+# ---------------------------------------------------------------- cadastro das Câmaras (GR Central)
+CAMARAS_INICIAIS = [("neves-paulista-sp", "Câmara Municipal de Neves Paulista", "Neves Paulista", "SP"),
+                    ("teste", "Ambiente de teste", "Neves Paulista", "SP")]
+
+
+def _semear_cadastro():
+    g = _geral()
+    if g.execute("SELECT 1 FROM contador WHERE nome='camaras_cadastro_v1'").fetchone():
+        return
+    for cid, nome, cidade, uf in CAMARAS_INICIAIS:
+        g.execute("INSERT OR IGNORE INTO camaras(id, nome, cidade, uf, cnpj, ativo, criado, por) VALUES(?,?,?,?,?,1,?,?)",
+                  (cid, nome, cidade, uf, "", agora(), "sistema"))
+    g.execute("INSERT OR IGNORE INTO contador(nome, valor) VALUES('camaras_cadastro_v1', 1)")
+
+
+def camaras(so_ativas=False):
+    _semear_cadastro()
+    q = "SELECT * FROM camaras" + (" WHERE ativo=1" if so_ativas else "") + " ORDER BY (id='teste'), nome"
+    return [dict(r) for r in _geral().execute(q)]
+
+
+def camaras_ids():
+    return [c["id"] for c in camaras()]
+
+
+def camara_info(camara):
+    _semear_cadastro()
+    r = _geral().execute("SELECT * FROM camaras WHERE id=?", (str(camara or ""),)).fetchone()
+    return dict(r) if r else None
+
+
+def municipio_da_camara(camara):
+    i = camara_info(camara) or {}
+    return f"{i.get('cidade')} — {i.get('uf')}" if i.get("cidade") else "Neves Paulista — SP"
+
+
+def _sem_acentos(t):
+    import unicodedata
+    return unicodedata.normalize("NFD", str(t or "")).encode("ascii", "ignore").decode()
+
+
+def cnpj_ok(cnpj):
+    d = re.sub(r"\D", "", str(cnpj or ""))
+    if len(d) != 14 or d == d[0] * 14:
+        return False
+    for n in (12, 13):
+        pesos = ([5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] if n == 12 else [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2])
+        s = sum(int(d[i]) * pesos[i] for i in range(n))
+        dv = 0 if s % 11 < 2 else 11 - s % 11
+        if int(d[n]) != dv:
+            return False
+    return True
+
+
+UFS = {"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"}
+
+
+def salvar_camara(d, por):
+    """Cadastra ou altera uma Câmara (GR Central). Câmara nova = banco novo, vazio, só dela."""
+    _semear_cadastro()
+    cid = str(d.get("id") or "").strip()
+    nome = re.sub(r"\s+", " ", str(d.get("nome") or "")).strip()[:120]
+    cidade = re.sub(r"\s+", " ", str(d.get("cidade") or "")).strip()[:80]
+    uf = str(d.get("uf") or "").strip().upper()[:2]
+    cnpj = re.sub(r"\D", "", str(d.get("cnpj") or ""))
+    if not nome or not cidade:
+        return 400, {"ok": False, "erro": "Preencha o nome da Câmara e a cidade."}
+    if uf not in UFS:
+        return 400, {"ok": False, "erro": "Escolha o estado (UF)."}
+    if cnpj and not cnpj_ok(cnpj):
+        return 400, {"ok": False, "erro": "CNPJ inválido. Confira os números."}
+    g = _geral()
+    if cnpj and g.execute("SELECT 1 FROM camaras WHERE cnpj=? AND id<>?", (cnpj, cid)).fetchone():
+        return 409, {"ok": False, "erro": "Já existe uma Câmara com este CNPJ."}
+    if cid:
+        if not camara_info(cid):
+            return 404, {"ok": False, "erro": "Câmara não encontrada."}
+        ativo = 1 if d.get("ativo", True) else 0
+        g.execute("UPDATE camaras SET nome=?, cidade=?, uf=?, cnpj=?, ativo=? WHERE id=?", (nome, cidade, uf, cnpj, ativo, cid))
+        registrar(cid, por, "Cadastro da Câmara alterado", f"{nome} · {cidade}/{uf}")
+        return 200, {"ok": True, "camara": camara_info(cid)}
+    base = re.sub(r"[^a-z0-9]+", "-", _sem_acentos(cidade).lower()).strip("-")[:50] + "-" + uf.lower()
+    cid, n = base, 2
+    while camara_info(cid) or os.path.exists(os.path.join(PASTA_CAMARAS, cid + ".db")):
+        cid, n = f"{base}-{n}", n + 1
+    g.execute("INSERT INTO camaras(id, nome, cidade, uf, cnpj, ativo, criado, por) VALUES(?,?,?,?,?,1,?,?)",
+              (cid, nome, cidade, uf, cnpj, agora(), por))
+    semear(cid)   # banco novo da Câmara, com os administradores da GR
+    registrar(cid, por, "Câmara cadastrada", f"{nome} · {cidade}/{uf}" + (f" · CNPJ {cnpj}" if cnpj else ""))
+    return 200, {"ok": True, "camara": camara_info(cid)}
+
+
+def _camara_do_usuario(uid):
+    r = _geral().execute("SELECT camara FROM usuario_camara WHERE id=?", (str(uid),)).fetchone()
+    if r:
+        return r["camara"]
+    for cam in bancos_das_camaras():   # índice incompleto: procura e anota
+        if _cam(cam).execute("SELECT 1 FROM usuarios WHERE id=?", (str(uid),)).fetchone():
+            _geral().execute("INSERT OR REPLACE INTO usuario_camara(id, camara) VALUES(?,?)", (str(uid), cam))
+            return cam
+    return None
+
+
+def _separar_camaras(g):
+    """26/11/2026: antes todas as Câmaras ficavam no mesmo banco (separadas pela coluna 'camara').
+    Uma vez só: copia cada Câmara para o arquivo dela, confere as contagens e renomeia as tabelas antigas
+    para antigo_* (ficam guardadas, ninguém mais lê). O segredo do recibo de protocolo vai para servidor_cfg."""
+    if g.execute("SELECT 1 FROM contador WHERE nome='camaras_separadas_v1'").fetchone():
+        return
+    tem = {r[0] for r in g.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if "usuarios" in tem or "dados" in tem:
+        # cópia inteira do banco como estava, antes de separar (fica em copias/, não é apagada)
+        guarda = os.path.join(PASTA_DADOS, "copias", "legislagov-antes-de-separar-camaras.db")
+        if not os.path.exists(guarda):
+            os.makedirs(os.path.dirname(guarda), exist_ok=True)
+            b = sqlite3.connect(guarda)
+            try:
+                g.backup(b)
+            finally:
+                b.close()
+        r = g.execute("SELECT valor FROM dados WHERE camara='__servidor__' AND chave='segredo_protocolo'").fetchone() if "dados" in tem else None
+        if r:
+            g.execute("INSERT OR IGNORE INTO servidor_cfg(chave, valor) VALUES('segredo_protocolo', ?)", (r[0],))
+        cams = set()
+        for t in TABELAS_CAMARA:
+            if t in tem:
+                cams |= {x[0] for x in g.execute(f"SELECT DISTINCT camara FROM {t}") if x[0]}
+        cams = sorted(x for x in cams if RE_CAMARA.fullmatch(x) and x != "__servidor__")
+        os.makedirs(PASTA_CAMARAS, exist_ok=True)
+        seq = (g.execute("SELECT valor FROM contador WHERE nome='seq'").fetchone() or [0])[0]
+        for cam in cams:
+            arq = os.path.join(PASTA_CAMARAS, cam + ".db")
+            g.execute("ATTACH DATABASE ? AS n", (arq,))
+            try:
+                for comando in [x for x in ESQUEMA_CAMARA.split(";") if x.strip()]:
+                    g.execute(comando.replace("CREATE TABLE IF NOT EXISTS ", "CREATE TABLE IF NOT EXISTS n.").replace("CREATE INDEX IF NOT EXISTS ix_", "CREATE INDEX IF NOT EXISTS n.ix_"))
+                g.execute("BEGIN")
+                for t in TABELAS_CAMARA:
+                    if t not in tem:
+                        continue
+                    cols = [x[1] for x in g.execute(f"PRAGMA main.table_info({t})")]
+                    lista = ", ".join(cols)
+                    g.execute(f"INSERT OR IGNORE INTO n.{t}({lista}) SELECT {lista} FROM main.{t} WHERE camara=?", (cam,))
+                    a = g.execute(f"SELECT COUNT(*) FROM main.{t} WHERE camara=?", (cam,)).fetchone()[0]
+                    b = g.execute(f"SELECT COUNT(*) FROM n.{t} WHERE camara=?", (cam,)).fetchone()[0]
+                    if b < a:
+                        raise RuntimeError(f"cópia incompleta {cam}.{t}: {b} de {a}")
+                like = "%" + cam + "%"
+                g.execute("INSERT OR IGNORE INTO n.contador(nome, valor) SELECT nome, valor FROM main.contador WHERE nome LIKE ? OR nome='sessoes_resumo_v1'", (like,))
+                g.execute("INSERT OR REPLACE INTO n.contador(nome, valor) VALUES('seq', ?)", (max(seq, (g.execute("SELECT MAX(seq) FROM n.dados").fetchone()[0] or 0)),))
+                if "usuarios" in tem:
+                    g.execute("INSERT OR REPLACE INTO main.usuario_camara(id, camara) SELECT id, camara FROM main.usuarios WHERE camara=?", (cam,))
+                g.execute("COMMIT")
+            except Exception:
+                try:
+                    g.execute("ROLLBACK")
+                except Exception:
+                    pass
+                g.execute("DETACH DATABASE n")
+                raise
+            g.execute("DETACH DATABASE n")
+        g.execute("BEGIN")
+        for t in TABELAS_CAMARA:
+            if t in tem and t != "registro":
+                g.execute(f"ALTER TABLE {t} RENAME TO antigo_{t}")
+        if "registro" in tem and cams:   # o registro geral fica (Rural, Central); o de cada Câmara foi para o banco dela
+            g.execute("DELETE FROM registro WHERE camara IN (%s)" % ",".join("?" * len(cams)), cams)
+        g.execute("COMMIT")
+        print("bancos separados por Câmara:", ", ".join(cams), flush=True)
+    g.execute("INSERT OR IGNORE INTO contador(nome, valor) VALUES('camaras_separadas_v1', 1)")
 
 
 def _resumo(token):
@@ -102,15 +332,14 @@ def agora():
     return time.strftime("%Y-%m-%dT%H:%M:%S%z")
 
 
-def _seq():
-    c = _db()
+def _seq(c):
     c.execute("INSERT INTO contador(nome, valor) VALUES('seq', 1) ON CONFLICT(nome) DO UPDATE SET valor = valor + 1")
     return c.execute("SELECT valor FROM contador WHERE nome='seq'").fetchone()[0]
 
 
 def registrar(camara, usuario, acao, detalhe="", ip=""):
     try:
-        _db().execute("INSERT INTO registro(camara, quando, usuario, acao, detalhe, ip) VALUES(?,?,?,?,?,?)",
+        (_cam(camara) if eh_camara(camara) else _geral()).execute("INSERT INTO registro(camara, quando, usuario, acao, detalhe, ip) VALUES(?,?,?,?,?,?)",
                       (camara, agora(), usuario, acao, str(detalhe)[:500], ip))
     except Exception:
         pass
@@ -138,7 +367,7 @@ def _sem_senha(d):
 
 
 def usuarios(camara):
-    lin = _db().execute("SELECT id, usuario, dados FROM usuarios WHERE camara=?", (camara,)).fetchall()
+    lin = _cam(camara).execute("SELECT id, usuario, dados FROM usuarios WHERE camara=?", (camara,)).fetchall()
     out = []
     for r in lin:
         d = json.loads(r["dados"])
@@ -148,7 +377,8 @@ def usuarios(camara):
 
 
 def _usuario(uid):
-    r = _db().execute("SELECT * FROM usuarios WHERE id=?", (uid,)).fetchone()
+    cam = _camara_do_usuario(uid)
+    r = _cam(cam).execute("SELECT * FROM usuarios WHERE id=?", (uid,)).fetchone() if cam else None
     if not r:
         return None
     d = json.loads(r["dados"])
@@ -164,17 +394,18 @@ def eh_gestor(u):
 
 def _marcar_usuarios(camara):
     """Avisa as telas abertas que a lista de usuários mudou (a lista vem da tabela de usuários)."""
-    _db().execute("INSERT INTO dados(camara, chave, valor, versao, seq, quando, por) VALUES(?,?,?,?,?,?,?) "
+    _cam(camara).execute("INSERT INTO dados(camara, chave, valor, versao, seq, quando, por) VALUES(?,?,?,?,?,?,?) "
                   "ON CONFLICT(camara, chave) DO UPDATE SET valor=excluded.valor, versao=dados.versao+1, seq=excluded.seq, quando=excluded.quando",
-                  (camara, CHAVE_USUARIOS, str(time.time()), 1, _seq(), agora(), "sistema"))
+                  (camara, CHAVE_USUARIOS, str(time.time()), 1, _seq(_cam(camara)), agora(), "sistema"))
 
 
 def _criar_usuario(camara, dados, senha):
     uid = dados.get("id") or ("usr-" + secrets.token_hex(6))
     login = str(dados["usuario"]).strip()
     d = _sem_senha({k: v for k, v in dados.items() if k not in ("id", "usuario", "camara")})
-    _db().execute("INSERT INTO usuarios(id, camara, usuario, senha, dados, criado) VALUES(?,?,?,?,?,?)",
+    _cam(camara).execute("INSERT INTO usuarios(id, camara, usuario, senha, dados, criado) VALUES(?,?,?,?,?,?)",
                   (uid, camara, login, hash_senha(senha), json.dumps(d, ensure_ascii=False), agora()))
+    _geral().execute("INSERT OR REPLACE INTO usuario_camara(id, camara) VALUES(?,?)", (uid, camara))
     _marcar_usuarios(camara)
     return uid
 
@@ -195,12 +426,12 @@ def _sem_senha_valida():
 def semear(camara):
     """Primeiro acesso de uma câmara: só os administradores (Ricardo e Geraldo), sem cargo.
     Os demais se cadastram pela tela e o administrador libera."""
-    c = _db()
+    c = _cam(camara)
     if not c.execute("SELECT 1 FROM usuarios WHERE camara=? LIMIT 1", (camara,)).fetchone():
         for uid, login_, nome in ADMINS:
             uid = _id_admin(uid, camara)
             _criar_usuario(camara, {"id": uid, "usuario": login_, "nome": nome, "cargo": "Administrador do sistema", "perfil": "admin",
-                                    "orgao": "ambos", "municipio": "Neves Paulista — SP", "ativo": True}, "")
+                                    "orgao": "ambos", "municipio": municipio_da_camara(camara), "ativo": True}, "")
             c.execute("UPDATE usuarios SET senha=? WHERE id=?", (_sem_senha_valida(), uid))
         gravar(camara, "lg_seed_perfis_v2", "1", None, "sistema")
         registrar(camara, "sistema", "Câmara criada no banco", "administradores Ricardo e Geraldo")
@@ -220,10 +451,10 @@ def _herdar_senha_admins(camara):
     origem = HERDA_SENHA.get(camara)
     if not origem:
         return
-    c = _db()
+    c = _cam(camara)
     for _uid, login_, _nome in ADMINS:
         alvo = c.execute("SELECT id, senha FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone()
-        fonte = c.execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (origem, login_)).fetchone()
+        fonte = _cam(origem).execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (origem, login_)).fetchone()
         if alvo and fonte and str(alvo["senha"]).startswith("!") and str(fonte["senha"]).startswith("pbkdf2$"):
             c.execute("UPDATE usuarios SET senha=? WHERE id=?", (fonte["senha"], alvo["id"]))
             registrar(camara, "sistema", "Senha do administrador igual à do painel da Câmara", login_)
@@ -231,7 +462,7 @@ def _herdar_senha_admins(camara):
 
 def _limpeza_v2(camara):
     """11/11/2026: tira os usuários de teste e a senha provisória; ficam só Ricardo e Geraldo."""
-    c = _db()
+    c = _cam(camara)
     marca = "limpeza_v2:" + camara
     if c.execute("SELECT 1 FROM contador WHERE nome=?", (marca,)).fetchone():
         return
@@ -242,7 +473,7 @@ def _limpeza_v2(camara):
         uid = r0["id"] if r0 else _id_admin(uid, camara)
         if not r0:
             _criar_usuario(camara, {"id": uid, "usuario": login_, "nome": nome, "cargo": "Administrador do sistema", "perfil": "admin",
-                                    "orgao": "ambos", "municipio": "Neves Paulista — SP", "ativo": True}, "")
+                                    "orgao": "ambos", "municipio": municipio_da_camara(camara), "ativo": True}, "")
         c.execute("UPDATE usuarios SET senha=? WHERE id=? AND senha NOT LIKE 'pbkdf2$%'", (_sem_senha_valida(), uid))
         r = c.execute("SELECT senha FROM usuarios WHERE id=?", (uid,)).fetchone()
         if r and confere_senha("123456", r["senha"]):
@@ -274,7 +505,7 @@ def _eh_exemplo(x):
 def _limpeza_v3(camara):
     """17/11/2026: tira os exemplos de demonstração (PL 027 da Guarda Municipal, avisos dele e itens marcados
     como exemplo) que o painel antigo gravava. O que sai fica guardado em copias/limpeza-v3-<câmara>.json."""
-    c = _db()
+    c = _cam(camara)
     marca = "limpeza_v3:" + camara
     if c.execute("SELECT 1 FROM contador WHERE nome=?", (marca,)).fetchone():
         return
@@ -322,7 +553,7 @@ def proximo_protocolo(camara, tipo, ano, manual=None):
     ano = int(ano)
     if not tipo or not 2000 <= ano <= 2100:
         raise ValueError("Tipo ou ano inválido.")
-    c = _db()
+    c = _cam(camara)
     usados = set()
     r = c.execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, CHAVE_PROTOCOLO)).fetchone()
     if r:
@@ -469,15 +700,13 @@ def carimbar_protocolo(antigo_txt, valor_txt, u):
 
 
 def _segredo_protocolo():
-    """Chave do código de conferência. Fica no banco (vai junto nas cópias de segurança)."""
-    c = _db()
-    q = "SELECT valor FROM dados WHERE camara='__servidor__' AND chave='segredo_protocolo'"
-    r = c.execute(q).fetchone()
+    """Chave do código de conferência. Fica no banco geral (vai junto nas cópias de segurança)."""
+    c = _geral()
+    r = c.execute("SELECT valor FROM servidor_cfg WHERE chave='segredo_protocolo'").fetchone()
     if r and r["valor"]:
         return r["valor"]
-    c.execute("INSERT OR IGNORE INTO dados(camara, chave, valor, versao, seq, quando, por) VALUES('__servidor__','segredo_protocolo',?,1,0,?,?)",
-              (secrets.token_hex(32), agora(), "servidor"))
-    return c.execute(q).fetchone()["valor"]
+    c.execute("INSERT OR IGNORE INTO servidor_cfg(chave, valor) VALUES('segredo_protocolo', ?)", (secrets.token_hex(32),))
+    return c.execute("SELECT valor FROM servidor_cfg WHERE chave='segredo_protocolo'").fetchone()["valor"]
 
 
 def codigo_protocolo(camara, r):
@@ -489,7 +718,7 @@ def codigo_protocolo(camara, r):
 
 
 def _protocolos(camara):
-    r = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, CHAVE_PROTOCOLO)).fetchone()
+    r = _cam(camara).execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, CHAVE_PROTOCOLO)).fetchone()
     try:
         lst = json.loads(r["valor"]) if r and r["valor"] else []
     except Exception:
@@ -543,10 +772,11 @@ def conferir_protocolo(camara, codigo, ip):
 
 def definir_senha(login_, senha, camara=None):
     """Usado pelo comando legislagov-senha no servidor (a pessoa digita a senha lá)."""
-    q = "UPDATE usuarios SET senha=? WHERE lower(usuario)=lower(?)" + (" AND camara=?" if camara else "")
-    args = (hash_senha(senha), login_) + ((camara,) if camara else ())
-    n = _db().execute(q, args).rowcount
-    _db().execute("DELETE FROM sessoes WHERE usuario_id IN (SELECT id FROM usuarios WHERE lower(usuario)=lower(?))", (login_,))
+    n = 0
+    for cam in ([camara] if camara else bancos_das_camaras()):
+        c = _cam(cam)
+        n += c.execute("UPDATE usuarios SET senha=? WHERE lower(usuario)=lower(?)", (hash_senha(senha), login_)).rowcount
+        c.execute("DELETE FROM sessoes WHERE usuario_id IN (SELECT id FROM usuarios WHERE lower(usuario)=lower(?))", (login_,))
     return n
 
 
@@ -613,7 +843,7 @@ def minha_conta(camara, u, d, ip=""):
 
 def meu_historico(camara, login_, n=150):
     """Entradas, senhas erradas e mudanças da própria conta (o que o servidor registrou)."""
-    lin = _db().execute("SELECT id, quando, acao, detalhe, ip FROM registro WHERE camara=? AND lower(usuario)=lower(?) ORDER BY id DESC LIMIT ?",
+    lin = _cam(camara).execute("SELECT id, quando, acao, detalhe, ip FROM registro WHERE camara=? AND lower(usuario)=lower(?) ORDER BY id DESC LIMIT ?",
                         (camara, str(login_), n)).fetchall()
     return [dict(x) for x in lin]
 
@@ -623,7 +853,7 @@ def gravar_usuarios(camara, lista, autor):
     gestor = eh_gestor(autor)
     atuais = {u["id"]: u for u in usuarios(camara)}
     por_login = {u["usuario"].lower(): u for u in atuais.values()}
-    c = _db()
+    c = _cam(camara)
     for novo in lista if isinstance(lista, list) else []:
         if not isinstance(novo, dict) or not novo.get("usuario"):
             continue
@@ -633,6 +863,8 @@ def gravar_usuarios(camara, lista, autor):
             if not gestor or novo.get("perfil") == "admin" or novo.get("orgao") == "ambos" or novo.get("teste"):
                 continue
             senha = str(novo.get("senha") or "") or _sem_senha_valida()
+            # criado pela Procuradoria/administrador: senha provisória, troca obrigatória no primeiro acesso, município da Câmara
+            novo = {**novo, "trocarSenha": True, "municipio": municipio_da_camara(camara)}
             try:
                 _criar_usuario(camara, novo, senha)
                 registrar(camara, autor.get("usuario"), "Usuário criado", novo["usuario"])
@@ -665,16 +897,17 @@ def gravar_usuarios(camara, lista, autor):
 # ---------------------------------------------------------------- sessões
 def criar_sessao(u):
     token = secrets.token_urlsafe(32)   # vai só para o navegador (cookie); no banco fica o resumo
-    _db().execute("INSERT INTO sessoes(token, usuario_id, camara, expira) VALUES(?,?,?,?)",
-                  (_resumo(token), u["id"], u["camara"], time.time() + SESSAO_DIAS * 86400))
-    _db().execute("DELETE FROM sessoes WHERE expira < ?", (time.time(),))
+    c = _cam(u["camara"])
+    c.execute("INSERT INTO sessoes(token, usuario_id, camara, expira) VALUES(?,?,?,?)",
+              (_resumo(token), u["id"], u["camara"], time.time() + SESSAO_DIAS * 86400))
+    c.execute("DELETE FROM sessoes WHERE expira < ?", (time.time(),))
     return token
 
 
 def sessao(token, camara):
     if not token:
         return None
-    r = _db().execute("SELECT * FROM sessoes WHERE token=?", (_resumo(token),)).fetchone()
+    r = _cam(camara).execute("SELECT * FROM sessoes WHERE token=?", (_resumo(token),)).fetchone()
     if not r or r["expira"] < time.time() or r["camara"] != camara:
         return None
     u = _usuario(r["usuario_id"])
@@ -686,8 +919,9 @@ def sessao(token, camara):
     return u
 
 
-def encerrar(token):
-    _db().execute("DELETE FROM sessoes WHERE token=?", (_resumo(token),))
+def encerrar(token, camara):
+    if token and eh_camara(camara):
+        _cam(camara).execute("DELETE FROM sessoes WHERE token=?", (_resumo(token),))
 
 
 _tentativas = {}
@@ -705,12 +939,12 @@ def _alertar(camara, login_, ip, n, tipo):
     if time.time() - _alertado.get(k, 0) < 1800:   # no máximo um aviso de cada tipo a cada 30 min
         return
     _alertado[k] = time.time()
-    r = _db().execute("SELECT id FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone()
+    r = _cam(camara).execute("SELECT id FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone()
     u = _usuario(r["id"]) if r else None
     item = {"id": "al" + secrets.token_hex(5), "quando": agora(), "login": login_[:60], "nome": (u or {}).get("nome", ""),
             "existe": bool(u), "ip": ip, "tentativas": n, "tipo": tipo}
     with _trava:
-        atual = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, ALERTAS)).fetchone()
+        atual = _cam(camara).execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, ALERTAS)).fetchone()
         try:
             lista = json.loads(atual["valor"]) if atual else []
         except Exception:
@@ -737,7 +971,7 @@ def ips_confiaveis(camara=None):
     Vêm de LG_IPS_CONFIAVEIS (servidor) e da lista que o administrador grava no painel (lg_ips_confiaveis_v1)."""
     ips = {x.strip() for x in os.environ.get("LG_IPS_CONFIAVEIS", "").replace(";", ",").split(",") if x.strip()}
     if camara:
-        r = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave='lg_ips_confiaveis_v1'", (camara,)).fetchone()
+        r = _cam(camara).execute("SELECT valor FROM dados WHERE camara=? AND chave='lg_ips_confiaveis_v1'", (camara,)).fetchone()
         if r:
             try:
                 ips |= {str(x.get("ip") if isinstance(x, dict) else x).strip() for x in json.loads(r["valor"]) or []}
@@ -754,14 +988,14 @@ _ipcache = {"lido": 0.0, "mapa": {}}
 
 
 def _tabela_ips():
-    _db().execute("CREATE TABLE IF NOT EXISTS ip_bloqueios(ip TEXT PRIMARY KEY, ate REAL, motivo TEXT, criado REAL, por TEXT, vezes INTEGER NOT NULL DEFAULT 0, ultimo REAL)")
+    _geral().execute("CREATE TABLE IF NOT EXISTS ip_bloqueios(ip TEXT PRIMARY KEY, ate REAL, motivo TEXT, criado REAL, por TEXT, vezes INTEGER NOT NULL DEFAULT 0, ultimo REAL)")
 
 
 def _ips_ativos():
     if time.time() - _ipcache["lido"] > 20:
         _tabela_ips()
         agora_ = time.time()
-        _ipcache["mapa"] = {r["ip"]: r["ate"] for r in _db().execute("SELECT ip, ate FROM ip_bloqueios WHERE ate IS NULL OR ate > ?", (agora_,))}
+        _ipcache["mapa"] = {r["ip"]: r["ate"] for r in _geral().execute("SELECT ip, ate FROM ip_bloqueios WHERE ate IS NULL OR ate > ?", (agora_,))}
         _ipcache["lido"] = agora_
     return _ipcache["mapa"]
 
@@ -782,12 +1016,12 @@ def ip_bloquear(ip, motivo, por="sistema", segundos=None, sempre=False):
     """Bloqueia o endereço. Sem 'segundos' e sem 'sempre': segue a escada (1 h, 24 h, 7 dias)."""
     _tabela_ips()
     agora_ = time.time()
-    r = _db().execute("SELECT * FROM ip_bloqueios WHERE ip=?", (ip,)).fetchone()
+    r = _geral().execute("SELECT * FROM ip_bloqueios WHERE ip=?", (ip,)).fetchone()
     vezes = (r["vezes"] if r and r["ultimo"] and agora_ - r["ultimo"] < 7 * 86400 else 0) + 1
     if r and r["ate"] is None and not sempre and por == "sistema":
         return   # já está bloqueado para sempre
     ate = None if sempre else agora_ + (segundos if segundos else ESCADA[min(vezes, len(ESCADA)) - 1])
-    _db().execute("INSERT INTO ip_bloqueios(ip, ate, motivo, criado, por, vezes, ultimo) VALUES(?,?,?,?,?,?,?) "
+    _geral().execute("INSERT INTO ip_bloqueios(ip, ate, motivo, criado, por, vezes, ultimo) VALUES(?,?,?,?,?,?,?) "
                   "ON CONFLICT(ip) DO UPDATE SET ate=excluded.ate, motivo=excluded.motivo, por=excluded.por, vezes=excluded.vezes, ultimo=excluded.ultimo",
                   (ip, ate, str(motivo)[:200], agora_, por, vezes, agora_))
     _ipcache["lido"] = 0
@@ -796,7 +1030,7 @@ def ip_bloquear(ip, motivo, por="sistema", segundos=None, sempre=False):
 
 def ip_desbloquear(ip, por):
     _tabela_ips()
-    _db().execute("UPDATE ip_bloqueios SET ate=?, vezes=0 WHERE ip=?", (time.time() - 1, ip))
+    _geral().execute("UPDATE ip_bloqueios SET ate=?, vezes=0 WHERE ip=?", (time.time() - 1, ip))
     _ip_falhas.pop(ip, None)
     _ipcache["lido"] = 0
     registrar("servidor", por, "Endereço desbloqueado", ip, ip)
@@ -807,7 +1041,7 @@ def ip_lista():
     agora_ = time.time()
     return [{"ip": r["ip"], "ate": r["ate"], "sempre": r["ate"] is None, "ativo": r["ate"] is None or r["ate"] > agora_, "motivo": r["motivo"] or "",
              "desde": r["ultimo"], "vezes": r["vezes"], "por": r["por"] or ""}
-            for r in _db().execute("SELECT * FROM ip_bloqueios ORDER BY (ate IS NULL) DESC, ultimo DESC LIMIT 300")]
+            for r in _geral().execute("SELECT * FROM ip_bloqueios ORDER BY (ate IS NULL) DESC, ultimo DESC LIMIT 300")]
 
 
 def ip_bloqueado(ip, camara=None):
@@ -829,10 +1063,14 @@ def _falha_ip(ip, camara, sistema="painel"):
 
 
 def _gravar_dados_usuario(uid, fn):
-    r = _db().execute("SELECT dados FROM usuarios WHERE id=?", (uid,)).fetchone()
+    cam = _camara_do_usuario(uid)
+    if not cam:
+        return
+    c = _cam(cam)
+    r = c.execute("SELECT dados FROM usuarios WHERE id=?", (uid,)).fetchone()
     d = json.loads(r["dados"]) if r else {}
     fn(d)
-    _db().execute("UPDATE usuarios SET dados=? WHERE id=?", (json.dumps(d, ensure_ascii=False), uid))
+    c.execute("UPDATE usuarios SET dados=? WHERE id=?", (json.dumps(d, ensure_ascii=False), uid))
 
 
 def bloqueio(u):
@@ -851,7 +1089,7 @@ def login(camara, usuario, senha, ip):
     if ip_bloqueado(ip, camara):
         return None, "Muitas tentativas erradas a partir desta internet. Tente de novo em 1 hora."
     chave = (ip, camara, str(usuario).lower())
-    r = _db().execute("SELECT id, senha FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, str(usuario).strip())).fetchone()
+    r = _cam(camara).execute("SELECT id, senha FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, str(usuario).strip())).fetchone()
     u0 = _usuario(r["id"]) if r else None
     msg = bloqueio(u0)
     if msg:
@@ -905,9 +1143,9 @@ def nova_senha_pelo_admin(camara, autor, uid, senha):
         return "Somente um administrador muda a senha de outro administrador."
     if len(str(senha or "")) < 8:
         return "A senha precisa ter pelo menos 8 caracteres."
-    _db().execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(senha)), uid))
+    _cam(camara).execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(senha)), uid))
     _gravar_dados_usuario(uid, lambda d: (d.pop("falhasSenha", None), d.pop("bloqueada", None), d.__setitem__("trocarSenha", True)))
-    _db().execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))
+    _cam(camara).execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))
     _marcar_usuarios(camara)
     registrar(camara, autor.get("usuario"), "Senha nova criada pelo administrador", alvo.get("usuario"))
     return ""
@@ -915,16 +1153,16 @@ def nova_senha_pelo_admin(camara, autor, uid, senha):
 
 # ---------------------------------------------------------------- esqueci minha senha (link por e-mail)
 def _tabela_redefinir():
-    _db().execute("CREATE TABLE IF NOT EXISTS redefinir(token TEXT PRIMARY KEY, usuario_id TEXT NOT NULL, camara TEXT NOT NULL, expira REAL NOT NULL, usado REAL)")
+    pass   # a tabela está no esquema de cada Câmara
 
 
-def pedir_redefinicao(camara, login_, base_url, ip):
+def pedir_redefinicao(camara, login_, base_url, ip, sufixo=""):
     """Sempre responde igual (não revela se o usuário existe). Envia o link se a pessoa tem e-mail cadastrado."""
     import lgenvio
     if ip_bloqueado(ip, camara):
         return
     _falha_ip(ip, camara)   # conta como tentativa: impede usar o "esqueci" para encher a caixa de alguém
-    r = _db().execute("SELECT id FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, str(login_).strip())).fetchone()
+    r = _cam(camara).execute("SELECT id FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, str(login_).strip())).fetchone()
     u = _usuario(r["id"]) if r else None
     email = str((u or {}).get("email") or "").strip()
     if not u or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
@@ -932,8 +1170,8 @@ def pedir_redefinicao(camara, login_, base_url, ip):
         return
     _tabela_redefinir()
     t = secrets.token_urlsafe(32)
-    _db().execute("INSERT INTO redefinir(token, usuario_id, camara, expira) VALUES(?,?,?,?)", (_resumo(t), u["id"], camara, time.time() + 3600))
-    link = base_url.rstrip("/") + "/painel/index.html?redefinir=" + t
+    _cam(camara).execute("INSERT INTO redefinir(token, usuario_id, camara, expira) VALUES(?,?,?,?)", (_resumo(t), u["id"], camara, time.time() + 3600))
+    link = base_url.rstrip("/") + "/painel/index.html?redefinir=" + t + sufixo
     nome = (u.get("nome") or u["usuario"]).split(" ")[0]
     texto = (f"Olá, {nome}.\n\nRecebemos um pedido para criar uma senha nova no painel da Câmara (usuário {u['usuario']}).\n"
              f"Para criar a senha nova, abra este link em até 1 hora:\n{link}\n\n"
@@ -944,15 +1182,15 @@ def pedir_redefinicao(camara, login_, base_url, ip):
 
 def redefinir_com_link(camara, token, nova, ip):
     _tabela_redefinir()
-    r = _db().execute("SELECT * FROM redefinir WHERE token=?", (_resumo(str(token or "")),)).fetchone()
+    r = _cam(camara).execute("SELECT * FROM redefinir WHERE token=?", (_resumo(str(token or "")),)).fetchone()
     if not r or r["usado"] or r["expira"] < time.time() or r["camara"] != camara:
         return "Este link já foi usado ou venceu. Peça um novo em “Esqueci minha senha”."
     if len(str(nova or "")) < 8:
         return "A senha precisa ter pelo menos 8 caracteres."
-    _db().execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(nova)), r["usuario_id"]))
+    _cam(camara).execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(nova)), r["usuario_id"]))
     _gravar_dados_usuario(r["usuario_id"], lambda d: (d.pop("falhasSenha", None), d.pop("bloqueada", None), d.pop("trocarSenha", None)))
-    _db().execute("UPDATE redefinir SET usado=? WHERE token=?", (time.time(), r["token"]))
-    _db().execute("DELETE FROM sessoes WHERE usuario_id=?", (r["usuario_id"],))
+    _cam(camara).execute("UPDATE redefinir SET usado=? WHERE token=?", (time.time(), r["token"]))
+    _cam(camara).execute("DELETE FROM sessoes WHERE usuario_id=?", (r["usuario_id"],))
     _marcar_usuarios(camara)
     u = _usuario(r["usuario_id"])
     registrar(camara, (u or {}).get("usuario", "?"), "Senha nova criada pelo link do e-mail", "", ip)
@@ -960,14 +1198,15 @@ def redefinir_com_link(camara, token, nova, ip):
 
 
 def trocar_senha(u, atual, nova):
-    r = _db().execute("SELECT senha FROM usuarios WHERE id=?", (u["id"],)).fetchone()
+    c = _cam(u["camara"])
+    r = c.execute("SELECT senha FROM usuarios WHERE id=?", (u["id"],)).fetchone()
     if not r or not confere_senha(str(atual), r["senha"]):
         return "A senha atual não confere."
     if len(str(nova)) < 8:
         return "A nova senha precisa ter pelo menos 8 caracteres."
-    _db().execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(nova)), u["id"]))
+    c.execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(nova)), u["id"]))
     _gravar_dados_usuario(u["id"], lambda d: d.pop("trocarSenha", None))
-    _db().execute("DELETE FROM sessoes WHERE usuario_id=?", (u["id"],))
+    c.execute("DELETE FROM sessoes WHERE usuario_id=?", (u["id"],))
     registrar(u["camara"], u["usuario"], "Senha trocada")
     return ""
 
@@ -977,13 +1216,13 @@ def cadastro(camara, d, ip):
     cargo_id = str(d.get("cargoId", ""))
     if not nome or not re.fullmatch(r"[\w.\-]{3,30}", login_) or len(senha) < 8:
         return "Informe nome, usuário (3 a 30 letras ou números) e senha com pelo menos 8 caracteres."
-    if _db().execute("SELECT 1 FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone():
+    if _cam(camara).execute("SELECT 1 FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone():
         return "Este usuário já existe."
     if cargo_id in CARGOS_UNICOS and cargo_id in cargos_ocupados(camara):
         return "Esse cargo já tem um usuário cadastrado. Fale com o administrador."
     dados = {"usuario": login_, "nome": nome[:120], "cargoId": cargo_id, "cargo": str(d.get("cargo", ""))[:80],
              "setor": str(d.get("setor", ""))[:80], "perfil": str(d.get("perfil", "usuario"))[:20], "orgao": "cam",
-             "municipio": "Neves Paulista — SP", "ativo": False, "pendente": True, "criadoEm": agora(),
+             "municipio": municipio_da_camara(camara), "ativo": False, "pendente": True, "criadoEm": agora(),
              "vereadorPedido": str(d.get("vereadorId", ""))[:20], "telefone": re.sub(r"[^\d]", "", str(d.get("telefone", "")))[:13]}
     if dados["perfil"] in ("admin",):
         dados["perfil"] = "usuario"
@@ -1030,7 +1269,7 @@ def salvar_arquivo(camara, tipo, conteudo, publico, por, acesso=None):
             fh.write(conteudo)
         os.replace(tmp, caminho)
     tipo = (tipo or "application/octet-stream")[:80]
-    c = _db()
+    c = _cam(camara)
     antes = c.execute("SELECT acesso FROM arquivos WHERE camara=? AND id=?", (camara, aid)).fetchone()
     novo = None
     if isinstance(acesso, dict):
@@ -1093,7 +1332,7 @@ def ler_arquivo(camara, aid, u):
     """Devolve (tipo, caminho) se a pessoa pode ver o arquivo; senão None."""
     if not re.fullmatch(r"[0-9a-f]{40}", aid or ""):
         return None
-    r = _db().execute("SELECT tipo, publico, acesso FROM arquivos WHERE camara=? AND id=?", (camara, aid)).fetchone()
+    r = _cam(camara).execute("SELECT tipo, publico, acesso FROM arquivos WHERE camara=? AND id=?", (camara, aid)).fetchone()
     if not r or not (r["publico"] or u):
         return None
     if r["acesso"] and not r["publico"]:
@@ -1113,7 +1352,7 @@ def ler_arquivo(camara, aid, u):
 
 def migrar_arquivos(camara):
     """Uma vez por câmara: tira os arquivos que já estavam dentro das informações (e do histórico)."""
-    c = _db()
+    c = _cam(camara)
     marca = "arquivos_v1:" + camara
     if c.execute("SELECT 1 FROM contador WHERE nome=?", (marca,)).fetchone():
         return
@@ -1185,7 +1424,7 @@ class Quem:
         self._comp = None
 
     def _ler(self, chave):
-        r = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (self.camara, chave)).fetchone()
+        r = _cam(self.camara).execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (self.camara, chave)).fetchone()
         try:
             return json.loads(r["valor"]) if r else None
         except Exception:
@@ -1430,7 +1669,7 @@ def mesclar_auditoria(camara, valor_txt, u):
         novo = json.loads(valor_txt)
     except Exception:
         novo = []
-    r = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, AUDITORIA)).fetchone()
+    r = _cam(camara).execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, AUDITORIA)).fetchone()
     try:
         velho = json.loads(r["valor"]) if r else []
     except Exception:
@@ -1446,7 +1685,7 @@ def mesclar_auditoria(camara, valor_txt, u):
 
 
 def registro_servidor(camara, n=500):
-    lin = _db().execute("SELECT id, quando, usuario, acao, detalhe, ip FROM registro WHERE camara=? ORDER BY id DESC LIMIT ?", (camara, n)).fetchall()
+    lin = _cam(camara).execute("SELECT id, quando, usuario, acao, detalhe, ip FROM registro WHERE camara=? ORDER BY id DESC LIMIT ?", (camara, n)).fetchall()
     return json.dumps([dict(x) for x in lin], ensure_ascii=False)
 
 
@@ -1475,7 +1714,7 @@ def _publico(chave, valor_txt):
 
 
 def carregar(camara, u):
-    c = _db()
+    c = _cam(camara)
     seq = c.execute("SELECT COALESCE(MAX(seq),0) FROM dados WHERE camara=?", (camara,)).fetchone()[0]
     out = {}
     q = Quem(camara, u) if u else None
@@ -1498,7 +1737,7 @@ def carregar(camara, u):
 
 
 def mudancas(camara, desde, u):
-    lin = _db().execute("SELECT chave, valor, versao, seq, por FROM dados WHERE camara=? AND seq>? ORDER BY seq", (camara, desde)).fetchall()
+    lin = _cam(camara).execute("SELECT chave, valor, versao, seq, por FROM dados WHERE camara=? AND seq>? ORDER BY seq", (camara, desde)).fetchall()
     out, ult = {}, desde
     q = Quem(camara, u) if u else None
     for r in lin:
@@ -1517,7 +1756,7 @@ def mudancas(camara, desde, u):
 
 def gravar(camara, chave, valor, versao_base, autor_login):
     """Grava se a versão do navegador for a atual; senão devolve o valor atual para juntar (409)."""
-    c = _db()
+    c = _cam(camara)
     valor = extrair_arquivos(camara, chave, valor, autor_login)
     with _trava:
         r = c.execute("SELECT valor, versao FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()
@@ -1533,19 +1772,19 @@ def gravar(camara, chave, valor, versao_base, autor_login):
                       (camara, chave, camara, chave))
         c.execute("INSERT INTO dados(camara, chave, valor, versao, seq, quando, por) VALUES(?,?,?,?,?,?,?) "
                   "ON CONFLICT(camara, chave) DO UPDATE SET valor=excluded.valor, versao=excluded.versao, seq=excluded.seq, quando=excluded.quando, por=excluded.por",
-                  (camara, chave, valor, nova, _seq(), agora(), autor_login))
+                  (camara, chave, valor, nova, _seq(_cam(camara)), agora(), autor_login))
         return True, valor, nova
 
 
 def remover(camara, chave, autor_login):
     with _trava:
-        r = _db().execute("SELECT valor, versao FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()
+        r = _cam(camara).execute("SELECT valor, versao FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()
         if r:
-            _db().execute("INSERT INTO historico(camara, chave, versao, valor, quando, por) VALUES(?,?,?,?,?,?)",
+            _cam(camara).execute("INSERT INTO historico(camara, chave, versao, valor, quando, por) VALUES(?,?,?,?,?,?)",
                           (camara, chave, r["versao"], r["valor"], agora(), autor_login))
             # marca como vazio (as outras telas recebem a mudança pela sequência)
-            _db().execute("UPDATE dados SET valor='null', versao=versao+1, seq=?, quando=?, por=? WHERE camara=? AND chave=?",
-                          (_seq(), agora(), autor_login, camara, chave))
+            _cam(camara).execute("UPDATE dados SET valor='null', versao=versao+1, seq=?, quando=?, por=? WHERE camara=? AND chave=?",
+                          (_seq(_cam(camara)), agora(), autor_login, camara, chave))
 
 
 _envios = {}
@@ -1560,7 +1799,7 @@ def envio_publico(camara, chave, itens, ip):
         return "Muitos envios seguidos. Tente de novo mais tarde."
     _envios[ip] = hist + [time.time()]
     with _trava:
-        r = _db().execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()
+        r = _cam(camara).execute("SELECT valor FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()
         try:
             atual = json.loads(r["valor"]) if r else None
         except Exception:

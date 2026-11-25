@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<script src="../assets/sincronia.js?v=202611251449"></script>
-<script src="../assets/carregando.js?v=202611251449"></script>
+<script src="../assets/sincronia.js?v=202611251918"></script>
+<script src="../assets/carregando.js?v=202611251918"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="app/app-192.png">
@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="LegislaGov">
-<script src="app/instalar.js?v=202611251449" defer></script>
+<script src="app/instalar.js?v=202611251918" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LegislaGov — Câmara Municipal</title>
 <link rel="icon" type="image/png" href="logo-legislagov.png">
@@ -852,7 +852,7 @@ input::placeholder,textarea::placeholder {color:#8498b4!important;}
 
     <!-- ============ USUÁRIOS (admin — gestão local) ============ -->
     <section class="view" id="view-usuarios">
-      <div class="letterhead"><div><div class="kicker">LegislaGov — Administração da plataforma</div><h1>Usuários</h1><div class="date">Todos os usuários cadastrados neste navegador, organizados por município</div></div></div>
+      <div class="letterhead"><div><div class="kicker">LegislaGov — Administração da plataforma</div><h1>Usuários</h1><div class="date">Vereadores, Presidente, comissões e usuários desta Câmara</div></div></div>
       <div id="usuarios-por-municipio"></div>
     </section>
 
@@ -1901,7 +1901,7 @@ function setMode(mode) {
 <script>
 /* Testes locais: mantém a navegação, expedientes, matérias, comissões e documentos do index original. */
 const LG_USERS='lg_camara_local_users_v3', LG_SESSION='lg_camara_session_v3';
-const LG_MUNICIPIO='Neves Paulista — SP';
+const LG_MUNICIPIO=(window.LG_SYNC&&LG_SYNC.ativo&&LG_SYNC.cidade)?(LG_SYNC.cidade+' — '+LG_SYNC.uf):'Neves Paulista — SP';
 function lgUsers(){try{return JSON.parse(localStorage.getItem(LG_USERS))||[]}catch{return []}}
 function lgSaveUsers(users){localStorage.setItem(LG_USERS,JSON.stringify(users))}
 function lgSeed(){let a=lgUsers();let r=a.find(u=>u.usuario.toLowerCase()==='ricardo');if(r){r.cargo='Administrador do sistema';r.setor='Administração do sistema';r.orgao='cam';r.perfil='admin';r.ativo=true;r.senha='123456';}else{a.push({id:'usr-ricardo',usuario:'Ricardo',senha:'123456',nome:'Ricardo',cargo:'Administrador do sistema',setor:'Administração do sistema',orgao:'cam',perfil:'admin',municipio:LG_MUNICIPIO,ativo:true});}if(!a.some(u=>u.usuario.toLowerCase()==='administrador'))a.push({id:'adm-local',usuario:'Administrador',senha:'admin123',nome:'Administrador',cargo:'Administrador da Câmara',orgao:'ambos',perfil:'admin',municipio:LG_MUNICIPIO,ativo:true});lgSaveUsers(a)}
@@ -2697,8 +2697,8 @@ window.lgv31Icon=ic;
 const URLS={
  leis:()=>localStorage.getItem('lgv31_url_leis')||'https://nevespaulista.siscam.com.br/',
  webmail:()=>{try{const c=JSON.parse(localStorage.getItem('lgt_site_cfg_v1')||'{}');if(c.webmail)return c.webmail}catch(e){}return 'http://webmail.camaranevespaulista.sp.gov.br'},
- transp:()=>(/\/painel\//.test(location.pathname)?'../transparencia.html':'transparencia.html'),
- site:()=>localStorage.getItem('lgv31_url_site')||(/\/painel\//.test(location.pathname)?'../index.html':'https://www.camaranevespaulista.sp.gov.br/')
+ transp:()=>{const S=window.LG_SYNC||{};if(S.entrada&&S.site)return S.site+'transparencia.html';return /\/painel\//.test(location.pathname)?'../transparencia.html':'transparencia.html'},
+ site:()=>{const S=window.LG_SYNC||{};if(S.entrada&&S.site)return S.site;return localStorage.getItem('lgv31_url_site')||(/\/painel\//.test(location.pathname)?'../index.html':'https://www.camaranevespaulista.sp.gov.br/')}
 };
 
 /* Áreas do sistema. Cada área tem o seu menu; o acesso é liberado por usuário em Gestão › Áreas e acessos. */
@@ -3242,26 +3242,26 @@ html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-msg{color:#c5
 html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-card:not(.bloq):hover,html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-card:not(.bloq):focus-visible{border-color:#1f4e79!important;background:#fff!important}
 </style>
 
-<script src="../assets/transparencia-catalogo.js?v=202611251449"></script>
-<script src="lgt-publicacoes.js?v=202611251449"></script>
-<script src="lgok-confirmar.js?v=202611251449"></script>
-<script src="lgf-financeiro.js?v=202611251449"></script>
-<script src="lgs-assinatura.js?v=202611251449"></script>
-<script src="lgvr-vereador.js?v=202611251449"></script>
-<script src="lgcm-comissoes.js?v=202611251449"></script>
-<script src="lgcg-cargos.js?v=202611251449"></script>
-<script src="lgux-facil.js?v=202611251449"></script>
-<script src="../assets/leis-comum.js?v=202611251449"></script>
-<script src="../assets/tv.js?v=202611251449"></script>
-<script src="lgpl-plenario.js?v=202611251449"></script>
-<script src="lgfx-funcoes.js?v=202611251449"></script>
-<script src="lgav-avisos.js?v=202611251449"></script>
-<script src="../assets/qr.js?v=202611251449"></script>
-<script src="lgpr-protocolo.js?v=202611251449"></script>
-<script src="lgrl-relatorios.js?v=202611251449"></script>
-<script src="lglt-linha-tempo.js?v=202611251449"></script>
-<script src="lgct-conta.js?v=202611251449"></script>
-<script src="lgsg-seguranca.js?v=202611251449"></script>
-<script src="lgsc-site.js?v=202611251449"></script>
-<script src="lgtr-treinamento.js?v=202611251449"></script>
+<script src="../assets/transparencia-catalogo.js?v=202611251918"></script>
+<script src="lgt-publicacoes.js?v=202611251918"></script>
+<script src="lgok-confirmar.js?v=202611251918"></script>
+<script src="lgf-financeiro.js?v=202611251918"></script>
+<script src="lgs-assinatura.js?v=202611251918"></script>
+<script src="lgvr-vereador.js?v=202611251918"></script>
+<script src="lgcm-comissoes.js?v=202611251918"></script>
+<script src="lgcg-cargos.js?v=202611251918"></script>
+<script src="lgux-facil.js?v=202611251918"></script>
+<script src="../assets/leis-comum.js?v=202611251918"></script>
+<script src="../assets/tv.js?v=202611251918"></script>
+<script src="lgpl-plenario.js?v=202611251918"></script>
+<script src="lgfx-funcoes.js?v=202611251918"></script>
+<script src="lgav-avisos.js?v=202611251918"></script>
+<script src="../assets/qr.js?v=202611251918"></script>
+<script src="lgpr-protocolo.js?v=202611251918"></script>
+<script src="lgrl-relatorios.js?v=202611251918"></script>
+<script src="lglt-linha-tempo.js?v=202611251918"></script>
+<script src="lgct-conta.js?v=202611251918"></script>
+<script src="lgsg-seguranca.js?v=202611251918"></script>
+<script src="lgsc-site.js?v=202611251918"></script>
+<script src="lgtr-treinamento.js?v=202611251918"></script>
 </body></html>

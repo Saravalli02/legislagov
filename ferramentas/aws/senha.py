@@ -19,11 +19,10 @@ if not args:
     print(__doc__)
     sys.exit(1)
 login = args[0]
-lgapi._db()
-for linha in open(os.path.join(lgapi.PASTA, "ferramentas", "aws", "dominios.txt"), encoding="utf-8"):
-    p = linha.split("#", 1)[0].split()
-    if len(p) >= 2 and (not camara or p[1] == camara):
-        lgapi.semear(p[1])   # garante que a câmara e os administradores existem
+lgapi._geral()
+for cam in lgapi.camaras_ids():
+    if not camara or cam == camara:
+        lgapi.semear(cam)   # garante que o banco da Câmara e os administradores existem
 s1 = getpass.getpass(f"Nova senha para {login}: ")
 s2 = getpass.getpass("Repita a senha: ")
 if s1 != s2:

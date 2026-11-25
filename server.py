@@ -314,6 +314,14 @@ def camara_do_host(host):
     return _dominios["mapa"].get(h) or (os.environ.get("LG_CAMARA_PADRAO", "teste"), "site")
 
 
+def site_da_camara(camara):
+    """Endereço do site público da Câmara (primeiro endereço 'site' dela no dominios.txt)."""
+    camara_do_host("")
+    doms = sorted((d for d, (c, m) in _dominios["mapa"].items() if c == camara and m == "site"),
+                  key=lambda d: (d.endswith(".legislagov.com.br"), d.startswith("www."), len(d)))
+    return f"https://{doms[0]}/" if doms else ""
+
+
 def plano_da_camara(camara):
     """Pacote contratado: 'completo' (padrão) ou 'protocolo' (só Protocolo e Tramitação)."""
     camara_do_host("")
@@ -392,9 +400,9 @@ class Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     # ---------------------------------------------------------------- banco de dados (LG_BANCO=1)
-    def _json(self, cod, dados, cookie=None):
+    def _json(self, cod, dados, cookie=None, extras=None):
         if getattr(self, "_fila", None) is not None:   # dentro da trava do banco: envia depois
-            self._fila.append((self._json, (cod, dados), {"cookie": cookie}))
+            self._fila.append((self._json, (cod, dados), {"cookie": cookie, "extras": extras if extras is not None else getattr(self, "_cookies_extras", None)}))
             return True
         corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
         self.send_response(cod)
@@ -407,6 +415,8 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_header("Set-Cookie", f"lg_sessao={cookie}; Path=/; HttpOnly; SameSite=Lax; Max-Age={lgapi.SESSAO_DIAS * 86400}{seguro}")
             else:
                 self.send_header("Set-Cookie", f"lg_sessao=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0{seguro}")
+        for c in extras or getattr(self, "_cookies_extras", None) or []:
+            self.send_header("Set-Cookie", c + ("; Secure" if self.headers.get("X-Forwarded-Proto") == "https" else ""))
         self.end_headers()
         self.wfile.write(corpo)
         return True
@@ -480,6 +490,12 @@ class Handler(SimpleHTTPRequestHandler):
         if not lgapi.ativo():
             return False
         camara, modo = camara_do_host(self.headers.get("Host"))
+        self._entrada = modo == "entrada"
+        self._cookies_extras = None
+        if self._entrada:
+            ck = SimpleCookie(self.headers.get("Cookie", ""))
+            camara = ck["lg_camara"].value if "lg_camara" in ck else ""
+            modo = "sistema"
         # O banco (uma conexão SQLite) atende um pedido por vez: o corpo é lido antes e a resposta é
         # enviada depois, fora da trava, para um celular lento não segurar os outros usuários.
         self._bruto = None
@@ -498,8 +514,35 @@ class Handler(SimpleHTTPRequestHandler):
             fn(*args, **kw)
         return r
 
+    def _camara_valida(self, camara):
+        i = lgapi.camara_info(camara) if camara else None
+        return camara if i and i.get("ativo") else ""
+
     def _api_rotas(self, metodo, caminho, camara, modo):
         try:
+            if self._entrada:
+                # entrada única (painel.legislagov.com.br): a pessoa escolhe a Câmara no login
+                if metodo != "GET" and self.headers.get("X-LG") != "1":
+                    return self._json(403, {"ok": False, "erro": "Requisição recusada."})
+                corpo_cam = ""
+                if caminho in ("/api/login", "/api/senha/esqueci", "/api/senha/redefinir") and metodo == "POST":
+                    d0 = self._corpo(20_000)
+                    corpo_cam = str(d0.get("camara") or "")
+                    if not self._camara_valida(corpo_cam):
+                        return self._json(400, {"ok": False, "erro": "Escolha a sua Câmara."})
+                    camara = corpo_cam
+                camara = self._camara_valida(camara)
+                lista = [{"id": c["id"], "nome": c["nome"], "cidade": c.get("cidade") or "", "uf": c.get("uf") or ""} for c in lgapi.camaras(so_ativas=True)]
+                if not camara:
+                    if caminho == "/api/inicio" and metodo == "GET":
+                        return self._json(200, {"ok": True, "entrada": True, "camaras": lista, "camara": "", "modo": "sistema", "plano": "completo",
+                                                "eu": None, "dados": {}, "seq": 0, "ocupados": []})
+                    if caminho == "/api/logout" and metodo == "POST":
+                        return self._json(200, {"ok": True}, cookie="")
+                    return self._json(401, {"ok": False, "erro": "Escolha a sua Câmara e entre de novo."})
+                if corpo_cam:
+                    self._cookies_extras = [f"lg_camara={camara}; Path=/; HttpOnly; SameSite=Lax; Max-Age={lgapi.SESSAO_DIAS * 86400}"]
+                self._entrada_lista = lista
             lgapi.semear(camara)
             ck = SimpleCookie(self.headers.get("Cookie", ""))
             token = ck["lg_sessao"].value if "lg_sessao" in ck else ""
@@ -507,14 +550,20 @@ class Handler(SimpleHTTPRequestHandler):
             # gravações exigem o cabeçalho X-LG (bloqueia envio disfarçado vindo de outro site)
             if metodo != "GET" and self.headers.get("X-LG") != "1":
                 return self._json(403, {"ok": False, "erro": "Requisição recusada."})
+            # senha provisória: até criar a própria senha, a pessoa não grava nada
+            if u and u.get("trocarSenha") and metodo != "GET" and caminho not in ("/api/senha", "/api/logout", "/api/meu-email", "/api/login"):
+                return self._json(403, {"ok": False, "erro": "Crie a sua senha antes de continuar.", "trocarSenha": True})
             ip = self._ip()
             if caminho == "/api/inicio" and metodo == "GET":
                 if "publico=1" in self.path:
                     u = None
                 dados, seq = lgapi.carregar(camara, u)
                 eu = {k: v for k, v in u.items() if k != "senha"} if u else None
+                ci = lgapi.camara_info(camara) or {}
+                extra = {"entrada": True, "camaras": self._entrada_lista} if self._entrada else {}
                 return self._json(200, {"ok": True, "camara": camara, "modo": modo, "plano": plano_da_camara(camara), "eu": eu, "dados": dados, "seq": seq,
-                                        "ocupados": lgapi.cargos_ocupados(camara)})
+                                        "ocupados": lgapi.cargos_ocupados(camara), "camaraNome": ci.get("nome") or "", "cidade": ci.get("cidade") or "",
+                                        "uf": ci.get("uf") or "", "site": site_da_camara(camara), **extra})
             if caminho == "/api/cargos" and metodo == "GET":
                 return self._json(200, {"ok": True, "ocupados": lgapi.cargos_ocupados(camara)})
             if caminho == "/api/login" and metodo == "POST":
@@ -530,7 +579,9 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(200, {"ok": True, "id": usr["id"], "provisoria": bool(usr.get("trocarSenha")) or str(d.get("senha", "")) in ("123456", "admin123")},
                                   cookie=lgapi.criar_sessao(usr))
             if caminho == "/api/logout" and metodo == "POST":
-                lgapi.encerrar(token)
+                lgapi.encerrar(token, camara)
+                if self._entrada:
+                    self._cookies_extras = ["lg_camara=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"]
                 return self._json(200, {"ok": True}, cookie="")
             if caminho == "/api/cadastro" and metodo == "POST":
                 erro = lgapi.cadastro(camara, self._corpo(20_000), ip)
@@ -543,7 +594,8 @@ class Handler(SimpleHTTPRequestHandler):
             if caminho == "/api/senha/esqueci" and metodo == "POST":
                 d = self._corpo(5_000)
                 proto = "https" if self.headers.get("X-Forwarded-Proto") == "https" else "http"
-                lgapi.pedir_redefinicao(camara, str(d.get("usuario", ""))[:60], f"{proto}://{self.headers.get('Host')}", ip)
+                lgapi.pedir_redefinicao(camara, str(d.get("usuario", ""))[:60], f"{proto}://{self.headers.get('Host')}", ip,
+                                        sufixo=("&c=" + camara) if self._entrada else "")
                 import lgenvio
                 return self._json(200, {"ok": True, "email": lgenvio.configurado()})
             if caminho == "/api/senha/redefinir" and metodo == "POST":
@@ -654,7 +706,7 @@ class Handler(SimpleHTTPRequestHandler):
                         return self._json(200, resp)
                     with lgapi._trava:
                         # versão antiga: primeiro junta (409); só depois confere a permissão sobre o que mudou
-                        r0 = lgapi._db().execute("SELECT valor, versao FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()
+                        r0 = lgapi._cam(camara).execute("SELECT valor, versao FROM dados WHERE camara=? AND chave=?", (camara, chave)).fetchone()
                         if r0 and d.get("versao") is not None and int(d.get("versao")) != r0["versao"]:
                             return self._json(409, {"ok": False, "valor": r0["valor"], "versao": r0["versao"]})
                         pode, motivo = lgapi.pode_gravar_valor(camara, chave, u, valor)
@@ -702,6 +754,13 @@ class Handler(SimpleHTTPRequestHandler):
         if self._api("GET"):
             return
         caminho = self.path.split("?", 1)[0].split("#", 1)[0]
+        # entrada única do painel (painel.legislagov.com.br): a raiz leva direto para o login
+        if camara_do_host(self.headers.get("Host"))[1] == "entrada" and caminho in ("/", "/index.html"):
+            self.send_response(302)
+            self.send_header("Location", "/painel/")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            return
         # Apps (LegislaGov Rural, Painel de e-mails): endereço próprio (modo rural/email) ou /rural/, /email/ no endereço de testes
         camara_r, modo_r = camara_do_host(self.headers.get("Host"))
         partes_r = [p for p in caminho.split("/") if p]

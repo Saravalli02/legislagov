@@ -27,6 +27,27 @@ if ! cmp -s "$APP/ferramentas/aws/importar.versao" /var/lib/legislagov/conteudo/
   systemd-run --unit="legislagov-importacao-$(date +%s)" --no-block /bin/bash -c '/usr/local/bin/legislagov-importar > /var/log/legislagov-importar.log 2>&1' || true
 fi
 
+# cópia diária (03:30) do banco geral e do banco de cada Câmara
+cat > /usr/local/bin/legislagov-copia <<'EOS'
+#!/bin/bash
+# cópia diária: banco geral + banco de cada Câmara (copias/camaras/<câmara>-AAAA-MM-DD.db.gz); guarda 14 dias
+set -e
+D=/var/lib/legislagov; H=$(date +%F)
+[ -f "$D/legislagov.db" ] || exit 0
+mkdir -p "$D/copias/camaras"
+sqlite3 "$D/legislagov.db" ".backup '$D/copias/legislagov-$H.db'"
+gzip -f "$D/copias/legislagov-$H.db"
+for f in "$D"/camaras/*.db; do
+  [ -f "$f" ] || continue
+  n=$(basename "$f" .db)
+  sqlite3 "$f" ".backup '$D/copias/camaras/$n-$H.db'"
+  gzip -f "$D/copias/camaras/$n-$H.db"
+done
+find "$D/copias" -name '*.db.gz' -mtime +14 -delete
+chown -R legislagov:legislagov "$D/copias"
+EOS
+chmod 755 /usr/local/bin/legislagov-copia
+
 # cópia do banco fora do servidor (depósito Lightsail legislagov-backup-sp, São Paulo), 03:45 todo dia
 python3 -c 'import boto3' 2>/dev/null || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-boto3; } || true
 cat > /usr/local/bin/legislagov-copia-externa <<'EOS'

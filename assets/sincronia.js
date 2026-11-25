@@ -8,7 +8,7 @@
 (function () {
   'use strict';
   const PAINEL = /\/painel(\/|$)/.test(location.pathname);
-  const LOCAIS = /^(site_(tema|fonte|cookies|contraste)|lg_contraste|lgv31_.*|lgv27_theme_v1|lgtr_.*|lg_brasao_v1|lgtv_cache_v1|lg_previa_.*|legislagov_v7_rascunho_.*|lgc_seguindo_v1|lg_area|lgp_escolher|lgvr_como|legislagov_session_v1|lg_camara_session_v3|lgsync_.*)$/;
+  const LOCAIS = /^(site_(tema|fonte|cookies|contraste)|lg_contraste|lgv31_.*|lgv27_theme_v1|lgtr_.*|lg_brasao_v1|lgtv_cache_v1|lg_previa_.*|legislagov_v7_rascunho_.*|lgc_seguindo_v1|lg_area|lgp_escolher|lgvr_como|legislagov_session_v1|lg_camara_session_v3|lg_camara_lembrar|lgsync_.*)$/;
   const ENVIO_PUBLICO = ['lgo_v1', 'site_mensagens', 'site_inscricoes', 'lgc_inscricoes_v1'];
   const USUARIOS = 'lg_camara_local_users_v3', SESSAO = 'lg_camara_session_v3';
   const ST = Storage.prototype, orig = { get: ST.getItem, set: ST.setItem, rem: ST.removeItem, key: ST.key };
@@ -26,7 +26,9 @@
 
   const ver = {}, base = {};
   let seq = info.seq || 0, eu = info.eu || null;
-  const SYNC = window.LG_SYNC = { ativo: true, camara: info.camara, modo: info.modo, plano: info.plano || 'completo', eu, ocupados: info.ocupados || [] };
+  const SYNC = window.LG_SYNC = { ativo: true, camara: info.camara, modo: info.modo, plano: info.plano || 'completo', eu, ocupados: info.ocupados || [],
+    entrada: !!info.entrada, camaras: info.camaras || [], camaraNome: info.camaraNome || '', cidade: info.cidade || '', uf: info.uf || '', site: info.site || '' };
+  const LEMBRAR = 'lg_camara_lembrar';
   try { document.documentElement.classList.add('lg-sincronizado'); } catch (e) { }
 
   function chavesLocais() { const out = []; for (let i = 0; i < LS.length; i++) out.push(orig.key.call(LS, i)); return out; }
@@ -255,11 +257,13 @@
     const v = id => (document.getElementById(id) || {}).value || '';
     const erro = m => { if (typeof window.mostrarErro === 'function') window.mostrarErro('login-error', m); else alert(m); return false; };
     const usuario = v('login-email').trim(), senha = v('login-senha');
+    const camEsc = SYNC.entrada ? v('login-camara') : '';
+    if (SYNC.entrada && !camEsc) return erro('Escolha a sua Câmara.');
     if (!usuario || !senha) return erro('Informe usuário e senha.');
     const btn = document.querySelector('#login-form button[type=submit]'); if (btn) btn.disabled = true;
     try {
       const codEl = document.getElementById('login-codigo');
-      const d = await api('/api/login', { usuario, senha, codigo: codEl ? codEl.value : '' });
+      const d = await api('/api/login', { usuario, senha, codigo: codEl ? codEl.value : '', ...(SYNC.entrada ? { camara: camEsc } : {}) });
       if (d.precisaCodigo) {
         // primeiro acesso com e-mail cadastrado: confirma com o código de 6 números que chegou no e-mail
         let c = codEl;
@@ -276,6 +280,13 @@
         return erro(d.erro);
       }
       if (!d.ok) return erro(d.erro || 'Não foi possível entrar.');
+      if (SYNC.entrada) {
+        try { if ((document.getElementById('login-lembrar') || {}).checked) orig.set.call(LS, LEMBRAR, camEsc); else orig.rem.call(LS, LEMBRAR); } catch (e) { }
+        if (camEsc !== SYNC.camara) {   // outra Câmara: recarrega já dentro dela (dados, nome e site da Câmara certa)
+          try { sessionStorage.setItem(SESSAO, d.id); } catch (e) { }
+          location.reload(); return false;
+        }
+      }
       const r = await fetch('/api/inicio', { credentials: 'same-origin' }); const i = await r.json();
       eu = SYNC.eu = i.eu; seq = i.seq || seq;
       // o que só existe aqui (informações iniciais criadas ao abrir) vai para o servidor
@@ -299,20 +310,22 @@
     try { sessionStorage.clear(); } catch (e) { }
     location.reload();
   }
-  function trocarSenha() {
+  function trocarSenha(obrigatoria) {
+    obrigatoria = obrigatoria === true;
     let m = document.getElementById('lgsync-senha'); if (m) m.remove();
     document.body.insertAdjacentHTML('beforeend', `<div id="lgsync-senha" role="dialog" aria-modal="true" aria-labelledby="lgsync-senha-t"><form>
-      <h2 id="lgsync-senha-t">Minha senha e e-mail</h2>
+      <h2 id="lgsync-senha-t">${obrigatoria ? 'Crie a sua senha' : 'Minha senha e e-mail'}</h2>${obrigatoria ? '<p style="margin:0;color:#b4b8be">Este é o seu primeiro acesso (ou a sua senha foi refeita). Para continuar, crie uma senha só sua: ninguém mais vê.</p>' : ''}
       <label>E-mail para recuperar a senha<span style="display:flex;gap:6px"><input type="email" name="email" autocomplete="email" value="${String((eu && eu.email) || '').replace(/"/g, '&quot;')}" placeholder="seu.email@exemplo.com" style="flex:1"><button type="button" data-email>Salvar</button></span></label>
       <p class="ok-email" hidden style="color:#1d7a46;margin:0">E-mail salvo. Se esquecer a senha, o link chega nele.</p>
       <h3 style="margin:10px 0 0;font-size:15px">Trocar a senha</h3>
-      <label>Senha atual<input type="password" name="atual" autocomplete="current-password" required></label>
+      <label>${obrigatoria ? 'Senha provisória (a que você recebeu)' : 'Senha atual'}<input type="password" name="atual" autocomplete="current-password" required></label>
       <label>Nova senha (mínimo 8 caracteres)<input type="password" name="nova" autocomplete="new-password" minlength="8" required></label>
       <label>Repita a nova senha<input type="password" name="nova2" autocomplete="new-password" minlength="8" required></label>
       <p class="erro" hidden></p>
-      <div class="acoes"><button type="button" data-x>Cancelar</button><button type="submit" class="pri">Trocar senha</button></div></form></div>`);
+      <div class="acoes">${obrigatoria ? '<button type="button" data-sair>Sair</button>' : '<button type="button" data-x>Cancelar</button>'}<button type="submit" class="pri">${obrigatoria ? 'Criar minha senha' : 'Trocar senha'}</button></div></form></div>`);
     m = document.getElementById('lgsync-senha'); const f = m.querySelector('form'), er = m.querySelector('.erro');
-    m.querySelector('[data-x]').onclick = () => m.remove();
+    if (m.querySelector('[data-x]')) m.querySelector('[data-x]').onclick = () => m.remove();
+    if (m.querySelector('[data-sair]')) m.querySelector('[data-sair]').onclick = () => sair();
     m.querySelector('[data-email]').onclick = async () => {
       const em = m.querySelector('[name=email]').value.trim();
       const r = await api('/api/meu-email', { email: em });
@@ -331,13 +344,42 @@
     };
   }
   function avisoSenha(provisoria) {
-    if (!provisoria || document.getElementById('lgsync-aviso')) return;
-    document.body.insertAdjacentHTML('beforeend', '<div id="lgsync-aviso" role="alert">Você entrou com a senha provisória. <button type="button">Criar minha senha</button><button type="button" aria-label="Fechar" class="x">×</button></div>');
-    const a = document.getElementById('lgsync-aviso'); a.querySelector('button').onclick = () => { a.remove(); trocarSenha(); }; a.querySelector('.x').onclick = () => a.remove();
+    // senha provisória: a pessoa só continua depois de criar a própria senha (o servidor também não deixa gravar nada antes)
+    if (!provisoria || document.getElementById('lgsync-senha')) return;
+    trocarSenha(true);
   }
   SYNC.trocarSenha = trocarSenha; SYNC.sair = sair;
   window.lgTrocarSenha = trocarSenha;
 
+  /* entrada única (painel.legislagov.com.br): a pessoa escolhe a Câmara no login; "Lembrar esta Câmara" guarda a escolha neste aparelho */
+  function escolhaDaCamara() {
+    const f = document.getElementById('login-form'); if (!f || document.getElementById('login-camara')) return;
+    let lembrada = ''; try { lembrada = orig.get.call(LS, LEMBRAR) || ''; } catch (e) { }
+    const sel = SYNC.camara || lembrada, esc = t => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const caixa = document.createElement('div'); caixa.className = 'field-group lgsync-camara';
+    caixa.innerHTML = `<label for="login-camara">Câmara</label><select id="login-camara" required><option value="">Escolha a sua Câmara</option>${SYNC.camaras.map(c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(c.nome)}${c.cidade ? ' — ' + esc(c.cidade) + '/' + esc(c.uf) : ''}</option>`).join('')}</select>
+      <label class="lgsync-lembrar"><input type="checkbox" id="login-lembrar"${lembrada ? ' checked' : ''}><span>Lembrar esta Câmara neste aparelho</span></label>`;
+    const ref = document.getElementById('login-email'); const g = ref && (ref.closest('.field-group') || ref.parentNode);
+    if (g && g.parentNode === f) f.insertBefore(caixa, g); else f.insertBefore(caixa, f.firstChild);
+  }
+  /* nome da Câmara nas telas (o painel nasceu com o nome de Neves Paulista escrito) */
+  function nomeDaCamara() {
+    if (!SYNC.camaraNome || /neves paulista/i.test(SYNC.camaraNome) || SYNC.camara === 'teste') return;
+    const nome = SYNC.camaraNome, cid = SYNC.cidade || '';
+    const troca = t => t.replace(/C[âa]mara Municipal de Neves Paulista/g, nome).replace(/C[ÂA]MARA MUNICIPAL DE NEVES PAULISTA/g, nome.toUpperCase())
+      .replace(/Neves Paulista/g, cid || nome).replace(/NEVES PAULISTA/g, (cid || nome).toUpperCase());
+    const passa = raiz => {
+      const w = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT); let n;
+      while ((n = w.nextNode())) {
+        const v = n.nodeValue; if (!v || !/neves paulista/i.test(v)) continue;
+        const pe = n.parentElement; if (!pe || pe.closest('script,style,textarea,[contenteditable],select,option')) continue;
+        n.nodeValue = troca(v);
+      }
+    };
+    passa(document.body);
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(x => { if (x.nodeType === 1) passa(x); else if (x.nodeType === 3 && /neves paulista/i.test(x.nodeValue || '')) { const pe = x.parentElement; if (pe && !pe.closest('script,style,textarea,[contenteditable],select,option')) x.nodeValue = troca(x.nodeValue); } }))).observe(document.body, { childList: true, subtree: true });
+    document.title = troca(document.title);
+  }
   function estilos() {
     const s = document.createElement('style'); s.textContent = `
     #lgsync-status{position:fixed;left:14px;bottom:14px;z-index:99999;font:600 12px/1.2 system-ui,sans-serif;padding:8px 12px;border-radius:999px;background:#1f2937;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:none}
@@ -346,11 +388,12 @@
     #lgsync-aviso button{background:#f2f3f5;color:#111;border:0;border-radius:7px;padding:6px 10px;font-weight:600;cursor:pointer}#lgsync-aviso .x{background:transparent;color:#f3dfa6;font-size:18px;padding:0 4px}
     #lgsync-senha{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
     #lgsync-senha form{background:#0d0e10;border:1px solid #2a2c31;border-radius:14px;padding:22px;width:min(100%,380px);color:#f3f4f6;font:14px system-ui,sans-serif;display:grid;gap:12px}
-    #lgsync-senha h2{margin:0;font-size:18px}#lgsync-senha label{display:grid;gap:6px;color:#b4b8be;font-size:13px}
+    #lgsync-senha h2{margin:0;font-size:18px;color:#fff}#lgsync-senha label{display:grid;gap:6px;color:#b4b8be;font-size:13px}
     #lgsync-senha input{background:#141517;border:1px solid #2c2f34;color:#fff;border-radius:9px;padding:10px 12px;font:inherit}
     #lgsync-senha .erro{color:#fca5a5;margin:0}#lgsync-senha .acoes{display:flex;gap:8px;justify-content:flex-end}
     #lgsync-senha button{border-radius:9px;padding:9px 14px;border:1px solid #2c2f34;background:transparent;color:#e5e7eb;font-weight:600;cursor:pointer}#lgsync-senha button.pri{background:#f2f3f5;color:#0b0c0e;border:0}
-    .lgsync-trocar{margin-top:6px}`;
+    .lgsync-trocar{margin-top:6px}
+    .lgsync-camara select{width:100%}.lgsync-lembrar{display:flex!important;align-items:center;gap:8px;margin-top:8px;font-weight:500;cursor:pointer}.lgsync-lembrar input{width:18px;height:18px;margin:0;accent-color:#2457c5}`;
     document.head.appendChild(s);
   }
   if (PAINEL) {
@@ -361,7 +404,10 @@
       window.fazerLogout = sair;
       window.lgSeed = function () { };   // usuários iniciais agora são criados no servidor
       const demo = document.querySelector('#auth-screen .demo-alert');
-      if (demo) demo.textContent = 'AMBIENTE DE TESTES · Os dados ficam no servidor da Câmara e todos os usuários veem as mesmas informações.';
+      if (demo && SYNC.entrada) demo.remove();   // entrada única: cada Câmara tem o seu banco; aviso de teste não se aplica
+      else if (demo) demo.textContent = 'AMBIENTE DE TESTES · Os dados ficam no servidor da Câmara e todos os usuários veem as mesmas informações.';
+      // entrada única: quem cria os usuários é a Procuradoria (Painel do Procurador › Vereadores e usuários)
+      if (SYNC.entrada) { const t = document.getElementById('tab-register'); if (t) { t.remove(); const l = document.getElementById('tab-login'); if (l && l.parentNode) l.parentNode.style.display = 'none'; } }
       const hint = document.querySelector('#register-form .auth-hint');
       if (hint) hint.textContent = 'Seu cadastro fica aguardando a liberação do administrador. O Presidente da Câmara é escolhido pela Procuradoria entre os vereadores.';
       // "Trocar senha" no menu lateral, junto do Sair
@@ -372,6 +418,9 @@
         sair_.parentNode.insertBefore(b, sair_); };
       setInterval(poe, 2000);
       status();
+      if (SYNC.entrada) escolhaDaCamara();
+      if (eu && eu.trocarSenha) setTimeout(() => avisoSenha(true), 900);
+      nomeDaCamara();
     });
   }
 })();

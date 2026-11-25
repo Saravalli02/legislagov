@@ -69,10 +69,12 @@ def definir(sistema, cliente, usuario, bloquear, motivo, por):
         _cache["set"].discard(chave)
     # quem estava dentro sai na hora
     if bloquear and sistema == "camara":
-        if chave[2]:
-            c.execute("DELETE FROM sessoes WHERE camara=? AND usuario_id=?", (chave[1], chave[2]))
-        else:
-            c.execute("DELETE FROM sessoes WHERE camara=?", (chave[1],))
+        if lgapi.eh_camara(chave[1]):
+            cc = lgapi._cam(chave[1])
+            if chave[2]:
+                cc.execute("DELETE FROM sessoes WHERE camara=? AND usuario_id=?", (chave[1], chave[2]))
+            else:
+                cc.execute("DELETE FROM sessoes WHERE camara=?", (chave[1],))
     if bloquear and sistema == "email":
         if chave[2]:
             c.execute("DELETE FROM em_sess WHERE usuario_id=?", (chave[2],))
@@ -96,6 +98,9 @@ def _info(c, sistema, cliente, usuario=""):
 NOMES_CAMARA = {"neves-paulista-sp": "Câmara Municipal de Neves Paulista", "teste": "Ambiente de teste"}
 
 
+ENTRADA_PAINEL = "https://painel.legislagov.com.br/painel/"   # entrada única: a pessoa escolhe a Câmara na lista
+
+
 def painel_url(camara):
     """Endereço do painel de cada câmara, tirado do dominios.txt (prefere o endereço legislagov.com.br)."""
     try:
@@ -106,7 +111,7 @@ def painel_url(camara):
             if len(p) >= 3 and p[1] == camara and p[2] in ("site", "sistema"):
                 doms.append(p[0])
         doms.sort(key=lambda d: (not d.endswith(".legislagov.com.br"), d.startswith("www."), len(d)))
-        return f"https://{doms[0]}/painel/" if doms else ""
+        return f"https://{doms[0]}/painel/" if doms else ENTRADA_PAINEL
     except OSError:
         return ""
 
@@ -117,7 +122,7 @@ def painel(c):
     out = {"ok": True}
     # Câmara (painel legislativo)
     camaras = []
-    for (cam,) in c.execute("SELECT DISTINCT camara FROM usuarios ORDER BY camara").fetchall():
+    for cam in lgapi.camaras_ids():
         us = []
         for u in lgapi.usuarios(cam):
             if u.get("pendente"):
@@ -128,7 +133,9 @@ def painel(c):
                        "cargoId": u.get("cargoId") or "", "admin": u.get("perfil") == "admin" or u.get("orgao") == "ambos", "ativo": u.get("ativo") is not False, **_info(c, "camara", cam, u["id"]),
                        **email_info(c, "camara", "camara:" + u["id"])})
         us.sort(key=lambda x: x["nome"].lower())
-        camaras.append({"id": cam, "nome": NOMES_CAMARA.get(cam, cam), "painel": painel_url(cam), "usuarios": us, **_info(c, "camara", cam)})
+        ci = lgapi.camara_info(cam) or {}
+        camaras.append({"id": cam, "nome": ci.get("nome") or NOMES_CAMARA.get(cam, cam), "cidade": ci.get("cidade") or "", "uf": ci.get("uf") or "",
+                        "cnpj": ci.get("cnpj") or "", "ativa": bool(ci.get("ativo", 1)), "painel": painel_url(cam), "usuarios": us, **_info(c, "camara", cam)})
     out["camara"] = camaras
     # Rural (cada horta é um cliente; a suspensão da horta usa a regra que o Rural já tinha)
     try:
@@ -350,7 +357,7 @@ def master(login, senha):
     if len([x for x in t if agora - x < 900]) >= 5:
         return None
     try:
-        r = lgapi._db().execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=?", (CAMARA_MASTER, login)).fetchone()
+        r = lgapi._cam(CAMARA_MASTER).execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=?", (CAMARA_MASTER, login)).fetchone()
         ok = bool(r and str(r["senha"]).startswith("pbkdf2$") and lgapi.confere_senha(str(senha or ""), r["senha"]))
     except Exception:
         ok = False
@@ -363,7 +370,7 @@ def master(login, senha):
 
 
 def master_hash(login):
-    r = lgapi._db().execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=?", (CAMARA_MASTER, str(login).lower())).fetchone()
+    r = lgapi._cam(CAMARA_MASTER).execute("SELECT senha FROM usuarios WHERE camara=? AND lower(usuario)=?", (CAMARA_MASTER, str(login).lower())).fetchone()
     return r["senha"] if r else None
 
 
@@ -552,21 +559,23 @@ def _cargo_ocupado(camara, cid, menos=None):
 def camara_criar(c, d, por):
     cam, nome, login = str(d.get("camara") or ""), str(d.get("nome") or "").strip()[:120], str(d.get("usuario") or "").strip()
     senha, cg, adm = str(d.get("senha") or ""), _cargo(str(d.get("cargoId") or "")), bool(d.get("admin"))
-    if not c.execute("SELECT 1 FROM usuarios WHERE camara=? LIMIT 1", (cam,)).fetchone():
+    if not lgapi.eh_camara(cam):
         return 404, {"ok": False, "erro": "Câmara não encontrada."}
+    lgapi.semear(cam)
+    cc = lgapi._cam(cam)
     if not nome or not re.fullmatch(r"[\w.\-]{3,30}", login):
         return 400, {"ok": False, "erro": "Preencha o nome e um usuário de 3 a 30 letras ou números, sem espaços."}
     if len(senha) < SENHA_MIN:
         return 400, {"ok": False, "erro": f"A senha precisa ter pelo menos {SENHA_MIN} caracteres."}
     if not cg and not adm:
         return 400, {"ok": False, "erro": "Escolha o cargo (ou marque que é administrador)."}
-    if c.execute("SELECT 1 FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (cam, login)).fetchone():
+    if cc.execute("SELECT 1 FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (cam, login)).fetchone():
         return 409, {"ok": False, "erro": "Este usuário já existe nesta Câmara."}
     if cg and _cargo_ocupado(cam, cg["id"]):
         return 409, {"ok": False, "erro": f"Já existe um usuário ativo no cargo {cg['nome']} (é um cargo único)."}
     cg = cg or {"id": "", "nome": "Administrador do sistema", "setor": "", "perfil": "admin"}
     dados = {"usuario": login, "nome": nome, "cargoId": cg["id"], "cargo": cg["nome"], "setor": cg["setor"],
-             "perfil": "admin" if adm else cg["perfil"], "orgao": "cam", "municipio": "Neves Paulista — SP",
+             "perfil": "admin" if adm else cg["perfil"], "orgao": "cam", "municipio": lgapi.municipio_da_camara(cam),
              "ativo": True, "pendente": False, "criadoEm": lgapi.agora(), "trocarSenha": True}
     if str(d.get("email") or "").strip() and not email_ok(d.get("email")):
         return 400, {"ok": False, "erro": "E-mail inválido."}
@@ -594,7 +603,7 @@ def camara_editar(c, d, por):
         x["perfil"] = "admin" if adm else ((cg or {}).get("perfil") or ("usuario" if x.get("perfil") == "admin" else x.get("perfil") or "usuario"))
     lgapi._gravar_dados_usuario(uid, muda)
     lgapi._marcar_usuarios(cam)
-    c.execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))   # entra de novo já com o cargo novo
+    lgapi._cam(cam).execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))   # entra de novo já com o cargo novo
     lgapi.registrar(cam, por, "Cargo alterado pela GR Central", f"{u['usuario']} · {(cg or {}).get('nome', '')}{' · administrador' if adm else ''}")
     return 200, {"ok": True}
 
@@ -606,14 +615,15 @@ def camara_senha(c, d, por):
     u = next((x for x in lgapi.usuarios(cam) if x["id"] == uid), None)
     if not u:
         return 404, {"ok": False, "erro": "Usuário não encontrado."}
-    c.execute("UPDATE usuarios SET senha=? WHERE id=?", (lgapi.hash_senha(senha), uid))
+    cc = lgapi._cam(cam)
+    cc.execute("UPDATE usuarios SET senha=? WHERE id=?", (lgapi.hash_senha(senha), uid))
 
     def muda(x):
         x["trocarSenha"] = True
         x.pop("bloqueada", None)
         x.pop("falhasSenha", None)
     lgapi._gravar_dados_usuario(uid, muda)
-    c.execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))
+    cc.execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))
     lgapi.registrar(cam, por, "Senha nova dada pela GR Central", u["usuario"])
     return 200, {"ok": True, "usuario": u["usuario"]}
 

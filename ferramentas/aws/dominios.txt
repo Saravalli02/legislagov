@@ -24,3 +24,5 @@ www.grsoftware.com.br          gr                  gr
 central.grsoftware.com.br      central             central
 rural.grsoftware.com.br        rural               rural
 email.grsoftware.com.br        email               email
+painel.legislagov.com.br       *                   entrada
+painel.grsoftware.com.br       *                   entrada

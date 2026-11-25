@@ -50,14 +50,20 @@ def ultima_local():
     return l[-1]
 
 
+def copias_camaras(dia):
+    """Cópias do dia do banco de cada Câmara (copias/camaras/<câmara>-AAAA-MM-DD.db.gz)."""
+    fim = f"-{dia}.db.gz"
+    return {os.path.basename(a)[:-len(fim)]: a for a in sorted(glob.glob(os.path.join(COPIAS, "camaras", "*" + fim)))}
+
+
 def enviar(s3, arq):
     dia = os.path.basename(arq)[len("legislagov-"):-len(".db.gz")]   # AAAA-MM-DD
     enviados = []
-    chave = f"diarias/{dia}.db.gz"
-    s3.upload_file(arq, BUCKET, chave, ExtraArgs={"ServerSideEncryption": "AES256"}); enviados.append(chave)
+    pares = [(arq, f"diarias/{dia}.db.gz")] + [(a, f"diarias/{dia}/camaras/{cam}.db.gz") for cam, a in copias_camaras(dia).items()]
     if dia.endswith("-01"):
-        chave = f"mensais/{dia[:7]}.db.gz"
-        s3.upload_file(arq, BUCKET, chave, ExtraArgs={"ServerSideEncryption": "AES256"}); enviados.append(chave)
+        pares += [(arq, f"mensais/{dia[:7]}.db.gz")] + [(a, f"mensais/{dia[:7]}/camaras/{cam}.db.gz") for cam, a in copias_camaras(dia).items()]
+    for origem, chave in pares:
+        s3.upload_file(origem, BUCKET, chave, ExtraArgs={"ServerSideEncryption": "AES256"}); enviados.append(chave)
     return enviados
 
 
@@ -83,25 +89,39 @@ def limpar(s3):
     return apagados
 
 
+def _abrir_copia(s3, chave, tmp):
+    gz = os.path.join(tmp, "c.db.gz"); db = os.path.join(tmp, "c.db")
+    s3.download_file(BUCKET, chave, gz)
+    with gzip.open(gz, "rb") as i, open(db, "wb") as o:
+        shutil.copyfileobj(i, o)
+    con = sqlite3.connect(db)
+    integ = con.execute("PRAGMA integrity_check").fetchone()[0]
+    n = {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("usuarios", "dados", "historico", "camaras")
+         if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (t,)).fetchone()}
+    con.close()
+    os.remove(db); os.remove(gz)
+    if integ != "ok":
+        raise RuntimeError(f"banco restaurado com defeito ({chave}): {integ}")
+    return n
+
+
 def testar(s3):
-    """Baixa a cópia diária mais recente do depósito e confere se o banco abre inteiro."""
-    objs = s3.list_objects_v2(Bucket=BUCKET, Prefix="diarias/").get("Contents", [])
-    if not objs:
+    """Baixa a cópia diária mais recente do depósito (banco geral + banco de cada Câmara) e confere se abrem inteiros."""
+    objs = []
+    for pagina in s3.get_paginator("list_objects_v2").paginate(Bucket=BUCKET, Prefix="diarias/"):
+        objs += pagina.get("Contents", [])
+    gerais = [o for o in objs if o["Key"].count("/") == 1]
+    if not gerais:
         raise RuntimeError("depósito sem cópias")
-    ult = max(objs, key=lambda o: o["Key"])
+    ult = max(gerais, key=lambda o: o["Key"])
+    dia = ult["Key"][len("diarias/"):-len(".db.gz")]
     tmp = tempfile.mkdtemp(prefix="lg-teste-")
     try:
-        gz = os.path.join(tmp, "c.db.gz"); db = os.path.join(tmp, "c.db")
-        s3.download_file(BUCKET, ult["Key"], gz)
-        with gzip.open(gz, "rb") as i, open(db, "wb") as o:
-            shutil.copyfileobj(i, o)
-        con = sqlite3.connect(db)
-        integ = con.execute("PRAGMA integrity_check").fetchone()[0]
-        n = {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("usuarios", "dados", "historico") if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (t,)).fetchone()}
-        con.close()
-        if integ != "ok":
-            raise RuntimeError("banco restaurado com defeito: " + integ)
-        return {"copia": ult["Key"], "tamanho_mb": round(ult["Size"] / 1048576, 2), "integridade": integ, "registros": n}
+        out = {"copia": ult["Key"], "tamanho_mb": round(ult["Size"] / 1048576, 2), "integridade": "ok", "registros": _abrir_copia(s3, ult["Key"], tmp), "camaras": {}}
+        for o in objs:
+            if o["Key"].startswith(f"diarias/{dia}/camaras/"):
+                out["camaras"][o["Key"].rsplit("/", 1)[1][:-len(".db.gz")]] = _abrir_copia(s3, o["Key"], tmp)
+        return out
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

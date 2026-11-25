@@ -466,7 +466,7 @@ def rota(h, metodo, camara_do_host):
                         return _resp(h, 400, {"ok": False, "erro": "Preencha nome e login."})
                     if len(senha) < 8:
                         return _resp(h, 400, {"ok": False, "erro": "A senha inicial precisa ter pelo menos 8 caracteres."})
-                    if _db().execute("SELECT 1 FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone():
+                    if lgapi._cam(camara).execute("SELECT 1 FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (camara, login_)).fetchone():
                         return _resp(h, 400, {"ok": False, "erro": "Este login já existe. Escolha outro."})
                     lgapi._criar_usuario(camara, {"usuario": login_, "nome": nome, "perfil": perfil, "cargo": "Atendimento WhatsApp",
                                                   "orgao": "ambos" if perfil == "admin" else "exec", "ativo": True}, senha)
@@ -479,9 +479,9 @@ def rota(h, metodo, camara_do_host):
                         return _resp(h, 400, {"ok": False, "erro": "Você não pode desativar o próprio login."})
                     alvo["ativo"] = acao == "ativar"
                     dados = {k: v for k, v in alvo.items() if k not in ("id", "usuario", "camara", "senha")}
-                    _db().execute("UPDATE usuarios SET dados=? WHERE id=?", (json.dumps(dados, ensure_ascii=False), alvo["id"]))
+                    lgapi._cam(camara).execute("UPDATE usuarios SET dados=? WHERE id=?", (json.dumps(dados, ensure_ascii=False), alvo["id"]))
                     if acao == "desativar":
-                        _db().execute("DELETE FROM sessoes WHERE usuario_id=?", (alvo["id"],))
+                        lgapi._cam(camara).execute("DELETE FROM sessoes WHERE usuario_id=?", (alvo["id"],))
                     lgapi.registrar(camara, u["usuario"], f"WhatsApp: login {acao}do", alvo["usuario"], _ip(h))
                 elif acao == "senha":
                     alvo = lgapi._usuario(str(d.get("id", "")))
@@ -490,8 +490,8 @@ def rota(h, metodo, camara_do_host):
                         return _resp(h, 404, {"ok": False, "erro": "Login não encontrado."})
                     if len(senha) < 8:
                         return _resp(h, 400, {"ok": False, "erro": "A senha precisa ter pelo menos 8 caracteres."})
-                    _db().execute("UPDATE usuarios SET senha=? WHERE id=?", (lgapi.hash_senha(senha), alvo["id"]))
-                    _db().execute("DELETE FROM sessoes WHERE usuario_id=?", (alvo["id"],))
+                    lgapi._cam(camara).execute("UPDATE usuarios SET senha=? WHERE id=?", (lgapi.hash_senha(senha), alvo["id"]))
+                    lgapi._cam(camara).execute("DELETE FROM sessoes WHERE usuario_id=?", (alvo["id"],))
                     lgapi.registrar(camara, u["usuario"], "WhatsApp: senha redefinida", alvo["usuario"], _ip(h))
                 else:
                     return _resp(h, 400, {"ok": False, "erro": "Ação desconhecida."})
