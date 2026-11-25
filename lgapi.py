@@ -1133,8 +1133,8 @@ def migrar_arquivos(camara):
 # ---------------------------------------------------------------- permissões (conferidas aqui, não só na tela)
 # Mesmo modelo do painel (lgt-publicacoes.js): perfil → painéis; exceções em "Áreas e acessos" (lgt_areas_v1).
 PERFIS_AREAS = {
-    "adm": {"legislativo": "edicao", "vereador": "edicao", "transparencia": "edicao", "financeiro": "edicao", "site": "edicao"},
-    "procurador": {"legislativo": "edicao"},
+    "adm": {"procuradoria": "edicao", "legislativo": "edicao", "vereador": "edicao", "transparencia": "edicao", "financeiro": "edicao", "site": "edicao"},
+    "procurador": {"procuradoria": "edicao"},
     "secretaria": {"legislativo": "edicao"},
     "financeiro": {"financeiro": "edicao", "transparencia": "edicao"},
     "vereador": {"vereador": "edicao"},
@@ -1269,7 +1269,7 @@ class Quem:
 
     @property
     def edita_algo(self):
-        return self.edita("legislativo", "vereador", "transparencia", "site", "financeiro")
+        return self.edita("procuradoria", "legislativo", "vereador", "transparencia", "site", "financeiro")
 
 
 def _regra(chave, q):

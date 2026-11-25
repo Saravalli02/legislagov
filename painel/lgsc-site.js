@@ -42,7 +42,7 @@
   }
   let tela = 'fotos';
   window.lgscAbrir = async function (k) {
-    if (pode() === 'nenhum') { U().aviso('Este usuário não tem permissão para a Publicação de matérias.', 'erro'); return; }
+    if (pode() === 'nenhum') { U().aviso('Este usuário não tem permissão para a Portal de Publicações.', 'erro'); return; }
     criarTelas(); tela = TELAS[k] ? k : 'fotos'; const [id, marca] = TELAS[tela];
     gotoShared(id); if (window.lgv31Mark) lgv31Mark(marca);
     document.documentElement.classList.toggle('lgsc-consulta', !edita());
@@ -128,7 +128,7 @@
   }
   function salvarVer(x, msg) {
     if (!gravar(K.ver, x)) return; U().log('Site', msg);
-    // mantém nomes e partidos iguais no Portal do Vereador (composição da Câmara)
+    // mantém nomes e partidos iguais no Painel do Vereador (composição da Câmara)
     try { const api = window.lgvrAPI; if (api) { const c = api.comp(); let mud = false; x.vereadores.forEach(v => { const cv = c.vereadores.find(k => k.id === 'v' + v.id); if (cv && (cv.nome !== v.nome || cv.completo !== v.completo || cv.partido !== v.partido)) { Object.assign(cv, { nome: v.nome, completo: v.completo, partido: v.partido }); mud = true; } }); if (mud) api.gravar(api.COMP_KEY, c); } } catch (e) { }
     aviso(msg); tVereadores();
   }
@@ -194,7 +194,7 @@
     const us = (window.lgtUsuariosLista ? lgtUsuariosLista() : []).map(u => ({ u, n: lgNivelArea('site', u) })).sort((a, b) => ({ edicao: 0, consulta: 1, nenhum: 2 }[a.n] - { edicao: 0, consulta: 1, nenhum: 2 }[b.n]) || String(a.u.nome).localeCompare(String(b.u.nome)));
     $('#view-lgsc-config').innerHTML = cab('Endereços e responsáveis', 'Quem cuida do site e os endereços usados no site e no painel.') +
       `<div class="lgt-grade2"><div class="lgt-card"><h3>Responsáveis pelo site</h3><p class="lgt-p">Quem tem <b>edição</b> publica matérias e altera fotos, vereadores e menus. ${gestor ? 'Você pode mudar aqui.' : 'Quem define é o administrador ou a Procuradoria.'}</p>
-        <div class="lgt-tabela-wrap"><table class="lgt-tabela"><thead><tr><th>Pessoa</th><th>Publicação de matérias</th></tr></thead><tbody>${us.map(({ u, n }) => { const adm = window.lgPerfil && lgPerfil(u) === 'adm';
+        <div class="lgt-tabela-wrap"><table class="lgt-tabela"><thead><tr><th>Pessoa</th><th>Portal de Publicações</th></tr></thead><tbody>${us.map(({ u, n }) => { const adm = window.lgPerfil && lgPerfil(u) === 'adm';
           return `<tr><td><b>${esc(u.nome)}</b><small>${esc(u.cargo || '')}</small></td><td>${gestor && !adm ? `<select class="lgt-nivel n-${n}" data-login="${esc(String(u.usuario).toLowerCase())}">${[['nenhum', 'Sem acesso'], ['consulta', 'Consulta'], ['edicao', 'Edição (responsável)']].map(([k, l]) => `<option value="${k}" ${k === n ? 'selected' : ''}>${l}</option>`).join('')}</select>` : `<span class="lgt-st ${n === 'edicao' ? 'pub' : 'ras'}">${n === 'edicao' ? 'Responsável' : n === 'consulta' ? 'Consulta' : 'Sem acesso'}</span>`}</td></tr>`; }).join('')}</tbody></table></div></div>
       <div class="lgt-card"><h3>Endereços</h3><form id="lgsc-cfg" class="lgt-form-mini"><label><span>Webmail da Câmara</span><input name="webmail" type="url" value="${esc(cfg.webmail || '')}" placeholder="http://webmail.camaranevespaulista.sp.gov.br" ${edita() ? '' : 'disabled'}></label>
         <label><span>Canal no YouTube</span><input name="youtube" type="url" value="${esc(cfg.youtube || '')}" placeholder="https://www.youtube.com/@…" ${edita() ? '' : 'disabled'}></label>${edita() ? '<button class="lgt-btn primario" type="submit">Salvar endereços</button>' : ''}</form></div></div>`;

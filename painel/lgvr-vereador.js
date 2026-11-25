@@ -176,7 +176,7 @@
   }
   let tela = 'inicio';
   window.lgvrAbrir = function (k) {
-    const a = atual(); if (!a) { UI().aviso('Seu usuário não tem acesso ao Portal do Vereador.', 'erro'); return; }
+    const a = atual(); if (!a) { UI().aviso('Seu usuário não tem acesso ao Painel do Vereador.', 'erro'); return; }
     if (PRES.includes(k) && !window.lgvrPresidenteAtual()) { UI().aviso('Função exclusiva do Presidente da Câmara.', 'erro'); k = 'inicio'; }
     criarTelas(); integrarAdministrativo(); tela = TELAS[k] ? k : 'inicio';
     gotoShared('lgvr-' + tela); if (window.lgv31Mark) lgv31Mark(TELAS[tela]);
@@ -243,7 +243,7 @@
       </section>
       <button type="button" class="lgvs-nova" data-edita onclick="lgvrNova()"><span>+</span> Escrever nova propositura</button>
       <h2 class="lgvs-h">O que você quer fazer?</h2>
-      <nav class="lgvs-grade" aria-label="Atalhos do Portal do Vereador">
+      <nav class="lgvs-grade" aria-label="Atalhos do Painel do Vereador">
         ${tile('materias', 'Minhas proposituras', tram.length ? `${tram.length} em andamento` : minhas.length ? `${minhas.length} no total` : 'Nenhuma ainda', "lgvrAbrir('proposituras')")}
         ${tile('votacao', 'Sessões e votação', prox ? 'Próxima: ' + esc(quandoProx) : 'Nenhuma marcada', "lgvrAbrir('sessoes')")}
         ${tile('assinar', 'Assinar documentos', pend.total ? `${pend.total} esperando você` : 'Nada para assinar', "lgvrAbrir('assinar')", pend.total)}
@@ -329,7 +329,7 @@
         timeline: [{ date: agoraTL(), label: `${T.nome} ${comoAss(ass)} por ${v.nome} (${ass.manual ? 'motivo: ' + ass.motivo : ass.metodo})` }, ...notaAut(ass), { date: agoraTL(), label: `Protocolado automaticamente: ${g.tipo} ${n}/${ano}` }, { date: agoraTL(), label: 'Encaminhado ao Presidente para despacho' }],
         origem: 'portal-vereador', tipo: g.tipo, tipoNome: T.nome, texto: g.texto, justificativa: g.justificativa, autorId: v.id, coautores: g.coautores || [], assinaturas: [ass] };
       listaProt().unshift(p); const d = dados(); d.rascunhos = d.rascunhos.filter(x => x.id !== g.rid); salvarDados(d);
-      persistirProt('Propositura protocolada pelo Portal do Vereador', p); UI().log('Portal do Vereador', `Protocolou ${p.numero}${ctx.autorizacao ? ' (assinatura à mão autorizada)' : ''}`);
+      persistirProt('Propositura protocolada pelo Painel do Vereador', p); UI().log('Painel do Vereador', `Protocolou ${p.numero}${ctx.autorizacao ? ' (assinatura à mão autorizada)' : ''}`);
       if (ctx.autorizacao) return;
       { const pr = comp().vereadores.find(x => x.id === comp().presidente); UI().aviso(`${p.numero} assinado e protocolado. Já está com o Presidente${pr ? ' ' + pr.nome : ''} para despacho.`, 'ok', `${T.nome} enviado com sucesso`); } abaProp = 'tramitando'; if (tela === 'proposituras' || tela === 'assinar') desenhar(); lgvrVer(p.id);
     },
@@ -683,7 +683,7 @@
   window.lgvrCriarUsuario = id => { if (!ehGestor()) return; const c = comp(); const v = c.vereadores.find(x => x.id === id); const l = criarUsuario(v); gravar(COMP_KEY, c); UI().aviso(`Usuário criado: ${l} · senha provisória 123456`); desenharComposicao(); };
   window.lgvrCriarTodos = () => { if (!ehGestor()) return; const c = comp(); const feitos = c.vereadores.filter(v => !v.usuario).map(v => criarUsuario(v)); gravar(COMP_KEY, c); UI().aviso(feitos.length ? `${feitos.length} usuário(s) criado(s). Senha provisória: 123456` : 'Todos os vereadores já têm usuário.'); desenharComposicao(); };
   window.lgvrRemoverVereador = id => { if (!ehGestor()) return; const c = comp(); if (id === c.presidente) return UI().aviso('Marque outro Presidente antes de remover este vereador.', 'erro'); const v = c.vereadores.find(x => x.id === id);
-    UI().abrirModal(`<div class="lgt-form"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Remover ${esc(v.nome)}?</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><p class="lgt-p" style="padding:6px 22px 10px">O usuário dele perde o acesso ao Portal do Vereador. As proposituras já protocoladas continuam no sistema.</p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="button" class="lgt-btn perigo" id="lgvr-ok">Remover</button></div></div>`);
+    UI().abrirModal(`<div class="lgt-form"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Remover ${esc(v.nome)}?</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><p class="lgt-p" style="padding:6px 22px 10px">O usuário dele perde o acesso ao Painel do Vereador. As proposituras já protocoladas continuam no sistema.</p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="button" class="lgt-btn perigo" id="lgvr-ok">Remover</button></div></div>`);
     $('#lgvr-ok').onclick = () => { const cc = comp(); cc.vereadores = cc.vereadores.filter(x => x.id !== id); cc.historico.push({ data: new Date().toISOString(), texto: `Vereador removido da composição: ${v.nome}`, por: (usuario() || {}).nome || '' }); gravar(COMP_KEY, cc); UI().fecharModal(); desenharComposicao(); }; };
   window.lgvrAddVereador = () => { if (!ehGestor()) return;
     UI().abrirModal(`<form class="lgt-form" novalidate><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Adicionar vereador</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div><div class="lgt-campos"><label class="cheio"><span>Nome completo *</span><input name="completo" required></label><label><span>Nome parlamentar *</span><input name="nome" required></label><label><span>Partido</span><input name="partido"></label></div><p class="lgt-erro" role="alert"></p><div class="lgt-modal-rod"><button type="button" class="lgt-btn" onclick="lgtFechar()">Cancelar</button><button type="submit" class="lgt-btn primario">Adicionar</button></div></form>`);
@@ -839,7 +839,7 @@
 
   /* ================= usuários de teste (pedido do Ricardo, 11/11/2026) =================
      Ricardo  — Administrador (todos os painéis)          · Vinicius — Procurador (Administrativo + usuários)
-     Erika    — Secretaria (Administrativo, protocolos)    · Ednilson — Presidente da Câmara (Portal do Vereador)
+     Erika    — Secretaria (Administrativo, protocolos)    · Ednilson — Presidente da Câmara (Painel do Vereador)
      André    — Tesoureiro (Financeiro + Transparência)
      Aplicado uma vez por navegador; depois, quem manda é a Procuradoria (Usuários / Áreas e acessos). */
   function cadastrosTeste() {

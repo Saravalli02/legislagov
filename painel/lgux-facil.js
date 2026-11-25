@@ -9,6 +9,7 @@
   const FAV = {
     secretaria: ['inicio', 'pendencias', 'protocolo', 'materias', 'sessoes', 'expedientes', 'oficios', 'ouvidoria'],
     procurador: ['inicio', 'pendencias', 'materias', 'prazos', 'comissoes', 'usuarios', 'acessos'],
+    procuradoria: ['pendencias', 'procPareceres', 'materias', 'prazos', 'procMao', 'expedientes', 'usuarios', 'acessos'],
     adm: ['inicio', 'pendencias', 'materias', 'protocolo', 'sessoes', 'usuarios', 'acessos'],
     padrao: ['inicio', 'pendencias', 'materias', 'sessoes', 'expedientes'],
     vereador: ['verInicio', 'pendencias', 'verAssinar', 'verProposituras', 'verSessoes', 'verComissoes'],
@@ -20,6 +21,7 @@
   const BARRA = {
     secretaria: ['inicio', 'pendencias', 'protocolo', 'materias'],
     procurador: ['inicio', 'pendencias', 'materias', 'prazos'],
+    procuradoria: ['pendencias', 'procPareceres', 'materias', 'prazos'],
     adm: ['inicio', 'pendencias', 'materias', 'acessos'],
     padrao: ['inicio', 'pendencias', 'materias', 'sessoes'],
     vereador: ['verInicio', 'pendencias', 'verAssinar', 'verSessoes'],
@@ -28,7 +30,7 @@
     site: ['pendencias', 'siteNoticias'],
   };
   const CURTO = { inicio: 'Início', verInicio: 'Início', pendencias: 'Pendências', protocolo: 'Protocolo', materias: 'Matérias', sessoes: 'Agenda', prazos: 'Prazos',
-    acessos: 'Acessos', verAssinar: 'Assinar', verSessoes: 'Sessões', presSessao: 'Plenário', transp: 'Publicar', calendario: 'Calendário', pntp: 'PNTP', siteNoticias: 'Notícias' };
+    acessos: 'Acessos', verAssinar: 'Assinar', verSessoes: 'Sessões', presSessao: 'Plenário', transp: 'Publicar', calendario: 'Calendário', pntp: 'PNTP', siteNoticias: 'Notícias', procPareceres: 'Pareceres', procMao: 'À mão' };
 
   // nomes mais claros no menu
   try {
@@ -41,7 +43,7 @@
   function papel() {
     const a = area();
     if (a === 'vereador') return window.lgEhPresidente && lgEhPresidente() ? 'presidente' : 'vereador';
-    if (a === 'transparencia' || a === 'site') return a;
+    if (a === 'transparencia' || a === 'site' || a === 'procuradoria') return a;
     const p = window.lgPerfil ? lgPerfil() : '';
     return FAV[p] ? p : 'padrao';
   }

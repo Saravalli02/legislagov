@@ -43,7 +43,7 @@
   const redesenhar = () => { if (tela && $('#view-lgfx-' + tela)?.style.display === 'block') desenhar(); };
 
   /* =====================================================================
-     1) MODELOS DE PROPOSITURAS (Portal do Vereador › Nova propositura)
+     1) MODELOS DE PROPOSITURAS (Painel do Vereador › Nova propositura)
      ===================================================================== */
   const MODELOS = {
     IND: [
@@ -508,7 +508,7 @@
   window.lgfxPn = (id, v) => { const m = ler(PN, {}) || {}; if (v) m[id] = v; else delete m[id]; gravar(PN, m); desenhar(); };
 
   /* =====================================================================
-     9) TV CÂMARA (YouTube) — Publicação de matérias › TV Câmara
+     9) TV CÂMARA (YouTube) — Portal de Publicações › TV Câmara
      O servidor lê o canal sozinho (/api/youtube). Aqui dá para ligar o vídeo à sessão certa,
      editar o resumo, esconder um vídeo e escolher se os vídeos entram também em Notícias.
      ===================================================================== */

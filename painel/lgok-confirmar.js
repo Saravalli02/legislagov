@@ -103,7 +103,7 @@
     [/^devolver para correção$/, () => ({ titulo: 'Devolver para correção?', texto: 'A matéria volta para quem enviou, com a sua observação.', ok: 'Sim, devolver' })],
     [/^assinar em lote/, () => ({ titulo: 'Assinar todos os documentos da lista?', texto: 'Cada documento será aberto para assinatura, um depois do outro.', ok: 'Sim, começar', conferir: false })],
   ];
-  // telas que alteram o site na hora (Publicação de matérias)
+  // telas que alteram o site na hora (Portal de Publicações)
   const SALVAR_SITE = /^salvar( (mesa|composição|endereços|alterações))?$/;
   const telaDoSite = b => !!b.closest('.view.lgsc') || (!!b.closest('#lgt-modal') && [...document.querySelectorAll('section.view.lgsc')].some(v => v.style.display !== 'none'));
 

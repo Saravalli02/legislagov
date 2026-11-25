@@ -39,26 +39,27 @@
 
   /* ---------------- perfis, áreas e permissões ----------------
      Cada usuário tem um PERFIL (cargo) que define os painéis que ele abre:
-       Administrador → todos · Procurador → Administrativo + gestão de usuários · Secretaria → Administrativo
-       Financeiro → Financeiro + Transparência · Vereador/Presidente → Portal do Vereador
+       Administrador → todos · Procurador → Painel do Procurador (pareceres, prazos, usuários e acessos) · Secretaria → Administrativo
+       Financeiro → Financeiro + Transparência · Vereador/Presidente → Painel do Vereador
      O Administrador e a Procuradoria podem ajustar exceções em "Áreas e acessos" (ex.: quem cuida do site).
      Painel sem permissão aparece com cadeado e não abre. */
   const AREAS_KEY = 'lgt_areas_v1';
   /* Painéis travados e escondidos de todos (nem aparecem com cadeado). Para reativar, tire da lista.
      Financeiro: travado em 11/11/2026 a pedido do Ricardo (não será usado por enquanto). */
-  const PAINEIS_OCULTOS = ['financeiro'].concat(window.lgPlano === 'protocolo' ? ['vereador', 'transparencia', 'site'] : []);   // pacote só Protocolo e Tramitação: um painel
+  const PAINEIS_OCULTOS = ['financeiro'].concat(window.lgPlano === 'protocolo' ? ['procuradoria', 'vereador', 'transparencia', 'site'] : []);   // pacote só Protocolo e Tramitação: um painel
   window.lgPainelOculto = k => PAINEIS_OCULTOS.includes(k);
   const ACESSO_TOTAL_PADRAO = ['ricardo'];
   const AREAS_INFO = [
-    ['legislativo', 'Painel Administrativo', 'Matérias, sessões, expedientes, protocolo e gestão.'],
-    ['vereador', 'Portal do Vereador', 'Proposituras, assinaturas, comissões, pauta; funções da Presidência.'],
+    ['procuradoria', 'Painel do Procurador', 'Pareceres jurídicos, prazos, assinaturas à mão, usuários e acessos.'],
+    ['legislativo', 'Painel Administrativo', 'Secretaria: protocolo, matérias, sessões, expedientes e ouvidoria.'],
+    ['vereador', 'Painel do Vereador', 'Proposituras, assinaturas, comissões, pauta; funções da Presidência.'],
     ['transparencia', 'Portal da Transparência', 'Publicar documentos no Portal da Transparência.'],
     ['financeiro', 'Painel Financeiro', 'Empenhos, pagamentos, dotações, contratos e vencimentos.'],
-    ['site', 'Publicação de matérias', 'Notícias, fotos, vereadores e menus do site.'],
+    ['site', 'Portal de Publicações', 'Notícias, fotos, vereadores e menus do site.'],
   ].filter(a => !PAINEIS_OCULTOS.includes(a[0]));
   const PERFIS = {
-    adm: { nome: 'Administrador do sistema', areas: { legislativo: 'edicao', vereador: 'edicao', transparencia: 'edicao', financeiro: 'edicao', site: 'edicao' } },
-    procurador: { nome: 'Procurador(a)', areas: { legislativo: 'edicao' } },
+    adm: { nome: 'Administrador do sistema', areas: { procuradoria: 'edicao', legislativo: 'edicao', vereador: 'edicao', transparencia: 'edicao', financeiro: 'edicao', site: 'edicao' } },
+    procurador: { nome: 'Procurador(a)', areas: { procuradoria: 'edicao' } },
     secretaria: { nome: 'Secretaria', areas: { legislativo: 'edicao' } },
     financeiro: { nome: 'Tesouraria e Transparência', areas: { financeiro: 'edicao', transparencia: 'edicao' } },
     vereador: { nome: 'Vereador(a)', areas: { vereador: 'edicao' } },
@@ -90,7 +91,9 @@
     u = u || usuario(); if (!u) return 'nenhum';
     if (PAINEIS_OCULTOS.includes(area)) return 'nenhum';
     const p = perfilDe(u); if (p === 'adm') return 'edicao';
-    if (p === 'vereador' && area === 'legislativo') return 'nenhum';   // vereador nunca entra no Painel Administrativo
+    if (p === 'vereador' && (area === 'legislativo' || area === 'procuradoria')) return 'nenhum';   // vereador nunca entra no Painel Administrativo
+    // pacote só Protocolo e Tramitação: não há Painel do Procurador; a Procuradoria usa o painel único
+    if (area === 'legislativo' && window.lgPlano === 'protocolo' && p === 'procurador') { const r0 = (mapaAreas()[loginDe(u)] || {}).legislativo; return r0 || 'edicao'; }
     const r = (mapaAreas()[loginDe(u)] || {})[area];
     if (r) return r;
     return nivelPadrao(area, u);
@@ -512,11 +515,12 @@
      Depois de usuário e senha, a pessoa escolhe: Administrativo, Portal da Transparência ou Financeiro.
      Painel sem permissão aparece com cadeado e avisa "este usuário não tem permissão". */
   const PAINEIS = [
-    ['legislativo', 'Painel Administrativo', 'Secretaria e Procuradoria: matérias, sessões, protocolo, expedientes e gestão.', 'materias'],
-    ['vereador', 'Portal do Vereador', 'Suas proposituras, assinatura gov.br, pauta das sessões e andamento das matérias.', 'vereador'],
+    ['procuradoria', 'Painel do Procurador', 'Pareceres jurídicos, prazos, assinaturas à mão, usuários e acessos.', 'leis'],
+    ['legislativo', 'Painel Administrativo', 'Secretaria: protocolo, matérias, sessões, expedientes e ouvidoria.', 'materias'],
+    ['vereador', 'Painel do Vereador', 'Suas proposituras, assinatura gov.br, pauta das sessões e andamento das matérias.', 'vereador'],
     ['transparencia', 'Portal da Transparência', 'Publicar documentos no Portal da Transparência do site.', 'transp'],
     ['financeiro', 'Painel Financeiro', 'Empenhos, liquidação, pagamentos, dotações, contratos e vencimentos.', 'moeda'],
-    ['site', 'Publicação de matérias', 'Notícias, fotos, vereadores e menus do site da Câmara.', 'site'],
+    ['site', 'Portal de Publicações', 'Notícias, fotos, vereadores e menus do site da Câmara.', 'site'],
   ].filter(p => !PAINEIS_OCULTOS.includes(p[0]));
   const nivelTxt = { edicao: 'Acesso liberado', consulta: 'Somente consulta', nenhum: 'Sem permissão' };
   function escolherPainel(auto) {
@@ -532,7 +536,7 @@
       <p class="lgp-sub">Câmara Municipal de Neves Paulista · ${esc(u.cargo || '')}</p>
       <p class="lgp-msg" id="lgp-msg" role="alert"></p>
       <div class="lgp-cards">${PAINEIS.slice().sort((a, b) => (nivelArea(a[0], u) === 'nenhum') - (nivelArea(b[0], u) === 'nenhum')).map(([k, n, d, i]) => { const nv = nivelArea(k, u); return `<button type="button" class="lgp-card ${nv === 'nenhum' ? 'bloq' : ''}" data-painel="${k}" onclick="lgpEntrar('${k}')"><span class="lgp-ic">${ic(i)}</span><span class="lgp-tx"><b>${n}</b><small>${d}</small></span><span class="lgp-st n-${nv}">${nv === 'nenhum' ? ic('cadeado') : ''}${nivelTxt[nv]}${nv !== 'nenhum' ? ic('seta') : ''}</span></button>`; }).join('')}</div>
-      <p class="lgp-rodape">Cada usuário abre os painéis do seu cargo. Os demais aparecem com cadeado. Quem libera é o administrador ou a Procuradoria, em Administrativo › Áreas e acessos.</p>${window.lgMarcaHTML ? `<p class="lg-marca-p" style="margin-top:22px">${lgMarcaHTML}</p>` : ''}</div>`;
+      <p class="lgp-rodape">Cada usuário abre os painéis do seu cargo. Os demais aparecem com cadeado. Quem libera é o administrador ou a Procuradoria, em Painel do Procurador › Áreas e acessos.</p>${window.lgMarcaHTML ? `<p class="lg-marca-p" style="margin-top:22px">${lgMarcaHTML}</p>` : ''}</div>`;
     if (!$('#lgt-modal').hidden) fecharModal();
     el.hidden = false; document.documentElement.classList.add('lgp-aberto');
     setTimeout(() => el.querySelector('.lgp-card:not(.bloq)')?.focus(), 40);
@@ -559,7 +563,7 @@
   .lgp-sair .lgv31-ic{width:16px;height:16px;flex-basis:16px}
   #lgp-escolha h1{font-size:clamp(24px,3.4vw,34px);font-weight:700;letter-spacing:-.02em;margin:0 0 8px;color:#fff;line-height:1.2}
   .lgp-sub{margin:0 0 22px;color:#8e9198;font-size:14.5px}
-  .lgp-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .lgp-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
   .lgp-card{display:flex;flex-direction:column;align-items:flex-start;gap:14px;text-align:left;padding:22px;border-radius:16px;border:1px solid #24262a;background:#0f1012;color:#f2f3f5;cursor:pointer;font:inherit;min-height:220px;transition:border-color .15s,transform .15s,background .15s}
   .lgp-card:hover,.lgp-card:focus-visible{border-color:#e2aa1c;background:#141518;transform:translateY(-2px);outline:none}
   .lgp-ic{width:48px;height:48px;border-radius:12px;background:#1b1c20;border:1px solid #2a2c31;display:flex;align-items:center;justify-content:center;color:#e2aa1c}

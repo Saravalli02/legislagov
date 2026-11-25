@@ -88,7 +88,7 @@
     const n = ler('lgv10_notifications_v1', []).find(x => x.id === id); try { window.lgv10Read && lgv10Read(id); } catch (e) { }
     if (!n) return; const k = n.kind || '';
     let areaL = ''; try { areaL = sessionStorage.getItem('lg_area') || ''; } catch (e) { }
-    if ((window.lgPerfil && lgPerfil() === 'vereador') || areaL === 'vereador') {   // no Portal do Vereador nada abre telas do Painel Administrativo
+    if ((window.lgPerfil && lgPerfil() === 'vereador') || areaL === 'vereador') {   // no Painel do Vereador nada abre telas do Painel Administrativo
       const pid = k.startsWith('protocolo:') ? k.slice(10) : '';
       if (pid && window.lgprVer) return lgprVer(pid, true);
       if (window.lgv10Open) return lgv10Open(k === 'mensagem' ? 'inbox' : 'notifications');
@@ -134,7 +134,7 @@
         switch (pz.etapa) {
           case 'recebimento': add(['perfil:secretaria'], { ...base, titulo: `Receber matéria do Executivo: ${num}`, acao: "gotoV('cam','entrada')", area: 'legislativo' }); break;
           case 'despacho': add(['pres'], { ...base, titulo: `Despachar ${num}`, acao: "lgvrAbrir('despacho')", area: 'vereador' }); break;
-          case 'juridico': add(['perfil:procurador'], { ...base, titulo: `Parecer jurídico: ${num}`, acao: `abrirDetalheCam('${p.id}')`, area: 'legislativo' }); break;
+          case 'juridico': add(['perfil:procurador'], { ...base, titulo: `Parecer jurídico: ${num}`, acao: `abrirDetalheCam('${p.id}')`, area: 'procuradoria' }); break;
           case 'relator': case 'parecer': case 'diligencia': case 'votoComissao': {
             const com = (c.comissoes || []).find(x => x.nome === p.comissao); if (!com) break; const t = (p.comTrab || {})[p.comissao] || {};
             const membros = [com.presidente, com.vice, com.relator].filter(Boolean);
@@ -174,7 +174,7 @@
   function minhas() {
     const me = eu(); if (!me) return [];
     let l = todas().filter(x => x.dest.some(d => meuDestino(d, me)));
-    // no Portal do Vereador só aparece o que é do vereador (nada do Administrativo ou da Transparência)
+    // no Painel do Vereador só aparece o que é do vereador (nada do Administrativo ou da Transparência)
     let areaAt = ''; try { areaAt = sessionStorage.getItem('lg_area') || ''; } catch (e) { }
     if (areaAt === 'vereador' || me.perfil === 'vereador') l = l.filter(x => !x.area || x.area === 'vereador');
     try { if (window.lgplPendencias) lgplPendencias(me.v).forEach(x => l.push({ dest: ['eu'], ...x })); } catch (e) { }
@@ -296,7 +296,7 @@
   function executar(x) {
     let area = ''; try { area = sessionStorage.getItem('lg_area') || ''; } catch (e) { }
     const vai = () => { try { (new Function(x.acao))(); } catch (e) { console.warn('Aviso', e); } };
-    // vereador fica sempre no Portal do Vereador: tarefa de outro painel abre a matéria em "Acompanhar matérias"
+    // vereador fica sempre no Painel do Vereador: tarefa de outro painel abre a matéria em "Acompanhar matérias"
     if (((window.lgPerfil && lgPerfil() === 'vereador') || area === 'vereador') && x.area && x.area !== 'vereador') { if (window.lgvrAbrir) lgvrAbrir('materias'); return; }
     if (x.area && x.area !== area && window.lgtAreasPermitidas && lgtAreasPermitidas().includes(x.area)) { lgv33TrocarArea(x.area); setTimeout(vai, 120); }
     else vai();

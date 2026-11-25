@@ -7,7 +7,7 @@
      parecer (favorável, favorável com emenda, contrário ou pedido de diligência) → os membros votam
      o parecer → aprovado, segue para a próxima comissão ou, concluídas todas, para o Plenário.
      Se a maioria rejeitar o parecer do relator, o presidente da comissão designa relator do voto vencedor.
-   · Cada vereador só vê e só age nas comissões de que é membro (Portal do Vereador → Minhas comissões).
+   · Cada vereador só vê e só age nas comissões de que é membro (Painel do Vereador → Minhas comissões).
    · Parecer contrário não arquiva sozinho: a decisão final é do Plenário (confirmar no Regimento Interno).
    ===================================================================== */
 (function () {
@@ -233,7 +233,7 @@
       <div class="lgt-modal-rod">${window.lgsTemPDF && lgsTemPDF(doc) ? `<button type="button" class="lgt-btn" onclick="lgsBaixarPDF('${doc}','Parecer-${slug}-${api.esc((p.numero || '').replace(/[^A-Za-z0-9]+/g, '-'))}.pdf')">PDF assinado</button>` : ''}<button type="button" class="lgt-btn primario" onclick="lgtFechar()">Fechar</button></div></div>`);
   };
 
-  /* resumo no detalhe da matéria (Portal do Vereador) */
+  /* resumo no detalhe da matéria (Painel do Vereador) */
   window.lgcmResumo = function (p) {
     const esc = A().esc; const rota = p.comissoesRota || []; if (!rota.length) return '';
     return `<h4>Comissões</h4><ol class="lgcm-rota">${rota.map(n => { const f = fase(p, n), t = (p.comTrab || {})[n] || {};
@@ -282,7 +282,7 @@
       lgcmIniciar(p); sincronizarProtocolo(p, 'Parecer jurídico registrado'); try { notificar(p, 'Encaminhado à Comissão de ' + p.comissao); } catch (e) { }
       renderAll(); abrirDetalheCam(id);
     };
-    window.anexarParecer = () => alert('O parecer da comissão é emitido pelo relator no Portal do Vereador e votado pelos membros da comissão.');
+    window.anexarParecer = () => alert('O parecer da comissão é emitido pelo relator no Painel do Vereador e votado pelos membros da comissão.');
     const orig = window.renderAcaoLateral;
     if (typeof orig === 'function' && !orig.__lgcm) {
       const w = function (p) {
@@ -290,7 +290,7 @@
         const esc = A().esc; const rota = lg24Etapas(p);
         const docs = `<div class="side-card"><h3>Documentos</h3><div class="doc-list">${(p.docs || []).map(d => `<div class="doc-row"><span class="doc-name">${esc(d)}</span></div>`).join('')}</div></div>`;
         const rotaHtml = `<div class="side-card"><h3>Comissões (despacho do Presidente)</h3><ol class="lgcm-rota">${rota.map(n => { const f = fase(p, n), t = (p.comTrab || {})[n] || {}; return `<li class="f-${f}"><b>${esc(n)}</b><span>${esc(FASE_TXT[f])}${t.relator ? ' · relator(a) ' + esc(nomeV(t.relator)) : ''}${t.parecer ? ' · ' + esc(CONCL[t.parecer.conclusao][0].toLowerCase()) : ''}</span></li>`; }).join('')}</ol>
-          <p class="note">Cada comissão: o presidente designa o relator, o relator emite e assina o parecer no Portal do Vereador e os membros votam. Esta tela só acompanha.</p></div>`;
+          <p class="note">Cada comissão: o presidente designa o relator, o relator emite e assina o parecer no Painel do Vereador e os membros votam. Esta tela só acompanha.</p></div>`;
         if (p.status === 'analise') return `<div class="side-card"><h3>Procuradoria Legislativa</h3><p class="note">Registre o parecer jurídico. Em seguida a matéria vai à Comissão de ${esc(rota[0])}.</p><textarea id="lg24-juridico" placeholder="Resumo do parecer jurídico" style="width:100%;min-height:95px;margin:12px 0"></textarea><button class="btn-primary" style="width:100%" onclick="lg24ParecerJuridico('${p.id}')">Registrar parecer e enviar à comissão</button></div>` + rotaHtml + docs;
         return rotaHtml + docs;
       }; w.__lgcm = true; window.renderAcaoLateral = w;

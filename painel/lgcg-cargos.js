@@ -14,7 +14,7 @@
     { id: 'contabil', nome: 'Técnico(a) Contábil', perfil: 'financeiro', setor: 'Contabilidade', unico: true, funcao: 'Contabilidade e Portal da Transparência' },
     { id: 'tesoureira', nome: 'Tesoureiro(a)', perfil: 'financeiro', setor: 'Tesouraria', unico: true, funcao: 'Tesouraria e Portal da Transparência' },
     { id: 'procurador', nome: 'Procurador(a) Legislativo', perfil: 'procurador', setor: 'Procuradoria Legislativa', unico: true, funcao: 'Pareceres jurídicos, vereadores, Presidente e permissões' },
-    { id: 'vereador', nome: 'Vereador(a)', perfil: 'usuario', setor: 'Gabinete', unico: false, funcao: 'Portal do Vereador' },
+    { id: 'vereador', nome: 'Vereador(a)', perfil: 'usuario', setor: 'Gabinete', unico: false, funcao: 'Painel do Vereador' },
   ];
   window.LG_CARGOS = CARGOS;
   /* setores de quem está logado: usados para entregar expedientes, protocolos e avisos "para o setor" */

@@ -1,9 +1,9 @@
 /* =====================================================================
    LegislaGov — SESSÃO PLENÁRIA DIGITAL
-   · Presidente (Portal do Vereador › Presidência) ou a Mesa/Secretaria (Administrativo › Sessão plenária):
+   · Presidente (Painel do Vereador › Presidência) ou a Mesa/Secretaria (Administrativo › Sessão plenária):
      monta a pauta com as matérias prontas, publica a convocação, abre a sessão, registra presença e quórum,
      coloca cada item em votação, proclama o resultado (aplicado na tramitação) e gera a ata.
-   · Vereador: registra presença e vota pelo Portal do Vereador (celular ou computador).
+   · Vereador: registra presença e vota pelo Painel do Vereador (celular ou computador).
    · Telão: painel/telao.html mostra presença, item em votação, votos e resultado (atualiza sozinho).
    Regras usadas (a confirmar no Regimento Interno e na Lei Orgânica — ajustáveis em REGRAS):
      abertura com 1/3 dos vereadores; deliberação com a maioria absoluta presente;
@@ -75,7 +75,7 @@
   /* ================= permissões ================= */
   function usuario() { try { return typeof usuarioAtual !== 'undefined' ? usuarioAtual : null; } catch (e) { return null; } }
   function operador() {
-    // Presidente (pelo Portal do Vereador) ou a Mesa/Secretaria (adm, secretaria, procurador com edição no Administrativo)
+    // Presidente (pelo Painel do Vereador) ou a Mesa/Secretaria (adm, secretaria, procurador com edição no Administrativo)
     const u = usuario(); if (!u) return null;
     const a = A() && A().atual();
     if (a && a.v.id === comp().presidente && A().podeEditar()) return { tipo: 'presidente', nome: a.v.nome, demo: a.demo };
@@ -228,7 +228,7 @@
   window.lgplVerConvocacao = sid => { const s = sessaoPorId(dados(), sid); if (s) documento(`Convocação — ${s.titulo}`, textoConvocacao(s)); };
   window.lgplWhatsConvocacao = function (sid) {
     const s = sessaoPorId(dados(), sid); if (!s) return;
-    const msg = `Câmara Municipal de Neves Paulista\n*${s.titulo}*\n${dataLonga(s.quando)}, às ${hora(s.quando)} — ${s.local}\n\nPauta:\n${s.itens.map((i, k) => { const p = prot(i.pid); return p ? `${k + 1}. ${p.numero} — ${p.ementa}` : ''; }).filter(Boolean).join('\n')}\n\nA pauta completa está no Portal do Vereador.`;
+    const msg = `Câmara Municipal de Neves Paulista\n*${s.titulo}*\n${dataLonga(s.quando)}, às ${hora(s.quando)} — ${s.local}\n\nPauta:\n${s.itens.map((i, k) => { const p = prot(i.pid); return p ? `${k + 1}. ${p.numero} — ${p.ementa}` : ''; }).filter(Boolean).join('\n')}\n\nA pauta completa está no Painel do Vereador.`;
     UI().abrirModal(`<div class="lgt-form"><div class="lgt-modal-cab"><h2 id="lgt-modal-t">Enviar a convocação pelo WhatsApp</h2><button type="button" class="lgt-x" onclick="lgtFechar()" aria-label="Fechar">×</button></div>
       <p class="lgt-p">Cada botão abre o WhatsApp com a mensagem pronta para o vereador. É só apertar enviar. Os avisos também aparecem no sino do sistema.</p>
       <ul class="lgpl-whats">${comp().vereadores.map(v => `<li><span><b>${esc(v.nome)}</b><small>${esc(window.lgavTelefone ? (lgavTelefone(v.id) || 'sem telefone cadastrado — você escolhe o contato') : '')}</small></span><a class="lgt-mini" target="_blank" rel="noopener" href="${esc(window.lgavLinkWhats ? lgavLinkWhats(v.id, msg) : 'https://wa.me/?text=' + encodeURIComponent(msg))}">${ic('whats')} Abrir WhatsApp</a></li>`).join('')}</ul>
@@ -256,7 +256,7 @@
     s.status = 'aberta'; s.abertura = new Date().toISOString(); abaPauta = false; salvar(d); UI().aviso('Sessão aberta. Coloque o primeiro item em votação.'); desenhar();
   };
   function itemAtual(s, o) {
-    if (s.status !== 'aberta') return `<div class="lgt-card lgpl-agora"><h3>${ic('votacao')} Quando a sessão abrir</h3><p class="lgt-p">Os vereadores registram presença pelo Portal do Vereador (ou a Mesa marca ao lado). Com quórum, use “Abrir a sessão”; cada item da pauta vai à votação e o resultado entra na tramitação automaticamente.</p></div>`;
+    if (s.status !== 'aberta') return `<div class="lgt-card lgpl-agora"><h3>${ic('votacao')} Quando a sessão abrir</h3><p class="lgt-p">Os vereadores registram presença pelo Painel do Vereador (ou a Mesa marca ao lado). Com quórum, use “Abrir a sessão”; cada item da pauta vai à votação e o resultado entra na tramitação automaticamente.</p></div>`;
     const idx = s.itens.findIndex(i => ['discussao', 'votacao'].includes(i.status));
     const prox = s.itens.findIndex(i => i.status === 'aguardando');
     if (idx < 0) {
@@ -401,7 +401,7 @@
     const w = window.open(url, 'lgpl-telao'); if (!w) UI().aviso('Permita janelas pop-up para abrir o telão.', 'erro');
   };
 
-  /* ================= Portal do Vereador: cartão da sessão ================= */
+  /* ================= Painel do Vereador: cartão da sessão ================= */
   window.lgplCardVereador = function (a) {
     if (!A() || !a) return ''; const d = dados(); const s = sessaoAtiva(d); if (!s) return '';
     const hoje = new Date().toDateString() === new Date(s.quando).toDateString();
