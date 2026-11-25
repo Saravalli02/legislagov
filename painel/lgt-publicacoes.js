@@ -102,7 +102,10 @@
   window.lgtAreasPermitidas = () => AREAS_INFO.map(a => a[0]).filter(a => nivelArea(a) !== 'nenhum');
   window.lgtAreasInfo = AREAS_INFO;
   window.lgtDefinirNivel = (login, area, nivel) => { const m = mapaAreas(); m[login] = { ...(m[login] || {}), [area]: nivel }; gravar(AREAS_KEY, m); log('Áreas e acessos', `${login}: ${area} = ${nivel}`); };
-  window.lgtUsuariosLista = () => (typeof lgUsers === 'function' ? lgUsers() : []).filter(u => u.ativo !== false && u.orgao !== 'exec' && !/vistaalegre/i.test(u.usuario || ''));
+  // administradores da GR (Ricardo e Geraldo) não aparecem nas listas de pessoal da Câmara
+  const ehAdminGR = u => !!u && (u.orgao === 'ambos' || /^usr-(ricardo|geraldo)-/.test(String(u.id || '')));
+  window.lgEhAdminGR = ehAdminGR;
+  window.lgtUsuariosLista = () => (typeof lgUsers === 'function' ? lgUsers() : []).filter(u => u.ativo !== false && u.orgao !== 'exec' && !ehAdminGR(u) && !/vistaalegre/i.test(u.usuario || ''));
   function podePublicar(u) { return nivelArea('transparencia', u) === 'edicao'; }
   function podeVerTransp(u) { return nivelArea('transparencia', u) !== 'nenhum'; }
   function ehAdmin() { return perfilDe() === 'adm'; }
