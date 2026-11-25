@@ -5,7 +5,7 @@ Uma linha em ct_acesso com bloqueado preenchido corta o acesso:
   usuario = id   → só aquela pessoa
 Cada sistema consulta bloqueado() ao entrar e a cada pedido com sessão, então o corte vale na hora.
 """
-import re, secrets, time, uuid
+import os, re, secrets, time, uuid
 
 import lgapi
 
@@ -96,6 +96,21 @@ def _info(c, sistema, cliente, usuario=""):
 NOMES_CAMARA = {"neves-paulista-sp": "Câmara Municipal de Neves Paulista", "teste": "Ambiente de teste"}
 
 
+def painel_url(camara):
+    """Endereço do painel de cada câmara, tirado do dominios.txt (prefere o endereço legislagov.com.br)."""
+    try:
+        arq = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ferramentas", "aws", "dominios.txt")
+        doms = []
+        for ln in open(arq, encoding="utf-8"):
+            p = ln.split("#")[0].split()
+            if len(p) >= 3 and p[1] == camara and p[2] in ("site", "sistema"):
+                doms.append(p[0])
+        doms.sort(key=lambda d: (not d.endswith(".legislagov.com.br"), d.startswith("www."), len(d)))
+        return f"https://{doms[0]}/painel/" if doms else ""
+    except OSError:
+        return ""
+
+
 def painel(c):
     """Tudo o que a aba "Sistemas e clientes" mostra."""
     _db()
@@ -109,11 +124,11 @@ def painel(c):
                 continue
             us.append({"id": u["id"], "nome": u.get("nome") or u["usuario"], "usuario": u["usuario"],
                        "cargo": " · ".join(x for x in (("Administrador" if u.get("perfil") == "admin" or u.get("orgao") == "ambos" else ""),
-                                                        (u.get("cargo") or ("" if u.get("perfil") == "admin" else u.get("perfil")) or "")) if x),
+                                                        ("" if u.get("cargo") == "Administrador do sistema" else u.get("cargo") or ("" if u.get("perfil") == "admin" else u.get("perfil")) or "")) if x),
                        "cargoId": u.get("cargoId") or "", "admin": u.get("perfil") == "admin" or u.get("orgao") == "ambos", "ativo": u.get("ativo") is not False, **_info(c, "camara", cam, u["id"]),
                        **email_info(c, "camara", "camara:" + u["id"])})
         us.sort(key=lambda x: x["nome"].lower())
-        camaras.append({"id": cam, "nome": NOMES_CAMARA.get(cam, cam), "usuarios": us, **_info(c, "camara", cam)})
+        camaras.append({"id": cam, "nome": NOMES_CAMARA.get(cam, cam), "painel": painel_url(cam), "usuarios": us, **_info(c, "camara", cam)})
     out["camara"] = camaras
     # Rural (cada horta é um cliente; a suspensão da horta usa a regra que o Rural já tinha)
     try:
@@ -543,12 +558,13 @@ def camara_criar(c, d, por):
         return 400, {"ok": False, "erro": "Preencha o nome e um usuário de 3 a 30 letras ou números, sem espaços."}
     if len(senha) < SENHA_MIN:
         return 400, {"ok": False, "erro": f"A senha precisa ter pelo menos {SENHA_MIN} caracteres."}
-    if not cg:
-        return 400, {"ok": False, "erro": "Escolha o cargo."}
+    if not cg and not adm:
+        return 400, {"ok": False, "erro": "Escolha o cargo (ou marque que é administrador)."}
     if c.execute("SELECT 1 FROM usuarios WHERE camara=? AND lower(usuario)=lower(?)", (cam, login)).fetchone():
         return 409, {"ok": False, "erro": "Este usuário já existe nesta Câmara."}
-    if _cargo_ocupado(cam, cg["id"]):
+    if cg and _cargo_ocupado(cam, cg["id"]):
         return 409, {"ok": False, "erro": f"Já existe um usuário ativo no cargo {cg['nome']} (é um cargo único)."}
+    cg = cg or {"id": "", "nome": "Administrador do sistema", "setor": "", "perfil": "admin"}
     dados = {"usuario": login, "nome": nome, "cargoId": cg["id"], "cargo": cg["nome"], "setor": cg["setor"],
              "perfil": "admin" if adm else cg["perfil"], "orgao": "cam", "municipio": "Neves Paulista — SP",
              "ativo": True, "pendente": False, "criadoEm": lgapi.agora(), "trocarSenha": True}
@@ -558,7 +574,7 @@ def camara_criar(c, d, por):
     if str(d.get("email") or "").strip():
         email_definir(c, "camara", "camara:" + novo_id, d.get("email"))
         lgapi._gravar_dados_usuario(novo_id, lambda x: x.update({"email": email_ok(d.get("email"))}))
-    lgapi.registrar(cam, por, "Usuário criado pela GR Central", f"{login} · {cg['nome']}{' · administrador' if adm else ''}")
+    lgapi.registrar(cam, por, "Usuário criado pela GR Central", f"{login} · {cg['nome']}{' · administrador' if adm and cg['id'] else ''}")
     return 200, {"ok": True}
 
 
