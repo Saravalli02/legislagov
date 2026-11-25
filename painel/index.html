@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<script src="../assets/sincronia.js?v=202611251036"></script>
-<script src="../assets/carregando.js?v=202611251036"></script>
+<script src="../assets/sincronia.js?v=202611251105"></script>
+<script src="../assets/carregando.js?v=202611251105"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#000000">
 <link rel="apple-touch-icon" href="app/app-192.png">
@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="LegislaGov">
-<script src="app/instalar.js?v=202611251036" defer></script>
+<script src="app/instalar.js?v=202611251105" defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LegislaGov — Câmara Municipal</title>
 <link rel="icon" type="image/png" href="logo-legislagov.png">
@@ -785,7 +785,7 @@ input::placeholder,textarea::placeholder {color:#8498b4!important;}
       <button class="btn-ghost" onclick="gotoV('cam','materias')" style="margin-bottom:18px;">← Voltar às matérias</button>
       <div class="detail-head"><div><div class="detail-num" id="cd-num">—</div><h1 id="cd-ementa">—</h1></div><span class="tag" id="cd-tag">—</span></div>
       <div class="meta-row">
-        <div class="meta-item"><div class="k">Origem</div><div class="v">Poder Executivo</div></div>
+        <div class="meta-item"><div class="k">Origem</div><div class="v" id="cd-origem">—</div></div>
         <div class="meta-item"><div class="k">Unidade</div><div class="v" id="cd-unidade">—</div></div>
         <div class="meta-item"><div class="k">Comissão</div><div class="v" id="cd-comissao">—</div></div>
         <div class="meta-item"><div class="k">Recebido em</div><div class="v" id="cd-data">—</div></div>
@@ -1751,6 +1751,7 @@ function abrirDetalheCam(id) {
   document.getElementById('cd-num').textContent = p.full;
   document.getElementById('cd-ementa').textContent = p.ementa;
   document.getElementById('cd-unidade').textContent = p.unidade;
+  { const o = document.getElementById('cd-origem'); if (o) o.textContent = (p.origem === 'portal-vereador' || p.autorId || /^Ver(\.|eador)/i.test(p.autor || '')) ? 'Vereador' : (p.origem && p.origem !== 'executivo' ? 'Câmara Municipal' : 'Poder Executivo'); }
   document.getElementById('cd-comissao').textContent = p.comissao || '—';
   document.getElementById('cd-data').textContent = p.data;
   document.getElementById('cd-autor').textContent = p.autor || 'Não informado';
@@ -2473,6 +2474,9 @@ html[data-lgv31-layout="simples"] .matter-row,
 html[data-lgv31-layout="simples"] .notification-item,
 html[data-lgv31-layout="simples"] .comissao-card,
 html[data-lgv31-layout="simples"] .integration-card{background:#fff!important;background-image:none!important;border:1px solid #dde2e7!important;border-radius:8px!important;color:#1f2933!important}
+/* lista de documentos da matéria: no tema claro ficava escura (regra do tema grafite) */
+html[data-lgv31-layout="simples"] .doc-row{background:#f7f9fb!important;border:1px solid #dde2e7!important;box-shadow:none!important;color:#1f2933!important}
+html[data-lgv31-layout="simples"] .doc-row a{color:#1f4e79!important}
 html[data-lgv31-layout="simples"] .lg27-stat{min-height:0!important;padding:14px 16px!important}
 html[data-lgv31-layout="simples"] .lg27-stat strong{font-size:24px!important;color:#1f2933!important}
 html[data-lgv31-layout="simples"] .lg27-stat small{color:#5b6670!important}
@@ -3200,26 +3204,26 @@ html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-msg{color:#c5
 html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-card:not(.bloq):hover,html[data-lgv31-layout="simples"] :is(body,#v32) #lgp-escolha .lgp-card:not(.bloq):focus-visible{border-color:#1f4e79!important;background:#fff!important}
 </style>
 
-<script src="../assets/transparencia-catalogo.js?v=202611251036"></script>
-<script src="lgt-publicacoes.js?v=202611251036"></script>
-<script src="lgok-confirmar.js?v=202611251036"></script>
-<script src="lgf-financeiro.js?v=202611251036"></script>
-<script src="lgs-assinatura.js?v=202611251036"></script>
-<script src="lgvr-vereador.js?v=202611251036"></script>
-<script src="lgcm-comissoes.js?v=202611251036"></script>
-<script src="lgcg-cargos.js?v=202611251036"></script>
-<script src="lgux-facil.js?v=202611251036"></script>
-<script src="../assets/leis-comum.js?v=202611251036"></script>
-<script src="../assets/tv.js?v=202611251036"></script>
-<script src="lgpl-plenario.js?v=202611251036"></script>
-<script src="lgfx-funcoes.js?v=202611251036"></script>
-<script src="lgav-avisos.js?v=202611251036"></script>
-<script src="../assets/qr.js?v=202611251036"></script>
-<script src="lgpr-protocolo.js?v=202611251036"></script>
-<script src="lgrl-relatorios.js?v=202611251036"></script>
-<script src="lglt-linha-tempo.js?v=202611251036"></script>
-<script src="lgct-conta.js?v=202611251036"></script>
-<script src="lgsg-seguranca.js?v=202611251036"></script>
-<script src="lgsc-site.js?v=202611251036"></script>
-<script src="lgtr-treinamento.js?v=202611251036"></script>
+<script src="../assets/transparencia-catalogo.js?v=202611251105"></script>
+<script src="lgt-publicacoes.js?v=202611251105"></script>
+<script src="lgok-confirmar.js?v=202611251105"></script>
+<script src="lgf-financeiro.js?v=202611251105"></script>
+<script src="lgs-assinatura.js?v=202611251105"></script>
+<script src="lgvr-vereador.js?v=202611251105"></script>
+<script src="lgcm-comissoes.js?v=202611251105"></script>
+<script src="lgcg-cargos.js?v=202611251105"></script>
+<script src="lgux-facil.js?v=202611251105"></script>
+<script src="../assets/leis-comum.js?v=202611251105"></script>
+<script src="../assets/tv.js?v=202611251105"></script>
+<script src="lgpl-plenario.js?v=202611251105"></script>
+<script src="lgfx-funcoes.js?v=202611251105"></script>
+<script src="lgav-avisos.js?v=202611251105"></script>
+<script src="../assets/qr.js?v=202611251105"></script>
+<script src="lgpr-protocolo.js?v=202611251105"></script>
+<script src="lgrl-relatorios.js?v=202611251105"></script>
+<script src="lglt-linha-tempo.js?v=202611251105"></script>
+<script src="lgct-conta.js?v=202611251105"></script>
+<script src="lgsg-seguranca.js?v=202611251105"></script>
+<script src="lgsc-site.js?v=202611251105"></script>
+<script src="lgtr-treinamento.js?v=202611251105"></script>
 </body></html>
