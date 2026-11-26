@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v57">
+<meta name="lg-versao" content="lg-v58">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -2837,6 +2837,9 @@ function vCardapio(){const c=cdp(),ps=prodList(),noc=ps.filter(p=>c.ids.includes
   <div class="grid2"><div><label>Taxa de entrega R$</label><input inputmode="decimal" value="${c.taxa?String(c.taxa).replace('.',','):''}" placeholder="0,00" onchange="salvarCdp({taxa:Math.max(0,num(this.value))})"></div>
   <div><label>WhatsApp do restaurante</label><input inputmode="tel" value="${esc(c.whatsapp)}" placeholder="(17) 99999-9999" onchange="salvarCdp({whatsapp:this.value.trim()})"></div></div>
   <label>Formas de pagamento aceitas</label><div class="row" style="flex-wrap:wrap;gap:4px 14px">${['Pix','Crédito','Débito','Dinheiro'].map(pg).join('')}</div>
+  <div class="grid2"><div><label>Horário de funcionamento</label><input value="${esc(c.horario||'')}" maxlength="80" placeholder="Ex.: Ter a dom, 18h às 23h" onchange="salvarCdp({horario:this.value.trim()})"></div>
+  <div><label>Fecha às (aparece “Aberto até…”)</label><input value="${esc(c.fecha||'')}" maxlength="8" placeholder="Ex.: 23h" onchange="salvarCdp({fecha:this.value.trim()})"></div></div>
+  <div class="grid2"><div><label>Pedido mínimo R$ (opcional)</label><input inputmode="decimal" value="${c.min?String(c.min).replace('.',','):''}" placeholder="0,00" onchange="salvarCdp({min:Math.max(0,num(this.value))})"></div><div></div></div>
   <label>Aviso no topo do cardápio (opcional)</label><input value="${esc(c.aviso)}" maxlength="140" placeholder="Ex.: Entregamos das 18h às 23h" onchange="salvarCdp({aviso:this.value.trim()})"></div></div>
   <div class="card" style="margin-top:14px"><div class="row"><h3 style="margin:0;flex:1">🍽️ Produtos no cardápio (${noc} de ${ps.length})</h3><button class="btn" onclick="salvarCdp({ids:prodList().map(p=>p.id)})">Mostrar todos</button><button class="btn" onclick="salvarCdp({ids:[]})">Tirar todos</button></div>
   <p style="color:var(--mut)">Ligue os produtos que aparecem para o cliente. Foto, preço e descrição vêm do cadastro: toque em ✏️ para mudar.</p>

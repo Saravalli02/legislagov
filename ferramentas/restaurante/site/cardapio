@@ -22,6 +22,22 @@ header.loja .in{max-width:760px;margin:0 auto;padding:22px 16px 18px;display:fle
 .pill{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 10px;border-radius:999px;font-size:.8rem;font-weight:700;background:#e7f6ee;color:var(--ok)}
 .pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .pill.off{background:#f6e9e9;color:#a51d1d}
+.inf{margin-top:8px;font-size:.84rem;color:var(--mut);line-height:1.5}
+.inf .mi{background:none;border:0;padding:0;color:var(--acc,#d9480f);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
+.lshare{margin-left:auto;align-self:flex-start;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card,#fff);color:inherit;display:grid;place-items:center;cursor:pointer;flex:none}
+.pnov{margin:6px 0 14px}.pnov h2{font-size:1.05rem;margin:0 0 8px}
+.pnov .rl{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+.pnov .it{flex:0 0 150px;scroll-snap-align:start;border:1px solid var(--line);border-radius:14px;background:var(--card,#fff);overflow:hidden;display:flex;flex-direction:column}
+.pnov .it .ft{height:90px;flex:none;overflow:hidden;background:#f3f1ee;display:grid;place-items:center;font-size:2rem}.pnov .it .ft img{width:100%;height:100%;object-fit:cover}
+.pnov .it b{font-size:.86rem;padding:8px 8px 0;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pnov .it span{font-size:.85rem;padding:2px 8px;font-weight:700}
+.pnov .it button{margin:6px 8px 8px;border:0;border-radius:10px;padding:7px;font-weight:700;background:var(--acc,#d9480f);color:#fff;cursor:pointer;font-size:.8rem}
+.minw{background:#fff4e5;border:1px solid #f5c58a;color:#8a4b00;border-radius:12px;padding:10px 12px;font-size:.9rem;margin-top:8px}
+.ilist{margin:0;padding:0;list-style:none}.ilist li{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.ilist li:last-child{border:0}.ilist .k{min-width:96px;color:var(--mut);font-size:.88rem}
+.hped{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}.hped .t{display:flex;justify-content:space-between;font-weight:700}.hped small{display:block;color:var(--mut);margin:4px 0 8px}
+.hped button{border:0;border-radius:10px;padding:8px 12px;font-weight:700;background:var(--acc,#d9480f);color:#fff;cursor:pointer}
+.mped{border:1px solid var(--line);background:var(--card,#fff);color:inherit;border-radius:12px;padding:0 12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.mped{min-width:52px;font-size:1.25rem;display:flex;align-items:center;justify-content:center;gap:4px}.mped .tx{font-size:.95rem}
 .aviso{margin:14px 0 0;padding:11px 14px;border-radius:12px;background:#fff8e6;border:1px solid #f2e2b3;font-size:.92rem}
 nav.cats{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0 10px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
 nav.cats::-webkit-scrollbar{display:none}
@@ -82,7 +98,7 @@ textarea.campo{height:70px;padding:10px 13px;resize:vertical}
 nav.cats{position:static}
 .prod .ft{position:relative}.ilu{position:absolute;left:6px;bottom:6px;font-size:.62rem;font-weight:700;background:#ffffffd9;color:#555;border-radius:6px;padding:1px 5px}
 .voltar{display:block;width:100%;text-align:left;font-weight:700;color:var(--acc);padding:4px 2px 12px}
-@media(max-width:420px){.carro .tx{display:none}}
+@media(max-width:420px){.carro .tx,.mped .tx{display:none}}
 .monte{margin:20px 2px 12px}.monte h2{margin:0;font-size:1.3rem;letter-spacing:-.02em}.monte p{margin:3px 0 0;color:var(--mut);font-size:.93rem}
 .menus{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(min-width:560px){.menus{grid-template-columns:repeat(3,1fr)}}
@@ -180,6 +196,9 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const brl=v=>(+v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 let D=null,cat='',busca='',carro={},folha=null,fim=null,PED={tipo:'',pagamento:'',nome:'',fone:'',endereco:'',troco:'',obs:''};
 try{carro=JSON.parse(localStorage.getItem('lg-cdp-carro')||'{}');Object.assign(PED,JSON.parse(localStorage.getItem('lg-cdp-dados')||'{}'));PED.tipo='';PED.pagamento=''}catch(e){}
+let HIST=[];try{HIST=JSON.parse(localStorage.getItem('lg-cdp-hist'+CLI_K())||'[]')}catch(e){}
+function CLI_K(){const c=new URLSearchParams(location.search).get('c');return c&&/^[a-z0-9-]{1,60}$/.test(c)?'-'+c:''}
+const salvarHist=()=>{try{localStorage.setItem('lg-cdp-hist'+CLI_K(),JSON.stringify(HIST.slice(0,10)))}catch(e){}};
 const salvar=()=>{try{localStorage.setItem('lg-cdp-carro',JSON.stringify(carro));localStorage.setItem('lg-cdp-dados',JSON.stringify({nome:PED.nome,fone:PED.fone,endereco:PED.endereco}))}catch(e){}};
 const ORDEM=['Pratos','Porções','Oriental','Lanches','Doces','Sobremesas','Bebidas','Outros'],ICONE={Bebidas:'🥤',Pratos:'🍛','Porções':'🍟',Oriental:'🍣',Lanches:'🍔',Doces:'🍫',Sobremesas:'🍨',Outros:'🍽️'};
 const ordemCat=c=>{const i=ORDEM.indexOf(c);return i<0?99:i};
@@ -234,21 +253,40 @@ function tela(){if(!D)return;const L=D.loja,cats=[...new Set(D.produtos.map(p=>p
   let corpo;
   if(!D.produtos.length)corpo='<div class="vazio">O cardápio ainda está sendo montado.</div>';
   else if(b)corpo=`<div class="ctit"><h2>Busca</h2><button class="vt" onclick="busca='';tela()">Limpar</button></div>${ps.length?ps.map(cartaoProd).join(''):'<div class="vazio">Nada encontrado.</div>'}`;
-  else if(!emCat)corpo=`<div class="monte"><h2>Monte seu pedido</h2><p>Escolha um menu para ver os itens</p></div>
+  else if(!emCat)corpo=`${pecaNovo()}<div class="monte"><h2>Monte seu pedido</h2><p>Escolha um menu para ver os itens</p></div>
     <div class="menus">${cats.map((c,i)=>{const f=fotoMenu(c),q=D.produtos.filter(p=>p.cat===c).length;
       return `<button onclick="irCat(CATS_[${i}])"><span class="im">${f?`<img src="${f}" alt="" loading="lazy">`:(ICONE[c]||'🍽️')}</span><span class="nm"><span><b>${esc(c)}</b><br><small>${q} ${q===1?'item':'itens'}</small></span><span class="seta" aria-hidden="true">›</span></span></button>`}).join('')}</div>`;
   else corpo=`${umSo?'':`<div class="ctit"><h2>${ICONE[cat]||''} ${esc(cat)}</h2></div>`}${ps.map(cartaoProd).join('')}
     ${umSo?'':`<button class="outros" onclick="irMenus()">Ver outros menus</button>`}`;
   $('#app').innerHTML=`<header class="loja"><div class="in"><div class="lg">${L.logo?`<img src="${L.logo}" alt="">`:esc((L.nome||'R').trim()[0]||'R')}</div><div class="lj"><h1>${esc(L.nome)}</h1>${L.endereco?`<p>${esc(L.endereco)}</p>`:''}
-    <span class="pill ${D.aberto?'':'off'}">${D.aberto?'Aberto · recebendo pedidos':'Fechado agora · pedidos indisponíveis'}</span></div></div></header>
+    <span class="pill ${D.aberto?'':'off'}">${D.aberto?(D.fecha?'Aberto até '+esc(D.fecha):'Aberto · recebendo pedidos'):'Fechado agora · pedidos indisponíveis'}</span>
+    <div class="inf">${[D.min>0?'Pedido mín. '+brl(D.min):'',D.tipos.entrega?(D.taxa?'Entrega '+brl(D.taxa):'Entrega grátis'):''].filter(Boolean).join(' · ')}${D.min>0||D.tipos.entrega?' · ':''}<button class="mi" onclick="folha=fInfo;tela()">Mais informações</button></div></div>
+    <button class="lshare" onclick="compartilhar()" aria-label="Compartilhar o cardápio"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg></button></div></header>
   <div class="wrap">${D.aviso&&!emCat?`<div class="aviso">${esc(D.aviso)}</div>`:''}
   <div class="fixo"><div class="linha"><input class="busca" placeholder="Buscar no cardápio" value="${esc(busca)}" oninput="busca=this.value;tela();const i=$('.busca');i.focus();i.setSelectionRange(i.value.length,i.value.length)">
-  <button class="carro ${n?'cheio':''}" onclick="abrir()" aria-label="Abrir o carrinho, ${n} itens"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h3l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.3a1.6 1.6 0 0 0 1.6-1.2l1.6-7.3H6.2"/></svg><span class="tx">Carrinho</span>${n?`<span class="ct">${n}</span>`:''}</button></div>
+  <button class="carro ${n?'cheio':''}" onclick="abrir()" aria-label="Abrir o carrinho, ${n} itens"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h3l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.3a1.6 1.6 0 0 0 1.6-1.2l1.6-7.3H6.2"/></svg><span class="tx">Carrinho</span>${n?`<span class="ct">${n}</span>`:''}</button>${HIST.length?`<button class="mped" onclick="folha=fHist;tela()" aria-label="Meus pedidos">🧾<span class="tx"> Meus pedidos</span></button>`:''}</div>
   ${cat&&!umSo&&!b?`<nav class="cats"><button class="mn" onclick="irMenus()">☰ Menus</button>${cats.map((c,i)=>`<button class="${cat===c?'act':''}" onclick="irCat(CATS_[${i}])">${ICONE[c]||''} ${esc(c)}</button>`).join('')}</nav>`:''}</div>
   ${corpo}
   <p class="rod">Cardápio digital · GR Restaurante</p></div>
   ${n&&D.aberto?`<div class="barra"><button onclick="abrir()"><span><span class="n">${n}</span>Ver carrinho</span><span>${brl(subtotal())}</span></button></div>`:''}${folha?folha():''}`}
 function abrir(){fim=null;folha=fFolha;tela()}
+/* “Peça de novo”: itens dos últimos pedidos deste aparelho que ainda estão no cardápio */
+function pecaNovo(){const vis=new Set(),l=[];for(const h of HIST)for(const i of h.itens||[]){const p=prod(i.id);if(p&&!p.esgotado&&!vis.has(p.id)){vis.add(p.id);l.push(p)}}
+  if(!l.length)return '';return `<div class="pnov"><h2>🔁 Peça de novo</h2><div class="rl">${l.slice(0,10).map(p=>`<div class="it"><div class="ft">${foto(p)?`<img src="${foto(p)}" alt="" loading="lazy">`:'🍽️'}</div><b>${esc(p.nome)}</b><span>${brl(p.preco)}</span>${D.aberto?`<button onclick="mudar('${p.id}',1)">${carro[p.id]?'No carrinho: '+carro[p.id]:'Adicionar'}</button>`:''}</div>`).join('')}</div></div>`}
+function repetir(k){const h=HIST[k];if(!h)return;let f=0;for(const i of h.itens||[]){const p=prod(i.id);if(p&&!p.esgotado)carro[p.id]=Math.min(50,(carro[p.id]||0)+i.q);else f++}salvar();fim=null;folha=fFolha;tela();
+  if(f)setTimeout(()=>{const e=$('#err');if(e)e.textContent=f+(f>1?' itens não estão disponíveis hoje e ficaram de fora.':' item não está disponível hoje e ficou de fora.')},50)}
+function fHist(){return `<div class="folha" onclick="if(event.target===this)fechar()"><div class="in" role="dialog" aria-modal="true" aria-label="Meus pedidos"><div class="topo"><h3>Meus pedidos</h3><button class="x" onclick="fechar()" aria-label="Fechar">×</button></div>
+  ${HIST.map((h,k)=>`<div class="hped"><div class="t"><span>Nº ${esc(h.num)}</span><span>${brl(h.total)}</span></div><small>${new Date(h.t).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · ${esc((h.itens||[]).map(i=>i.q+'x '+i.nome).join(', '))}</small>${D.aberto?`<button onclick="repetir(${k})">Pedir de novo</button>`:''}</div>`).join('')}
+  <p style="color:var(--mut);font-size:.82rem">Guardamos só neste aparelho os seus últimos pedidos.</p></div></div>`}
+function fInfo(){const L=D.loja,w=(L.whatsapp||'').replace(/\D/g,''),wn=w?(w.length<=11?'55'+w:w):'',tp=Object.keys(TIPOS).filter(k=>D.tipos[k]).map(k=>TIPOS[k][0]);
+  const li=(k,v)=>v?`<li><span class="k">${k}</span><span>${v}</span></li>`:'';
+  return `<div class="folha" onclick="if(event.target===this)fechar()"><div class="in" role="dialog" aria-modal="true" aria-label="Informações"><div class="topo"><h3>${esc(L.nome)}</h3><button class="x" onclick="fechar()" aria-label="Fechar">×</button></div>
+  <ul class="ilist">${li('Situação',D.aberto?'🟢 Aberto agora'+(D.fecha?' · até '+esc(D.fecha):''):'🔴 Fechado agora')}${li('Horário',esc(D.horario))}${li('Endereço',L.endereco?`${esc(L.endereco)}<br><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(L.endereco)}" target="_blank" rel="noopener">Ver no mapa</a>`:'')}
+  ${li('WhatsApp',wn?`<a href="https://wa.me/${wn}" target="_blank" rel="noopener">${esc(L.whatsapp)}</a>`:'')}${li('Telefone',esc(L.fone))}${li('Atendimento',esc(tp.join(' · ')))}${li('Entrega',D.tipos.entrega?(D.taxa?'Taxa de '+brl(D.taxa):'Grátis'):'')}${li('Pedido mínimo',D.min>0?brl(D.min):'')}${li('Pagamento',esc(D.pagamentos.join(' · ')))}</ul></div></div>`}
+async function compartilhar(){const u=location.href.split('#')[0],t=(D.loja.nome||'Cardápio')+' — cardápio digital';
+  try{if(navigator.share){await navigator.share({title:t,text:t,url:u});return}}catch(e){if(e&&e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(u);alerta('Link do cardápio copiado!')}catch(e){prompt('Copie o link do cardápio:',u)}}
+function alerta(m){let d=$('#toast');if(!d){d=document.createElement('div');d.id='toast';d.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:12px;z-index:99;font-weight:600';document.body.appendChild(d)}d.textContent=m;d.style.display='block';clearTimeout(d._t);d._t=setTimeout(()=>d.style.display='none',2200)}
 function fechar(){folha=null;tela()}
 function fFolha(){if(fim)return fSucesso();const its=itens(),tps=Object.keys(TIPOS).filter(k=>D.tipos[k]);if(!PED.tipo&&tps.length===1)PED.tipo=tps[0];
   const taxa=PED.tipo==='entrega'?D.taxa:0;
@@ -263,7 +301,7 @@ function fFolha(){if(fim)return fSucesso();const its=itens(),tps=Object.keys(TIP
   <div class="bloco"><h4>Forma de pagamento</h4><div class="opc">${D.pagamentos.map(x=>`<button class="${PED.pagamento===x?'act':''}" onclick="PED.pagamento='${esc(x)}';tela()">${esc(x)}<small>${x==='Pix'?'Na entrega ou no balcão':x==='Dinheiro'?'Informe o troco':'Na maquininha'}</small></button>`).join('')}</div>
   ${PED.pagamento==='Dinheiro'?`<label for="ft">Troco para quanto? (opcional)</label><input id="ft" class="campo" inputmode="decimal" placeholder="Ex.: 100" value="${esc(PED.troco)}" oninput="PED.troco=this.value">`:''}
   <label for="fo">Observação (opcional)</label><textarea id="fo" class="campo" maxlength="200" placeholder="Ex.: sem cebola, ponto da carne" oninput="PED.obs=this.value">${esc(PED.obs)}</textarea></div>
-  <div class="bloco"><div class="tot"><span>Itens</span><span>${brl(subtotal())}</span></div>${taxa?`<div class="tot"><span>Taxa de entrega</span><span>${brl(taxa)}</span></div>`:''}<div class="tot g"><span>Total</span><span>${brl(subtotal()+taxa)}</span></div></div>
+  <div class="bloco"><div class="tot"><span>Itens</span><span>${brl(subtotal())}</span></div>${taxa?`<div class="tot"><span>Taxa de entrega</span><span>${brl(taxa)}</span></div>`:''}<div class="tot g"><span>Total</span><span>${brl(subtotal()+taxa)}</span></div>${D.min>0&&subtotal()<D.min?`<div class="minw">O pedido mínimo é de <b>${brl(D.min)}</b>. Faltam ${brl(D.min-subtotal())}.</div>`:''}</div>
   <button class="enviar" id="env" onclick="enviar()">Fazer pedido</button><p class="erro" id="err" role="alert"></p>`:!D.aberto&&its.length?'<p class="vazio" style="padding:14px">O restaurante não está recebendo pedidos agora.</p>':''}</div></div>`}
 async function enviar(){const e=$('#err'),bt=$('#env');e.textContent='';
   if(!PED.tipo)return e.textContent='Escolha se vai retirar, comer no local ou receber em casa.';
@@ -271,10 +309,11 @@ async function enviar(){const e=$('#err'),bt=$('#env');e.textContent='';
   if(PED.fone.replace(/\D/g,'').length<10)return e.textContent='Escreva seu WhatsApp com DDD.';
   if(PED.tipo==='entrega'&&PED.endereco.trim().length<5)return e.textContent='Escreva o endereço de entrega.';
   if(!PED.pagamento)return e.textContent='Escolha a forma de pagamento.';
+  if(D.min>0&&subtotal()<D.min)return e.textContent='O pedido mínimo é de '+brl(D.min)+'.';
   bt.disabled=true;bt.textContent='Enviando…';salvar();
   try{const r=await fetch('/api/pedido'+CLI_Q,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...PED,itens:itens().map(x=>({id:x.p.id,qtd:x.q}))})});
     const d=await r.json().catch(()=>({}));
-    if(r.ok&&d.num){fim={...d,itens:itens().map(x=>x.q+'x '+x.p.nome),tipo:PED.tipo,pagamento:PED.pagamento};carro={};salvar();PED.obs='';tela();return}
+    if(r.ok&&d.num){HIST.unshift({num:d.num,t:Date.now(),total:d.total,itens:itens().map(x=>({id:x.p.id,q:x.q,nome:x.p.nome}))});salvarHist();fim={...d,itens:itens().map(x=>x.q+'x '+x.p.nome),tipo:PED.tipo,pagamento:PED.pagamento};carro={};salvar();PED.obs='';tela();return}
     e.textContent=d.erro||'Não foi possível enviar o pedido. Tente de novo.';if(r.status===409||r.status===400)carregar()}
   catch(x){e.textContent='Sem internet. Confira a conexão e tente de novo.'}
   bt.disabled=false;bt.textContent='Fazer pedido'}

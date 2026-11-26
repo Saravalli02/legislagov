@@ -53,7 +53,7 @@ const cardapio=async st=>{const pub=pubM.get(st.cli)||{t:0,v:null};if(pub.v&&Dat
   const e=await doc(st,'estado','atual'),ed=(e&&e.data)||{},mv=ed.movId?await doc(st,'movimentos',ed.movId):null;
   const ativo=cd.ativo!==false,aberto=ativo&&!!(mv&&mv.data&&!mv.data.fechamento);
   const v={loja:{nome:c.razao||'Restaurante',logo:c.logo||'',fone:c.fone||'',endereco:c.endereco||'',whatsapp:cd.whatsapp||''},ativo,aberto,genericas:cd.genericas!==false,
-    tipos:cd.tipos||{retirada:true,local:true,entrega:false},taxa:+cd.taxa||0,pagamentos:cd.pagamentos||['Pix','Crédito','Débito','Dinheiro'],aviso:cd.aviso||'',
+    tipos:cd.tipos||{retirada:true,local:true,entrega:false},taxa:+cd.taxa||0,pagamentos:cd.pagamentos||['Pix','Crédito','Débito','Dinheiro'],aviso:cd.aviso||'',horario:cd.horario||'',fecha:cd.fecha||'',min:+cd.min||0,
     produtos:ps.map(p=>({id:p.id,nome:p.nome,unidade:p.unidade||'',cat:p.cat||'Outros',preco:+p.preco||0,custo:+p.custo||0,desc:p.desc||'',img:p.img||'',
       esgotado:!(p.estoque===''||p.estoque==null)&&+p.estoque<=0}))};
   if(pubM.size>200)pubM.clear();pubM.set(st.cli,{t:Date.now(),v});return v};
@@ -74,6 +74,7 @@ const pedido=async(st,e,b)=>{
     if(!p||p.esgotado||!(q>=1&&q<=50))return J(400,{erro:'Algum item acabou de sair do cardápio. Atualize a página e tente de novo.'});
     const it=its.find(i=>i.pid===p.id);if(it)it.qtd+=q;else its.push({pid:p.id,nome:p.nome+(p.unidade?' '+p.unidade:''),preco:p.preco,custo:p.custo,qtd:q})}
   if(!its.length)return J(400,{erro:'Escolha pelo menos um item.'});
+  {const sub=its.reduce((a,i)=>a+(+i.preco||0)*(+i.qtd||0),0);if(v.min>0&&sub+1e-9<v.min)return J(400,{erro:'O pedido mínimo é de R$ '+v.min.toFixed(2).replace('.',',')+'.'})}
   if(tipo==='entrega'&&v.taxa>0)its.push({pid:'taxa-entrega',nome:'Taxa de entrega',preco:v.taxa,custo:0,qtd:1});
   let num=0,movId='';
   for(let k=0;k<6&&!num;k++){const x=await st.get('estado','atual'),ed=(x&&!x.del&&x.data)||{},nd={...ed,seq:(+ed.seq||0)+1};
@@ -142,18 +143,20 @@ const waResponder=async(base,cfg,pid,cli,de,texto,botao)=>{
   const tipo=(a&&a.tipo)||'restaurante',loja=c.razao||(tipo==='acougue'?'nosso açougue':'nosso restaurante'),link=waLink(cli,tipo),n=Date.now();
   const ct=(await st.privGet('wa|ct|'+de))||{};
   const t=String(texto||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const bt0=botao;
   if(!botao){if(/card[aá]?pio|menu|pedir|pedido/.test(t))botao='cardapio';else if(/atendente|pessoa|humano|falar com/.test(t))botao='humano';else if(/horario|endereco|onde fica|aberto/.test(t))botao='info'}
   if(botao==='humano'){await st.privPut('wa|ct|'+de,{...ct,humano:n+2*3600e3});
     return waTexto(cfg,pid,de,w.humano||'Certo! 🙂 Já avisamos a equipe. Um atendente vai te responder por aqui em instantes.')}
   if(botao==='menu'){botao='';ct.humano=0}
   if(!botao&&ct.humano&&ct.humano>n)return;               // conversa está com um atendente: o robô fica quieto
+  if(!bt0&&t&&botao!=='humano'){const r=await waBusca(st,t,loja,link,texto);if(r){await st.privPut('wa|ct|'+de,{...ct,menu:n,humano:0});return waTexto(cfg,pid,de,r)}}
   if(botao==='cardapio'){const v=await cardapio(st),ps=v.produtos.filter(p=>!p.esgotado);let s=`📋 *Cardápio — ${loja}*\n`;
     if(!v.aberto)s+='\n⚠️ Estamos fechados agora. Os pedidos abrem no horário de funcionamento.\n';
     const cats=[...new Set(ps.map(p=>p.cat))];
     for(const k of cats){const l=`\n*${k}*\n`+ps.filter(p=>p.cat===k).map(p=>`• ${p.nome}${p.unidade?' '+p.unidade:''} — ${waBRL(p.preco)}`).join('\n')+'\n';if(s.length+l.length>3300){s+='\n…e mais itens no link abaixo.\n';break}s+=l}
     s+=`\n🛵 Veja as fotos e faça seu pedido aqui:\n${link}`;
     await st.privPut('wa|ct|'+de,{...ct,menu:n,humano:0});return waTexto(cfg,pid,de,s)}
-  if(botao==='info'){const l=[`📍 *${loja}*`];if(c.endereco)l.push('Endereço: '+c.endereco);if(w.horario)l.push('Horário: '+w.horario);if(c.fone)l.push('Telefone: '+c.fone);
+  if(botao==='info'){const l=[`📍 *${loja}*`];if(c.endereco)l.push('Endereço: '+c.endereco);{const hr=w.horario||(c.cardapio||{}).horario;if(hr)l.push('Horário: '+hr)}if(c.fone)l.push('Telefone: '+c.fone);
     if(l.length===1)l.push('Responda "atendente" que a equipe te passa o horário e o endereço.');l.push('\nCardápio: '+link);
     await st.privPut('wa|ct|'+de,{...ct,menu:n,humano:0});return waTexto(cfg,pid,de,l.join('\n'))}
   if(ct.menu&&n-ct.menu<60e3)return;                       // não repete o menu a cada mensagem
@@ -161,6 +164,22 @@ const waResponder=async(base,cfg,pid,cli,de,texto,botao)=>{
   return waEnviar(cfg,pid,{to:de,type:'interactive',interactive:{type:'button',
     body:{text:String(w.boas||`Olá! 👋 Bem-vindo(a) ao ${loja}. Como podemos te ajudar?`).slice(0,1000)},footer:{text:'Toque numa opção'},
     action:{buttons:[{type:'reply',reply:{id:'cardapio',title:'Cardápio e pedido'}},{type:'reply',reply:{id:'info',title:'Horário e endereço'}},{type:'reply',reply:{id:'humano',title:'Falar com atendente'}}]}}})};
+/* pergunta livre ("quais macarrão vocês têm hoje?") → procura no cardápio e responde com as opções e o link */
+const WA_PARADA=new Set('quais qual quero queria gostaria saber tipos tipo tem tens temos teria tenho vcs voces voce vc hoje agora ai aqui la disponivel disponiveis opcoes opcao do da de dos das no na nos nas o a os as um uma uns umas e ou que pra para por com sem me mim sobre valor valores preco precos quanto custa custam cardapio menu oi ola bom boa dia tarde noite tudo bem favor obrigado obrigada pode poderia manda mandar envia enviar ver vende vendem vender servem serve fazem faz sabor sabores pedir pedido quero algum alguma ainda mais'.split(' '));
+const WA_EMO={Pratos:'🍛','Porções':'🍟',Oriental:'🍣',Lanches:'🍔',Doces:'🍫',Sobremesas:'🍨',Bebidas:'🥤',Pizzas:'🍕',Massas:'🍝',Bovinos:'🥩',Suínos:'🥓',Aves:'🍗',Linguiças:'🌭'};
+const waNorm=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]+/g,' ');
+const waRaiz=w=>w.length>4?w.replace(/(oes|aes|ais|eis|es|s)$/,''):w.replace(/s$/,'');
+const waBusca=async(st,t,loja,link,orig)=>{const ori={};String(orig||t).toLowerCase().split(/[^0-9a-zà-ÿ]+/).forEach(w=>{if(w)ori[waNorm(w).trim()]=w});const pal=[...new Set(waNorm(t).split(/\s+/).filter(w=>w.length>=3&&!WA_PARADA.has(w)))].slice(0,6);if(!pal.length)return '';
+  const v=await cardapio(st);
+  const ach=v.produtos.filter(p=>!p.esgotado).map(p=>{const nm=waNorm(p.nome+' '+p.cat),ds=waNorm(p.desc);let sc=0;
+    for(const w of pal){const r=waRaiz(w);if(nm.includes(r))sc+=2;else if(ds.includes(r))sc+=1}return {p,sc}}).filter(x=>x.sc>0);
+  if(!ach.length)return '';const mx=Math.max(...ach.map(x=>x.sc)),ps=ach.filter(x=>x.sc===mx).map(x=>x.p).sort((a,b)=>a.preco-b.preco).slice(0,12);
+  const h=+new Intl.DateTimeFormat('en-US',{hour:'numeric',hourCycle:'h23',timeZone:'America/Sao_Paulo'}).format(new Date());
+  const sd=h>=5&&h<12?'Bom dia! ☀️':h>=12&&h<18?'Boa tarde! 😊':'Boa noite! 🌙',tema=pal.filter(w=>ps.some(p=>waNorm(p.nome+' '+p.cat+' '+p.desc).includes(waRaiz(w)))).map(w=>ori[w]||w).join(' ')||pal[0];
+  const em=p=>{const x=waNorm(p.nome);return /macarr|massa|lasanh|espaguet|nhoque|talharim/.test(x)?'🍝':/pizza/.test(x)?'🍕':/sushi|temaki|hot ?roll|sashimi/.test(x)?'🍣':/cerveja|chopp/.test(x)?'🍺':/suco/.test(x)?'🧃':WA_EMO[p.cat]||'🍽️'};
+  let s=`${sd}\n\n${ps.length>1?`Estas são as opções de *${tema}* disponíveis no cardápio:`:`Temos sim! 😋`}\n\n`+ps.map(p=>`${em(p)} ${p.nome}${p.unidade&&p.unidade!=='un'?' ('+p.unidade+')':''} — ${waBRL(p.preco)}`).join('\n');
+  if(!v.aberto)s+=`\n\n⚠️ No momento não estamos recebendo pedidos${v.horario?' — horário: '+v.horario:''}.`;
+  return s+`\n\nConfira o cardápio digital para ver todas as opções de hoje e fazer seu pedido! 😊\n${link}`};
 const waWebhook=async(base,e,h,q,m)=>{const cfg=await waCfg(base);
   if(m==='GET'){if(q['hub.mode']==='subscribe'&&q['hub.verify_token']&&q['hub.verify_token']===cfg.verify)return{statusCode:200,headers:{'content-type':'text/plain'},body:String(q['hub.challenge']||'')};return J(403,{ok:false})}
   if(!cfg.segredo||!cfg.token)return J(200,{ok:1});
