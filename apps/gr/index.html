@@ -144,6 +144,29 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 .rod{padding:36px clamp(16px,3vw,32px);display:flex;align-items:center;gap:14px;color:var(--sub);font-size:13.5px;flex-wrap:wrap}
 .rod img{height:22px}.rod .es2{margin-left:auto;display:flex;gap:18px}
 .rod a:hover{color:#fff}
+
+/* ---------- loja: perfis dos sistemas (sem preço por enquanto) ---------- */
+.loja-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+@media(max-width:900px){.loja-g{grid-template-columns:1fr}}
+.prd{border:1px solid var(--lin);border-radius:22px;overflow:hidden;background:#0a0b0e;display:flex;flex-direction:column}
+.prd .capa{position:relative;height:190px;background:radial-gradient(120% 140% at 85% 10%,var(--c2) 0%,transparent 55%),linear-gradient(135deg,var(--c) 0%,#0a0b0e 95%);display:flex;align-items:flex-end;padding:20px;overflow:hidden}
+.prd .capa .big{position:absolute;right:18px;top:12px;font-size:92px;filter:drop-shadow(0 10px 24px #0008);transform:rotate(-8deg)}
+.prd .capa .tela{position:absolute;right:120px;top:26px;width:170px;border-radius:12px;background:#0d0f14e6;border:1px solid #ffffff22;padding:9px;display:grid;gap:5px;box-shadow:0 18px 40px #0009}
+.prd .capa .tela i{display:block;height:8px;border-radius:4px;background:#ffffff26}.prd .capa .tela i:nth-child(1){width:60%;background:var(--c)}.prd .capa .tela i:nth-child(3){width:80%}.prd .capa .tela i:nth-child(4){width:45%}
+.prd .capa .tela b{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.prd .capa .tela b u{height:20px;border-radius:5px;background:#ffffff1a;text-decoration:none}.prd .capa .tela b u:nth-child(2n){background:color-mix(in srgb,var(--c) 55%,transparent)}
+@media(max-width:520px){.prd .capa .tela{display:none}}
+.prd .capa h3{position:relative;font-size:28px;letter-spacing:-.03em;text-shadow:0 2px 14px #0008}.prd .capa small{display:block;font-size:13px;color:#ffffffcc;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.prd .cp{padding:20px 22px 22px;display:flex;flex-direction:column;gap:14px;flex:1}
+.prd .cp>p{color:var(--sub);line-height:1.5}
+.prd ul.fe{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:14.5px}
+@media(max-width:520px){.prd ul.fe{grid-template-columns:1fr}}
+.prd ul.fe li{display:flex;gap:8px;align-items:flex-start;line-height:1.35}.prd ul.fe li::before{content:"✓";flex:none;width:18px;height:18px;border-radius:50%;background:color-mix(in srgb,var(--c) 30%,transparent);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.prd .ac{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:6px}
+.prd .ac .bt[aria-disabled=true]{opacity:.45;cursor:not-allowed;pointer-events:none}
+.prd .ac .bt.wa{background:#25d366;color:#04140a}
+.prd .ac em{align-self:center;font-size:12.5px;color:var(--sub);font-style:normal}
+.incl{margin-top:22px;border:1px dashed #ffffff26;border-radius:18px;padding:18px 22px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;justify-content:center;color:var(--sub);font-size:14.5px}
+.incl b{color:var(--txt)}
 .rev{opacity:0;transform:translateY(18px);transition:opacity .7s,transform .7s}.rev.vis{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){.raios,.brilho{animation:none}.rev{opacity:1;transform:none}}
 
@@ -164,7 +187,7 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 <body>
 <nav class="nav">
   <a class="marca" href="#topo" aria-label="GR Software, início"><img src="gr-emblema.webp" alt="">GR Software</a>
-  <div class="menu" id="menu"><a href="#modelos">Produtos</a><a href="#como">Como funciona</a><a href="#modelos">Modelos prontos</a><a href="#sobre">Sobre nós</a><a href="#contato">Contato</a><a class="m-lg" href="https://painel.grsoftware.com.br/" title="Entrar na LegislaGov: escolha a sua Câmara, usuário e senha">LegislaGov</a><a class="m-entrar" href="https://central.grsoftware.com.br/">Entrar no meu painel →</a></div>
+  <div class="menu" id="menu"><a href="#produtos">Produtos</a><a href="#como">Como funciona</a><a href="#modelos">Modelos prontos</a><a href="#sobre">Sobre nós</a><a href="#contato">Contato</a><a class="m-lg" href="https://painel.grsoftware.com.br/" title="Entrar na LegislaGov: escolha a sua Câmara, usuário e senha">LegislaGov</a><a class="m-entrar" href="https://central.grsoftware.com.br/">Entrar no meu painel →</a></div>
   <div class="dir"><a class="bt es" href="https://central.grsoftware.com.br/">Entrar</a><a class="bt cl" href="#contato">Fale com a gente</a></div>
   <button class="hamb" id="hamb" aria-label="Abrir o menu" aria-expanded="false">☰</button>
 </nav>
@@ -181,6 +204,27 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
     <a class="grp" href="#m-vendas" style="--c:#3fae4f;--cl:#c9f5d2"><span class="gt"><i></i><b>Sistema personalizado</b></span><em>Monte do seu jeito</em><ul><li>Horta</li><li>Mecânica</li><li>Loja de roupas</li><li>Distribuidora</li></ul></a>
   </div>
 </header>
+
+<section class="sec" id="produtos">
+  <div class="in">
+    <div class="cab rev"><div class="tag">Nossos produtos</div><h2>Escolha o sistema do seu comércio.</h2><p>Cada sistema já vem pronto para usar no computador e no celular. Veja tudo o que vem em cada um.</p></div>
+    <div class="loja-g">
+      <article class="prd rev" id="p-restaurante" style="--c:#e53935;--c2:#ff8a65"><div class="capa"><div class="tela" aria-hidden="true"><i></i><i></i><b><u></u><u></u><u></u><u></u><u></u><u></u><u></u><u></u></b><i></i><i></i></div><span class="big" aria-hidden="true">🍽️</span><div><small>Pronto para usar</small><h3>GR Restaurante</h3></div></div>
+        <div class="cp"><p>Do salão à cozinha: caixa, mesas, garçom no celular, delivery e cardápio digital, tudo em tempo real.</p><ul class="fe"><li>Caixa rápido com atalhos de teclado</li><li>Mesas e comandas</li><li>App do garçom com PIN</li><li>Retirada, comer no local e delivery</li><li>Cardápio digital com pedido online</li><li>Robô de atendimento no WhatsApp</li><li>Pedido impresso na cozinha</li><li>Produtos com foto e estoque</li><li>Clientes com conta e cobrança por Pix</li><li>Painel gerencial e controle de despesas</li><li>Histórico e relatórios de vendas</li><li>Funciona no computador e no celular</li></ul>
+        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20GR%20Restaurante.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><em>Compra pelo site em breve</em></div></div></article>
+      <article class="prd rev" id="p-acougue" style="--c:#f0b000;--c2:#ff7043"><div class="capa"><div class="tela" aria-hidden="true"><i></i><i></i><b><u></u><u></u><u></u><u></u><u></u><u></u><u></u><u></u></b><i></i><i></i></div><span class="big" aria-hidden="true">🥩</span><div><small>Pronto para usar</small><h3>GR Açougue</h3></div></div>
+        <div class="cp"><p>Caixa grande e rápido para o balcão, venda por quilo e grama e clientes com conta.</p><ul class="fe"><li>Caixa grande, feito para o balcão</li><li>Venda por quilo e por grama</li><li>Lê a etiqueta da balança</li><li>Clientes com crédito (fiado) e cobrança</li><li>Reserva de assados pelo link</li><li>Pedido digital</li><li>Estoque e movimentação</li><li>Comprovante impresso</li><li>Painel gerencial e despesas</li><li>Relatórios por dia e por período</li></ul>
+        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20GR%20A%C3%A7ougue.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><em>Compra pelo site em breve</em></div></div></article>
+      <article class="prd rev" id="p-mercado" style="--c:#1e88e5;--c2:#26c6da"><div class="capa"><div class="tela" aria-hidden="true"><i></i><i></i><b><u></u><u></u><u></u><u></u><u></u><u></u><u></u><u></u></b><i></i><i></i></div><span class="big" aria-hidden="true">🛒</span><div><small>Base do GR Açougue</small><h3>GR Mercado</h3></div></div>
+        <div class="cp"><p>O caixa só passa, recebe e emite. Cadastro, estoque e movimentação ficam com quem administra.</p><ul class="fe"><li>Caixa simples para o operador</li><li>Venda por unidade e por peso</li><li>Lê a etiqueta da balança</li><li>Cadastro de produtos e categorias</li><li>Estoque e movimentação</li><li>Clientes com conta</li><li>Acesso separado: caixa e gerência</li><li>Relatórios e painel gerencial</li></ul>
+        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20GR%20Mercado.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><em>Compra pelo site em breve</em></div></div></article>
+      <article class="prd rev" id="p-personalizado" style="--c:#3fae4f;--c2:#a5d6a7"><div class="capa"><div class="tela" aria-hidden="true"><i></i><i></i><b><u></u><u></u><u></u><u></u><u></u><u></u><u></u><u></u></b><i></i><i></i></div><span class="big" aria-hidden="true">🧩</span><div><small>Feito sob medida</small><h3>Sistema personalizado</h3></div></div>
+        <div class="cp"><p>Seu negócio não é restaurante nem mercado? A gente cria um sistema exclusivo, do jeito que você trabalha.</p><ul class="fe"><li>Você conta como trabalha, a gente monta</li><li>Telas e relatórios do seu jeito</li><li>App no celular que funciona sem internet</li><li>Vendedores, rotas e prestação de contas</li><li>Ajustes depois de pronto</li><li>Exemplo real: GR Rural (horta com vendedores na rua)</li></ul>
+        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20Sistema%20personalizado.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><em>Compra pelo site em breve</em></div></div></article>
+    </div>
+    <div class="incl rev"><b>Em todos os sistemas:</b><span>☁️ Servidores Amazon (AWS)</span><span>🔒 Cópia de segurança dos dados</span><span>🔄 Atualizações sem custo extra</span><span>💬 Suporte pelo WhatsApp</span><span>🎬 Videoaulas passo a passo (em breve)</span></div>
+  </div>
+</section>
 
 <section class="sec" id="como">
   <div class="in">
