@@ -406,7 +406,7 @@
       const demo = document.querySelector('#auth-screen .demo-alert');
       if (demo && SYNC.entrada) demo.remove();   // entrada única: cada Câmara tem o seu banco; aviso de teste não se aplica
       else if (demo) demo.textContent = 'AMBIENTE DE TESTES · Os dados ficam no servidor da Câmara e todos os usuários veem as mesmas informações.';
-      // entrada única: quem cria os usuários é a Procuradoria (Painel do Procurador › Vereadores e usuários)
+      // entrada única: quem cria os usuários é a Procuradoria (Painel da Procuradoria › Vereadores e usuários)
       if (SYNC.entrada) { const t = document.getElementById('tab-register'); if (t) { t.remove(); const l = document.getElementById('tab-login'); if (l && l.parentNode) l.parentNode.style.display = 'none'; } }
       const hint = document.querySelector('#register-form .auth-hint');
       if (hint) hint.textContent = 'Seu cadastro fica aguardando a liberação do administrador. O Presidente da Câmara é escolhido pela Procuradoria entre os vereadores.';

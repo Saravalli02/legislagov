@@ -39,7 +39,7 @@
 
   /* ---------------- perfis, áreas e permissões ----------------
      Cada usuário tem um PERFIL (cargo) que define os painéis que ele abre:
-       Administrador → todos · Procurador → Painel do Procurador (pareceres, prazos, usuários e acessos) · Secretaria → Administrativo
+       Administrador → todos · Procurador → Painel da Procuradoria (pareceres, prazos, usuários e acessos) · Secretaria → Administrativo
        Financeiro → Financeiro + Transparência · Vereador/Presidente → Painel do Vereador
      O Administrador e a Procuradoria podem ajustar exceções em "Áreas e acessos" (ex.: quem cuida do site).
      Painel sem permissão aparece com cadeado e não abre. */
@@ -50,7 +50,7 @@
   window.lgPainelOculto = k => PAINEIS_OCULTOS.includes(k);
   const ACESSO_TOTAL_PADRAO = ['ricardo'];
   const AREAS_INFO = [
-    ['procuradoria', 'Painel do Procurador', 'Pareceres jurídicos, prazos, assinaturas à mão, usuários e acessos.'],
+    ['procuradoria', 'Painel da Procuradoria', 'Pareceres jurídicos, prazos, assinaturas à mão, usuários e acessos.'],
     ['legislativo', 'Painel Administrativo', 'Secretaria: protocolo, matérias, sessões, expedientes e ouvidoria.'],
     ['vereador', 'Painel do Vereador', 'Proposituras, assinaturas, comissões, pauta; funções da Presidência.'],
     ['transparencia', 'Portal da Transparência', 'Publicar documentos no Portal da Transparência.'],
@@ -92,7 +92,7 @@
     if (PAINEIS_OCULTOS.includes(area)) return 'nenhum';
     const p = perfilDe(u); if (p === 'adm') return 'edicao';
     if (p === 'vereador' && (area === 'legislativo' || area === 'procuradoria')) return 'nenhum';   // vereador nunca entra no Painel Administrativo
-    // pacote só Protocolo e Tramitação: não há Painel do Procurador; a Procuradoria usa o painel único
+    // pacote só Protocolo e Tramitação: não há Painel da Procuradoria; a Procuradoria usa o painel único
     if (area === 'legislativo' && window.lgPlano === 'protocolo' && p === 'procurador') { const r0 = (mapaAreas()[loginDe(u)] || {}).legislativo; return r0 || 'edicao'; }
     const r = (mapaAreas()[loginDe(u)] || {})[area];
     if (r) return r;
@@ -518,7 +518,7 @@
      Depois de usuário e senha, a pessoa escolhe: Administrativo, Portal da Transparência ou Financeiro.
      Painel sem permissão aparece com cadeado e avisa "este usuário não tem permissão". */
   const PAINEIS = [
-    ['procuradoria', 'Painel do Procurador', 'Pareceres jurídicos, prazos, assinaturas à mão, usuários e acessos.', 'leis'],
+    ['procuradoria', 'Painel da Procuradoria', 'Pareceres jurídicos, prazos, assinaturas à mão, usuários e acessos.', 'leis'],
     ['legislativo', 'Painel Administrativo', 'Secretaria: protocolo, matérias, sessões, expedientes e ouvidoria.', 'materias'],
     ['vereador', 'Painel do Vereador', 'Suas proposituras, assinatura gov.br, pauta das sessões e andamento das matérias.', 'vereador'],
     ['transparencia', 'Portal da Transparência', 'Publicar documentos no Portal da Transparência do site.', 'transp'],
@@ -539,7 +539,7 @@
       <p class="lgp-sub">Câmara Municipal de Neves Paulista · ${esc(u.cargo || '')}</p>
       <p class="lgp-msg" id="lgp-msg" role="alert"></p>
       <div class="lgp-cards">${PAINEIS.slice().sort((a, b) => (nivelArea(a[0], u) === 'nenhum') - (nivelArea(b[0], u) === 'nenhum')).map(([k, n, d, i]) => { const nv = nivelArea(k, u); return `<button type="button" class="lgp-card ${nv === 'nenhum' ? 'bloq' : ''}" data-painel="${k}" onclick="lgpEntrar('${k}')"><span class="lgp-ic">${ic(i)}</span><span class="lgp-tx"><b>${n}</b><small>${d}</small></span><span class="lgp-st n-${nv}">${nv === 'nenhum' ? ic('cadeado') : ''}${nivelTxt[nv]}${nv !== 'nenhum' ? ic('seta') : ''}</span></button>`; }).join('')}</div>
-      <p class="lgp-rodape">Cada usuário abre os painéis do seu cargo. Os demais aparecem com cadeado. Quem libera é o administrador ou a Procuradoria, em Painel do Procurador › Áreas e acessos.</p>${window.lgMarcaHTML ? `<p class="lg-marca-p" style="margin-top:22px">${lgMarcaHTML}</p>` : ''}</div>`;
+      <p class="lgp-rodape">Cada usuário abre os painéis do seu cargo. Os demais aparecem com cadeado. Quem libera é o administrador ou a Procuradoria, em Painel da Procuradoria › Áreas e acessos.</p>${window.lgMarcaHTML ? `<p class="lg-marca-p" style="margin-top:22px">${lgMarcaHTML}</p>` : ''}</div>`;
     if (!$('#lgt-modal').hidden) fecharModal();
     el.hidden = false; document.documentElement.classList.add('lgp-aberto');
     setTimeout(() => el.querySelector('.lgp-card:not(.bloq)')?.focus(), 40);
