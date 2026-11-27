@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v62">
+<meta name="lg-versao" content="lg-v63">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -421,7 +421,7 @@ nav button small{font-size:.72rem}
 #printArea .cupom table td,#printArea .cupom table th{font-size:var(--bobfs,12px)}
 #printArea.medir{display:block!important;position:absolute;left:-9999px;top:0;width:var(--bob,80mm)}
 .cupom.tk .tk-n{font-size:1.35em;font-weight:800;letter-spacing:.5px}.cupom.tk .tk-m{font-size:1.6em;font-weight:800;margin:2px 0}
-.cupom.tk .tk-i{font-size:1.3em;margin:6px 0 2px;font-weight:800}.cupom.tk .tk-o,.cupom.tk .tk-io{font-weight:800;font-size:1.1em;border:2px solid #000;padding:2px 5px;margin:2px 0 6px}.cupom.tk .tk-io{margin-left:10px}
+.cupom .tk-v{font-size:2em;font-weight:900;letter-spacing:1px;border:4px solid #000;padding:4px 2px;margin:6px 0 2px}.cupom.tk .tk-i{font-size:1.3em;margin:6px 0 2px;font-weight:800}.cupom.tk .tk-o,.cupom.tk .tk-io{font-weight:800;font-size:1.1em;border:2px solid #000;padding:2px 5px;margin:2px 0 6px}.cupom.tk .tk-io{margin-left:10px}
 .obs-it{display:block;background:#fff3c4;color:#7a4a00;border:1px solid #f0c85a;border-radius:8px;padding:3px 8px;margin:3px 0;font-weight:800;font-size:.9rem}
 .cdp-it .thumb img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
 label.sw{position:relative;display:inline-flex;margin:0;cursor:pointer}label.sw input{position:absolute;opacity:0;width:1px;height:1px}
@@ -1586,7 +1586,8 @@ ${v.nota?`<tr><td>Nota fiscal</td><td class="n">${v.nota.status==='emitida'?'NFC
 <div class="c">NÃO É DOCUMENTO FISCAL<br>Obrigado pela preferência!</div></div>`}
 function ticketPedido(o){const its=(o.itens||[]).filter(i=>i.pid!=='taxa-entrega');
   const onde=o.mesa?'MESA '+o.mesa:o.tipo==='entrega'?'ENTREGA':o.tipo==='local'?'COMER NO LOCAL':o.tipo?'RETIRADA':'';
-  return `<div class="cupom tk"><div class="c tk-n">PEDIDO Nº ${esc(o.num||'')}</div>${onde?`<div class="c tk-m">${onde}</div>`:''}<hr>
+  const viagem=!o.mesa&&o.tipo&&o.tipo!=='local';
+  return `<div class="cupom tk"><div class="c tk-n">PEDIDO Nº ${esc(o.num||'')}</div>${viagem?`<div class="c tk-v">PARA VIAGEM</div>`:''}${onde?`<div class="c tk-m">${onde}</div>`:''}<hr>
   ${its.map(i=>`<div class="tk-i"><b>${i.qtd}x ${esc(i.nome)}</b></div>${i.obs?`<div class="tk-io">&gt;&gt; ${esc(i.obs)}</div>`:''}`).join('')}
   ${o.obs?`<hr><div class="tk-o">OBS: ${esc(o.obs)}</div>`:''}<hr>
   ${o.cliente?`<div>Cliente: <b>${esc(o.cliente)}</b>${o.fone?' · '+esc(o.fone):''}</div>`:''}${o.tipo==='entrega'&&o.endereco?`<div>Endereço: ${esc(o.endereco)}</div>`:''}
@@ -3030,7 +3031,7 @@ function gConta(){const n=g.mesa,m=mesa(n),its=m.itens||[],tot=totItens(its);
   <button class="btn acc big" style="margin-top:8px" onclick="st.pag=null;st.cpf='';st.nota=false;gGo('fechar')">💳 Fechar pelo app (maquininha)</button>
   ${(m.pedidos||[]).length?`<h3 style="margin-top:18px">Pedidos enviados</h3>${m.pedidos.slice().reverse().map(p=>`<div class="pedlog"><b>${hr(p.hora)} · ${esc(p.por)}</b> — ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)+(i.obs?` <span class="obs-it">📝 ${esc(i.obs)}</span>`:'')).join(', ')}${p.obs?`<br><i>📝 ${esc(p.obs)}</i>`:''}</div>`).join('')}`:''}</div>`;
   return h}
-function resumoHtml(n,titulo){const its=mesa(n).itens||[];return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">${titulo||'FECHAMENTO DE CONTA'}</div><div class="c">${esc(rotulo(n))} · ${dt(new Date().toISOString())}${mesa(n).garcom?'<br>Garçom: '+esc(mesa(n).garcom):''}</div><hr>${tabelaItens(its)}<hr>
+function resumoHtml(n,titulo){const its=mesa(n).itens||[];return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">${titulo||'FECHAMENTO DE CONTA'}</div>${isDel(n)&&mesa(n).tipo!=='local'?'<div class="c tk-v">PARA VIAGEM</div>':''}<div class="c">${esc(rotulo(n))} · ${dt(new Date().toISOString())}${mesa(n).garcom?'<br>Garçom: '+esc(mesa(n).garcom):''}</div><hr>${tabelaItens(its)}<hr>
   <table><tr><td>Itens</td><td class="n">${its.reduce((s,i)=>s+i.qtd,0)}</td></tr><tr><td><b>TOTAL</b></td><td class="n"><b>${brl(totItens(its))}</b></td></tr></table><hr><div class="c">NÃO É DOCUMENTO FISCAL<br>Confira antes de pagar</div></div>`}
 async function gPedirConta(){const u=gUser(),n=g.mesa;
   await mutate('mesas',n,m=>m?{...m,conta:{por:u.nome,dev:DEV,hora:new Date().toISOString()}}:ABORT);
