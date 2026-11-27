@@ -551,7 +551,7 @@ class Handler(SimpleHTTPRequestHandler):
             if metodo != "GET" and self.headers.get("X-LG") != "1":
                 return self._json(403, {"ok": False, "erro": "Requisição recusada."})
             # senha provisória: até criar a própria senha, a pessoa não grava nada
-            if u and u.get("trocarSenha") and metodo != "GET" and caminho not in ("/api/senha", "/api/logout", "/api/meu-email", "/api/login"):
+            if u and u.get("trocarSenha") and u.get("perfil") != "admin" and metodo != "GET" and caminho not in ("/api/senha", "/api/logout", "/api/meu-email", "/api/login"):
                 return self._json(403, {"ok": False, "erro": "Crie a sua senha antes de continuar.", "trocarSenha": True})
             ip = self._ip()
             if caminho == "/api/inicio" and metodo == "GET":
@@ -576,7 +576,7 @@ class Handler(SimpleHTTPRequestHandler):
                     em = lgacesso.email_porta(lgapi._db(), "camara", "camara:" + usr["id"], usr.get("nome") or usr["usuario"], d.get("codigo"))
                 if em:
                     return self._json(em[0], em[1])
-                return self._json(200, {"ok": True, "id": usr["id"], "provisoria": bool(usr.get("trocarSenha")) or str(d.get("senha", "")) in ("123456", "admin123")},
+                return self._json(200, {"ok": True, "id": usr["id"], "provisoria": usr.get("perfil") != "admin" and (bool(usr.get("trocarSenha")) or str(d.get("senha", "")) in ("123456", "admin123"))},
                                   cookie=lgapi.criar_sessao(usr))
             if caminho == "/api/logout" and metodo == "POST":
                 lgapi.encerrar(token, camara)

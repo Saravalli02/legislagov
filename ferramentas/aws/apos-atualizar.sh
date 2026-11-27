@@ -91,6 +91,11 @@ exec sudo -E -u legislagov python3 /opt/legislagov/app/ferramentas/aws/senha.py 
 EOS
 chmod 755 /usr/local/bin/legislagov-senha
 
+# uma vez (27/11/2026): administradores e o usuário de teste "user" sem troca obrigatória de senha
+if [ ! -f /var/lib/legislagov/.tirar-troca-adm ]; then
+  ( set -a; . "$ENV"; set +a; sudo -E -u legislagov python3 "$APP/ferramentas/aws/tirar_troca_adm.py" > /var/log/legislagov-tirar-troca.log 2>&1 ) && touch /var/lib/legislagov/.tirar-troca-adm || true
+fi
+
 # HTTPS para cada endereço listado em dominios.txt — só os que já apontam para este servidor
 # (assim o Caddy não fica tentando certificado de endereço cujo DNS ainda não mudou).
 # Roda também a cada 30 min: quando o DNS de um endereço novo passar a apontar para cá, ele entra sozinho.

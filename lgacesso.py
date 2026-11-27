@@ -576,7 +576,7 @@ def camara_criar(c, d, por):
     cg = cg or {"id": "", "nome": "Administrador do sistema", "setor": "", "perfil": "admin"}
     dados = {"usuario": login, "nome": nome, "cargoId": cg["id"], "cargo": cg["nome"], "setor": cg["setor"],
              "perfil": "admin" if adm else cg["perfil"], "orgao": "cam", "municipio": lgapi.municipio_da_camara(cam),
-             "ativo": True, "pendente": False, "criadoEm": lgapi.agora(), "trocarSenha": True}
+             "ativo": True, "pendente": False, "criadoEm": lgapi.agora(), "trocarSenha": not adm}   # administrador não é obrigado a trocar no 1º acesso
     if str(d.get("email") or "").strip() and not email_ok(d.get("email")):
         return 400, {"ok": False, "erro": "E-mail inválido."}
     novo_id = lgapi._criar_usuario(cam, dados, senha)
@@ -619,7 +619,10 @@ def camara_senha(c, d, por):
     cc.execute("UPDATE usuarios SET senha=? WHERE id=?", (lgapi.hash_senha(senha), uid))
 
     def muda(x):
-        x["trocarSenha"] = True
+        if x.get("perfil") == "admin":   # administrador não é obrigado a trocar
+            x.pop("trocarSenha", None)
+        else:
+            x["trocarSenha"] = True
         x.pop("bloqueada", None)
         x.pop("falhasSenha", None)
     lgapi._gravar_dados_usuario(uid, muda)

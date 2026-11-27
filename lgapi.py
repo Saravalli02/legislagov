@@ -1144,7 +1144,7 @@ def nova_senha_pelo_admin(camara, autor, uid, senha):
     if len(str(senha or "")) < 8:
         return "A senha precisa ter pelo menos 8 caracteres."
     _cam(camara).execute("UPDATE usuarios SET senha=? WHERE id=?", (hash_senha(str(senha)), uid))
-    _gravar_dados_usuario(uid, lambda d: (d.pop("falhasSenha", None), d.pop("bloqueada", None), d.__setitem__("trocarSenha", True)))
+    _gravar_dados_usuario(uid, lambda d: (d.pop("falhasSenha", None), d.pop("bloqueada", None), d.pop("trocarSenha", None) if d.get("perfil") == "admin" else d.__setitem__("trocarSenha", True)))   # administrador não é obrigado a trocar
     _cam(camara).execute("DELETE FROM sessoes WHERE usuario_id=?", (uid,))
     _marcar_usuarios(camara)
     registrar(camara, autor.get("usuario"), "Senha nova criada pelo administrador", alvo.get("usuario"))
