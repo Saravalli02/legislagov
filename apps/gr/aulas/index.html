@@ -24,7 +24,7 @@ main{max-width:1180px;margin:0 auto;padding:clamp(28px,5vw,56px) clamp(16px,3vw,
 .sis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:28px}
 @media(max-width:820px){.sis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sis button{font:inherit;color:inherit;text-align:left;cursor:pointer;border:1px solid var(--lin);background:#0a0b0e;border-radius:18px;padding:16px;display:flex;gap:12px;align-items:center;transition:border-color .15s,background .15s}
-.sis button i{font-style:normal;font-size:26px;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 26%,transparent)}
+.sis button i{flex:none;width:48px;height:48px;border-radius:13px;overflow:hidden;display:block;box-shadow:0 0 0 1px #ffffff1f}.sis button i img{width:100%;height:100%;display:block}
 .sis button b{display:block;font-size:15px}.sis button small{color:var(--sub);font-size:12.5px}
 .sis button.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,#0a0b0e);box-shadow:0 0 0 1px var(--c) inset}
 .palco{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
@@ -66,14 +66,14 @@ main{max-width:1180px;margin:0 auto;padding:clamp(28px,5vw,56px) clamp(16px,3vw,
   <div class="ajuda"><b style="color:#fff">Como recebo o código?</b> Quando você compra um sistema da GR Software, enviamos o seu <b style="color:#fff">código de acesso</b> (no formato GR-XXXX-XXXX) pelo WhatsApp ou e-mail. Ele libera todas as aulas do sistema que você comprou e fica guardado neste aparelho por 30 dias.<br>Não recebeu? <a href="https://wa.me/5517981874267?text=Ol%C3%A1!%20Preciso%20do%20meu%20c%C3%B3digo%20das%20videoaulas." target="_blank" rel="noopener">Fale com a gente no WhatsApp</a>.</div>
 </main>
 <script>
-const SIS={restaurante:['GR Restaurante','🍽️','#e53935'],acougue:['GR Açougue','🥩','#f0b000'],mercado:['GR Mercado','🛒','#1e88e5'],legislagov:['LegislaGov Câmara','🏛️','#22b8e6']};
+const SIS={restaurante:['GR Restaurante','../icone-restaurante-192.png','#e53935'],acougue:['GR Açougue','../icone-acougue-192.png','#f0b000'],mercado:['GR Mercado','../icone-mercado-192.png','#1e88e5'],legislagov:['LegislaGov Câmara','../icone-legislagov-192.png','#22b8e6']};
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let V={},cur=new URLSearchParams(location.search).get('s'),LIB={},atual=null;
 if(!SIS[cur])cur='restaurante';
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
 async function api(a,{corpo,tok}={}){const r=await fetch('/api/central/aulas/'+a,{method:corpo?'POST':'GET',cache:'no-store',headers:Object.assign({'Content-Type':'application/json','X-LG':'1'},tok?{Authorization:'Bearer '+tok}:{}),body:corpo?JSON.stringify(corpo):undefined});
   let d={};try{d=await r.json()}catch(e){}if(!r.ok){const e=new Error(d.erro||'Não foi possível agora. Tente de novo.');e.status=r.status;throw e}return d}
-function botoes(){$('#sis').innerHTML=Object.entries(SIS).map(([k,[n,ic,c]])=>{const v=V[k]||{};return `<button role="tab" aria-selected="${k===cur}" class="${k===cur?'on':''}" style="--c:${c}" data-k="${k}"><i>${ic}</i><span><b>${n}</b><small>${v.total?v.total+(v.total>1?' aulas':' aula'):'aulas em breve'}${LIB[k]?' · liberado ✓':''}</small></span></button>`}).join('');
+function botoes(){$('#sis').innerHTML=Object.entries(SIS).map(([k,[n,ic,c]])=>{const v=V[k]||{};return `<button role="tab" aria-selected="${k===cur}" class="${k===cur?'on':''}" style="--c:${c}" data-k="${k}"><i><img src="${ic}" alt="" width="46" height="46"></i><span><b>${n}</b><small>${v.total?v.total+(v.total>1?' aulas':' aula'):'aulas em breve'}${LIB[k]?' · liberado ✓':''}</small></span></button>`}).join('');
   document.querySelectorAll('#sis button').forEach(b=>b.onclick=()=>{cur=b.dataset.k;history.replaceState(null,'','?s='+cur);atual=null;mostrar()})}
 function tocar(a){atual=a.id;$('#player').outerHTML=`<video id="player" controls playsinline preload="metadata" src="${esc(a.url)}"></video>`;$('#inf').hidden=false;$('#tt').textContent=a.titulo;$('#ds').textContent=a.descr||'';listar()}
 function listar(){const v=V[cur]||{},lib=LIB[cur],aulas=lib?lib.aulas:(v.abertas||[]),travadas=lib?0:Math.max(0,(v.total||0)-aulas.length);
