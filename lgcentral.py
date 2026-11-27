@@ -43,7 +43,7 @@ SISTEMAS = [
      "desc": "Matérias, protocolo, sessões, Portal do Vereador e Transparência.",
      "abrir": ["Abrir o painel de Neves Paulista", "https://neves.legislagov.com.br/painel/"],
      "acessos": [{"nome": "Site da Câmara", "tipo": "site", "url": "https://neves.legislagov.com.br/"},
-                 {"nome": "Ambiente de teste", "tipo": "teste", "url": "https://teste.legislagov.com.br/painel/"}], "acoes": ["aulas"], "demo": False},
+                 {"nome": "Ambiente de teste", "tipo": "teste", "url": "https://teste.legislagov.com.br/painel/"}], "demo": False},
     {"id": "email", "grupo": "camaras", "nome": "Painel de e-mails", "icone": "em-email.png", "cor": "#7a4fd6",
      "desc": "Caixas de e-mail institucionais: criar, trocar senha e mandar avisos.",
      "abrir": ["Abrir o painel de e-mails", "https://email.legislagov.com.br/"],
@@ -453,6 +453,16 @@ def rota(h, metodo):
                     return _resp(h, *lgaulas.vitrine(c))
                 if acao == "aulas/entrar" and metodo == "POST":
                     return _resp(h, *lgaulas.entrar(c, corpo.get("codigo"), ip))
+                tok = h.headers.get("Authorization", "")
+                tok = tok[7:].strip() if tok.lower().startswith("bearer ") else ""
+                if acao == "aulas/ativar" and metodo == "POST":
+                    return _resp(h, *lgaulas.ativar(c, corpo, ip))
+                if acao == "aulas/login" and metodo == "POST":
+                    return _resp(h, *lgaulas.login(c, corpo, ip))
+                if acao == "aulas/painel" and metodo == "GET":
+                    return _resp(h, *lgaulas.painel(c, tok))
+                if acao == "aulas/sair" and metodo == "POST":
+                    return _resp(h, *lgaulas.sair(c, tok))
                 if acao == "aulas/lista" and metodo == "GET":
                     auth = h.headers.get("Authorization", "")
                     return _resp(h, *lgaulas.lista(c, auth[7:].strip() if auth.lower().startswith("bearer ") else ""))
