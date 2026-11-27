@@ -19,7 +19,7 @@ _ALF = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # sem 0/O/1/I para não confundir
 # aula aberta inicial (vitrine). As demais entram pela Central.
 SEMENTE = [
     ("restaurante", 1, "Aula 1 · Conhecendo o sistema", "Uma volta rápida por todas as telas do GR Restaurante.",
-     "https://cdn.creativeclaw.co/u/73c2a5e0/videos/ff19ae48-3763-462c-901a-e1fb8d75748e.mp4", 1),
+     "https://cdn.creativeclaw.co/u/73c2a5e0/videos/057362fd-c37f-4d12-bb33-c0847a183600.mp4", 1),
 ]
 
 _pronto = {"ok": False}
