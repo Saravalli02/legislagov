@@ -52,12 +52,24 @@ main{max-width:1180px;margin:0 auto;padding:clamp(28px,5vw,56px) clamp(16px,3vw,
 .lib{display:flex;align-items:center;gap:10px;font-size:13.5px;color:#7ee2a8;padding:8px 10px}.lib button{margin-left:auto;background:none;border:1px solid #ffffff22;color:#c9c9d1;border-radius:999px;padding:5px 12px;cursor:pointer;font:inherit;font-size:12.5px}
 .ajuda{margin-top:34px;border:1px dashed #ffffff26;border-radius:18px;padding:18px 22px;color:var(--sub);line-height:1.6;font-size:14.5px}
 .ajuda a{color:var(--ciano);font-weight:600}
+.bv{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:18px;background:#000000b8;backdrop-filter:blur(8px)}
+.bv[hidden]{display:none}
+.bv .cx{width:min(520px,100%);border-radius:24px;border:1px solid #19e3d055;background:radial-gradient(500px 220px at 50% 0,#2f6bff33,transparent 70%),#0a0b0e;padding:30px 28px 26px;text-align:center;box-shadow:0 30px 80px #000c}
+.bv img{height:54px}.bv h2{font-size:26px;letter-spacing:-.02em;margin-top:14px}.bv p{color:var(--sub);line-height:1.55;margin-top:10px;font-size:15.5px}
+.bv .bts{display:flex;flex-direction:column;gap:10px;margin-top:22px}
+.bv .bts button,.bv .bts a{height:48px;border-radius:12px;font:inherit;font-weight:700;font-size:15.5px;cursor:pointer;display:grid;place-items:center;border:1px solid #ffffff26;background:#ffffff10;color:#fff}
+.bv .bts .pri{background:#fff;color:#000;border:0}.bv .bts .wa{background:#25d366;color:#04140a;border:0}
+.bv .lin{display:flex;gap:8px;margin-top:18px}.bv input{flex:1;min-width:0;height:50px;border-radius:12px;border:1px solid #ffffff33;background:#000;color:#fff;font:inherit;font-size:18px;letter-spacing:.1em;text-transform:uppercase;padding:0 14px;text-align:center}
+.bv input:focus{outline:2px solid var(--ciano);outline-offset:1px}
+.bv .vt{background:none;border:0;color:var(--sub);font:inherit;font-size:14px;cursor:pointer;margin-top:12px;text-decoration:underline}
+.trav{aspect-ratio:16/9;display:grid;place-items:center;text-align:center;padding:24px;background:radial-gradient(500px 260px at 50% 0,#2f6bff2a,transparent 70%)}
+.trav b{display:block;font-size:20px;margin:10px 0 6px}.trav p{color:var(--sub);margin-bottom:14px}
 </style>
 </head>
 <body>
 <header class="topo"><a class="marca" href="../"><img src="../gr-emblema.webp" alt="">GR Software</a><a class="vol" href="../#produtos">← Voltar ao site</a></header>
 <main>
-  <div class="cab"><div class="tag">Videoaulas</div><h1>Aprenda a usar o seu sistema.</h1><p>Aulas curtas, passo a passo, com as telas reais. A primeira aula de cada sistema é aberta; as outras são liberadas com o código de acesso de quem comprou.</p></div>
+  <div class="cab"><div class="tag">Videoaulas</div><h1>Aprenda a usar o seu sistema.</h1><p>Aulas curtas, passo a passo, com as telas reais do sistema. Exclusivo para quem comprou: digite o seu código de licença para assistir.</p></div>
   <div class="sis" id="sis" role="tablist" aria-label="Escolha o sistema"></div>
   <div class="palco">
     <section class="tela" aria-live="polite"><div id="player" class="vazio">Carregando…</div><div class="inf" id="inf" hidden><h2 id="tt"></h2><p id="ds"></p></div></section>
@@ -65,6 +77,7 @@ main{max-width:1180px;margin:0 auto;padding:clamp(28px,5vw,56px) clamp(16px,3vw,
   </div>
   <div class="ajuda"><b style="color:#fff">Como recebo o código?</b> Quando você compra um sistema da GR Software, enviamos o seu <b style="color:#fff">código de acesso</b> (no formato GR-XXXX-XXXX) pelo WhatsApp ou e-mail. Ele libera todas as aulas do sistema que você comprou e fica guardado neste aparelho por 30 dias.<br>Não recebeu? <a href="https://wa.me/5517981874267?text=Ol%C3%A1!%20Preciso%20do%20meu%20c%C3%B3digo%20das%20videoaulas." target="_blank" rel="noopener">Fale com a gente no WhatsApp</a>.</div>
 </main>
+<div class="bv" id="bv" role="dialog" aria-modal="true" aria-labelledby="bvt" hidden><div class="cx" id="bvc"></div></div>
 <script>
 const SIS={restaurante:['GR Restaurante','../icone-restaurante-192.png','#e53935'],acougue:['GR Açougue','../icone-acougue-192.png','#f0b000'],mercado:['GR Mercado','../icone-mercado-192.png','#1e88e5'],legislagov:['LegislaGov Câmara','../icone-legislagov-192.png','#22b8e6']};
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -76,13 +89,13 @@ async function api(a,{corpo,tok}={}){const r=await fetch('/api/central/aulas/'+a
 function botoes(){$('#sis').innerHTML=Object.entries(SIS).map(([k,[n,ic,c]])=>{const v=V[k]||{};return `<button role="tab" aria-selected="${k===cur}" class="${k===cur?'on':''}" style="--c:${c}" data-k="${k}"><i><img src="${ic}" alt="" width="46" height="46"></i><span><b>${n}</b><small>${v.total?v.total+(v.total>1?' aulas':' aula'):'aulas em breve'}${LIB[k]?' · liberado ✓':''}</small></span></button>`}).join('');
   document.querySelectorAll('#sis button').forEach(b=>b.onclick=()=>{cur=b.dataset.k;history.replaceState(null,'','?s='+cur);atual=null;mostrar()})}
 function tocar(a){atual=a.id;$('#player').outerHTML=`<video id="player" controls playsinline preload="metadata" src="${esc(a.url)}"></video>`;$('#inf').hidden=false;$('#tt').textContent=a.titulo;$('#ds').textContent=a.descr||'';listar()}
-function listar(){const v=V[cur]||{},lib=LIB[cur],aulas=lib?lib.aulas:(v.abertas||[]),travadas=lib?0:Math.max(0,(v.total||0)-aulas.length);
+function listar(){const v=V[cur]||{},lib=LIB[cur],aulas=lib?lib.aulas:[],travadas=lib?0:(v.titulos||[]).length;
   let h=`<h3>${esc(SIS[cur][0])}</h3>`;
   if(lib)h+=`<div class="lib">🔓 Aulas liberadas${lib.cliente?' para '+esc(lib.cliente):''}<button type="button" id="sairc">Sair</button></div>`;
   h+=aulas.map((a,i)=>`<button type="button" class="au ${a.id===atual?'on':''}" data-id="${esc(a.id)}"><span class="n">${i+1}</span><span><b>${esc(a.titulo)}</b><small>${a.aberta?'Aula aberta':'Liberada'}</small></span></button>`).join('');
-  for(let i=0;i<travadas;i++)h+=`<div class="au trava"><span class="n">🔒</span><span><b>Aula ${aulas.length+i+1}</b><small>Liberada com o código de acesso</small></span></div>`;
+  for(let i=0;i<travadas;i++)h+=`<div class="au trava"><span class="n">🔒</span><span><b>${esc((v.titulos||[])[i]||'Aula '+(i+1))}</b><small>Liberada com o código de licença</small></span></div>`;
   if(!aulas.length&&!travadas)h+=`<p style="color:var(--sub);padding:8px 10px;font-size:14px">As aulas deste sistema estão sendo gravadas e chegam em breve.</p>`;
-  if(!lib)h+=`<form class="cod" id="fcod"><b>Já comprou? Digite o seu código</b><p>Ele libera todas as aulas do ${esc(SIS[cur][0])}.</p><div class="lin"><input id="ic" autocomplete="off" spellcheck="false" maxlength="14" placeholder="GR-XXXX-XXXX" aria-label="Código de acesso"><button class="bt" id="bc">Liberar</button></div><div class="msg" id="mc" role="status"></div></form>`;
+  if(!lib)h+=`<form class="cod" id="fcod"><b>Já comprou? Digite o seu código de licença</b><p>Ele libera todas as aulas do ${esc(SIS[cur][0])}.</p><div class="lin"><input id="ic" autocomplete="off" spellcheck="false" maxlength="14" placeholder="GR-XXXX-XXXX" aria-label="Código de acesso"><button class="bt" id="bc">Liberar</button></div><div class="msg" id="mc" role="status"></div></form>`;
   $('#lista').innerHTML=h;
   document.querySelectorAll('.au[data-id]').forEach(b=>b.onclick=()=>{const a=aulas.find(x=>x.id===b.dataset.id);if(a)tocar(a)});
   const f=$('#fcod');if(f)f.onsubmit=async e=>{e.preventDefault();const m=$('#mc'),bt=$('#bc');m.className='msg';m.textContent='Conferindo…';bt.disabled=true;
@@ -91,10 +104,23 @@ function listar(){const v=V[cur]||{},lib=LIB[cur],aulas=lib?lib.aulas:(v.abertas
     catch(er){m.className='msg err';m.textContent=er.message}finally{bt.disabled=false}};
   const sc=$('#sairc');if(sc)sc.onclick=()=>{ls.set('lg-aulas-'+cur,null);delete LIB[cur];atual=null;mostrar()}}
 async function carregarLib(k){const t=ls.get('lg-aulas-'+k);if(!t)return;try{LIB[k]=await api('lista',{tok:t})}catch(e){if(e.status===401)ls.set('lg-aulas-'+k,null)}}
-function mostrar(){botoes();const lib=LIB[cur],v=V[cur]||{},aulas=lib?lib.aulas:(v.abertas||[]);
-  const a=aulas.find(x=>x.id===atual)||aulas[0];if(a)tocar(a);else{$('#player').outerHTML=`<div id="player" class="vazio">${(v.total||0)?'🔒 Digite o código de acesso para assistir às aulas.':'As aulas deste sistema chegam em breve.'}</div>`;$('#inf').hidden=true;listar()}}
+function mostrar(){botoes();const lib=LIB[cur],v=V[cur]||{},aulas=lib?lib.aulas:[];
+  const a=aulas.find(x=>x.id===atual)||aulas[0];if(a)tocar(a);else{$('#player').outerHTML=lib?`<div id="player" class="vazio">As aulas deste sistema chegam em breve.</div>`:`<div id="player" class="trav"><div><span style="font-size:42px">🔒</span><b>Videoaulas travadas</b><p>Digite o seu código de licença para assistir.</p><button class="bt" type="button" onclick="boasVindas(true)">Digitar meu código</button></div></div>`;$('#inf').hidden=true;listar()}}
+/* tela de boas-vindas: aparece ao entrar sem nenhum sistema liberado */
+function boasVindas(codigo){const bv=$('#bv'),c=$('#bvc');bv.hidden=false;
+  if(!codigo){c.innerHTML=`<img src="../gr-emblema.webp" alt=""><h2 id="bvt">Seja bem-vindo às Videoaulas!</h2><p>Para assistir, digite o seu <b style="color:#fff">código de licença</b>. Você recebeu o código no seu e-mail assim que efetuou a compra.</p>
+    <div class="bts"><button class="pri" type="button" id="bvJa">Já comprei — digitar o código</button><a class="wa" href="../#produtos">Comprar agora</a><button type="button" id="bvF">Fechar</button></div>`;
+    $('#bvJa').onclick=()=>boasVindas(true);$('#bvF').onclick=()=>{bv.hidden=true}}
+  else{c.innerHTML=`<img src="../gr-emblema.webp" alt=""><h2 id="bvt">Digite o seu código de licença</h2><p>Ele está no e-mail da compra, no formato GR-XXXX-XXXX.</p>
+    <form id="bvF2"><div class="lin"><input id="bvI" autocomplete="off" spellcheck="false" maxlength="14" placeholder="GR-XXXX-XXXX" aria-label="Código de licença"></div><div class="msg" id="bvM" role="status"></div>
+    <div class="bts"><button class="pri" id="bvOk">Liberar as aulas</button><button type="button" id="bvF">Fechar</button></div></form><button type="button" class="vt" id="bvV">Ainda não comprei</button>`;
+    $('#bvI').focus();$('#bvF').onclick=()=>{bv.hidden=true};$('#bvV').onclick=()=>boasVindas(false);
+    $('#bvF2').onsubmit=async e=>{e.preventDefault();const m=$('#bvM'),b=$('#bvOk');m.className='msg';m.textContent='Conferindo…';b.disabled=true;
+      try{const d=await api('entrar',{corpo:{codigo:$('#bvI').value}});ls.set('lg-aulas-'+d.sistema,d.token);await carregarLib(d.sistema);cur=d.sistema;history.replaceState(null,'','?s='+cur);atual=null;bv.hidden=true;mostrar()}
+      catch(er){m.className='msg err';m.textContent=er.message}finally{b.disabled=false}}}}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#bv').hidden=true});
 (async()=>{try{V=(await api('vitrine')).sistemas||{}}catch(e){V={}}
-  await Promise.all(Object.keys(SIS).map(carregarLib));mostrar()})();
+  await Promise.all(Object.keys(SIS).map(carregarLib));mostrar();if(!Object.keys(LIB).length)boasVindas(false)})();
 </script>
 </body>
 </html>

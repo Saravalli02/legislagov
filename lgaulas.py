@@ -68,7 +68,8 @@ def vitrine(c):
     out = {}
     for sis, nome in SISTEMAS.items():
         tot = c.execute("SELECT COUNT(*) FROM au_aulas WHERE sistema=?", (sis,)).fetchone()[0]
-        out[sis] = {"nome": nome, "total": tot, "abertas": _aulas(c, sis, True)}
+        # tudo travado: a vitrine mostra só os títulos (sem o endereço do vídeo); assistir exige o código
+        out[sis] = {"nome": nome, "total": tot, "titulos": [a["titulo"] for a in _aulas(c, sis)]}
     return 200, {"ok": True, "sistemas": out}
 
 
