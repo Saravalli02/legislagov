@@ -19,7 +19,7 @@ _ALF = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # sem 0/O/1/I para não confundir
 # aula aberta inicial (vitrine). As demais entram pela Central.
 SEMENTE = [
     ("restaurante", 1, "Aula 1 · Conhecendo o sistema", "Uma volta rápida por todas as telas do GR Restaurante.",
-     "https://cdn.creativeclaw.co/u/73c2a5e0/videos/98567e1e-3b2c-4bea-b414-828ecef2b043.mp4", 1),
+     "https://cdn.creativeclaw.co/u/73c2a5e0/videos/ff19ae48-3763-462c-901a-e1fb8d75748e.mp4", 1),
 ]
 
 _pronto = {"ok": False}
@@ -39,6 +39,8 @@ def _db(c):
             for sis, ordem, tit, ds, url, ab in SEMENTE:
                 c.execute("INSERT INTO au_aulas(id, sistema, ordem, titulo, descr, url, aberta, criado) VALUES(?,?,?,?,?,?,?,?)",
                           ("au-" + secrets.token_hex(6), sis, ordem, tit, ds, url, ab, time.time()))
+        # aula 1 do restaurante ganhou música de fundo (27/11): troca o endereço antigo
+        c.execute("UPDATE au_aulas SET url=? WHERE url=?", ("https://cdn.creativeclaw.co/u/73c2a5e0/videos/ff19ae48-3763-462c-901a-e1fb8d75748e.mp4", "https://cdn.creativeclaw.co/u/73c2a5e0/videos/98567e1e-3b2c-4bea-b414-828ecef2b043.mp4"))
         _pronto["ok"] = True
     return c
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v60">
+<meta name="lg-versao" content="lg-v61">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -2846,7 +2846,7 @@ function vCardapio(){const c=cdp(),ps=prodList(),noc=ps.filter(p=>c.ids.includes
   ${ps.length?(()=>{const cc=cats.includes(st.cdpCat)?st.cdpCat:'',lista=cc?ps.filter(p=>(p.cat||'Outros')===cc):ps,PG=pagina('cdp',lista,10);return `<div class="g-abas g-cats" style="margin:8px 0 10px">${['',...cats].map(k=>`<button class="${cc===k?'act':''}" onclick="st.cdpCat='${k}';st.pg_cdp=0;render(true)">${k?esc(k):'Todos'}<em>${k?ps.filter(p=>(p.cat||'Outros')===k).length:ps.length}</em></button>`).join('')}</div><div class="cdp-grid" data-pgk="cdp">${PG.itens.map(p=>`<div class="it cdp-it"><div class="thumb">${p.img?`<img src="${p.img}" alt="">`:c.genericas!==false?`<img src="${fotoGenerica(p.nome,p.cat)}" alt=""><span class="ilu">Ilustração</span>`:'🍽️'}</div><div class="nm"><b>${esc(nomeP(p))}</b><small>${brl(p.preco)}${p.desc?' · '+esc(p.desc):' · sem descrição'}</small><small>${p.img?'📷 Foto do restaurante':c.genericas!==false?'✨ Foto ilustrativa (troque pela sua quando quiser)':'Sem foto'}</small></div>
     <button class="btn" onclick="cdpFoto('${p.id}')">📷 ${p.img?'Trocar foto':'Pôr foto'}</button>${p.img?`<button class="btn" title="Tirar a foto" onclick="mutate('produtos','${p.id}',x=>x?{...x,img:''}:ABORT)">🗑️</button>`:''}<button class="btn" onclick="formProduto('${p.id}')">✏️</button><label class="sw"><input type="checkbox" ${c.ids.includes(p.id)?'checked':''} onchange="cdpTrocar('${p.id}',this.checked)"><i></i></label></div>`).join('')}</div>${PG.pager}`})():'<div class="vazio">Cadastre produtos primeiro em Produtos.</div>'}</div>`}
 /* videoaulas do sistema (quem usa o sistema já tem acesso; as aulas também ficam em grsoftware.com.br/aulas) */
-const AULAS={restaurante:[{t:'Aula 1 · Conhecendo o sistema',d:'Uma volta rápida por todas as telas.',u:'https://cdn.creativeclaw.co/u/73c2a5e0/videos/98567e1e-3b2c-4bea-b414-828ecef2b043.mp4'}],acougue:[]};
+const AULAS={restaurante:[{t:'Aula 1 · Conhecendo o sistema',d:'Uma volta rápida por todas as telas.',u:'https://cdn.creativeclaw.co/u/73c2a5e0/videos/ff19ae48-3763-462c-901a-e1fb8d75748e.mp4'}],acougue:[]};
 function cartaoAulas(){const k=ACG?'acougue':'restaurante',ls=AULAS[k]||[],i=Math.min(st.aulaI||0,Math.max(0,ls.length-1)),a=ls[i];
   return `<div class="card" style="grid-column:1/-1"><h3>🎬 Videoaulas</h3><p style="color:var(--mut);margin:0 0 10px">Aprenda a usar o sistema com aulas curtas, passo a passo. Novas aulas aparecem aqui sozinhas.</p>
   ${a?`<div style="display:grid;grid-template-columns:1fr;gap:10px" class="aulas-g"><video controls playsinline preload="metadata" src="${esc(a.u)}" style="width:100%;aspect-ratio:16/9;border-radius:12px;background:#000"></video>
