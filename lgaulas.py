@@ -40,7 +40,8 @@ def _db(c):
                 c.execute("INSERT INTO au_aulas(id, sistema, ordem, titulo, descr, url, aberta, criado) VALUES(?,?,?,?,?,?,?,?)",
                           ("au-" + secrets.token_hex(6), sis, ordem, tit, ds, url, ab, time.time()))
         # aula 1 do restaurante ganhou música de fundo (27/11): troca o endereço antigo
-        c.execute("UPDATE au_aulas SET url=? WHERE url=?", ("https://cdn.creativeclaw.co/u/73c2a5e0/videos/ff19ae48-3763-462c-901a-e1fb8d75748e.mp4", "https://cdn.creativeclaw.co/u/73c2a5e0/videos/98567e1e-3b2c-4bea-b414-828ecef2b043.mp4"))
+        for antigo in ("https://cdn.creativeclaw.co/u/73c2a5e0/videos/98567e1e-3b2c-4bea-b414-828ecef2b043.mp4", "https://cdn.creativeclaw.co/u/73c2a5e0/videos/ff19ae48-3763-462c-901a-e1fb8d75748e.mp4"):
+            c.execute("UPDATE au_aulas SET url=? WHERE url=?", ("https://cdn.creativeclaw.co/u/73c2a5e0/videos/057362fd-c37f-4d12-bb33-c0847a183600.mp4", antigo))
         _pronto["ok"] = True
     return c
 
