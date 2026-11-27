@@ -170,9 +170,11 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 
 
 /* ---------- LegislaGov em destaque (carrossel) ---------- */
-.lgx{position:relative;border-radius:26px;overflow:hidden;border:1px solid #22b8e655;background:radial-gradient(900px 400px at 0% 0%,#123a8a55,transparent 60%),radial-gradient(700px 360px at 100% 100%,#19e3d026,transparent 60%),#06080d;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr);gap:0;margin-bottom:22px;box-shadow:0 30px 80px #0009,inset 0 1px 0 #ffffff12}
-@media(max-width:980px){.lgx{grid-template-columns:1fr}}
-.lgx .tx{padding:clamp(24px,3.4vw,44px);display:flex;flex-direction:column;gap:16px}
+.lgx{position:relative;border-radius:26px;overflow:hidden;border:1px solid #22b8e655;background:radial-gradient(900px 400px at 0% 0%,#123a8a55,transparent 60%),radial-gradient(700px 360px at 100% 100%,#19e3d026,transparent 60%),#06080d;display:grid;grid-template-columns:1fr;gap:0;margin-bottom:22px;box-shadow:0 30px 80px #0009,inset 0 1px 0 #ffffff12}
+
+.lgx .tx{padding:clamp(20px,3vw,36px) clamp(24px,3.4vw,44px) clamp(24px,3.4vw,40px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px 40px;align-items:start}
+.lgx .tx>.sel,.lgx .tx>h3,.lgx .tx>p{grid-column:1}.lgx .tx>ul.fe{grid-column:2;grid-row:1/4;align-self:center}.lgx .tx>.ac{grid-column:1/-1}
+@media(max-width:900px){.lgx .tx{grid-template-columns:1fr}.lgx .tx>ul.fe{grid-column:1;grid-row:auto}}
 .lgx .sel{display:inline-flex;align-self:flex-start;gap:8px;align-items:center;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#bfeeff;background:#22b8e61f;border:1px solid #22b8e655;padding:6px 12px;border-radius:999px}
 .lgx h3{font-size:clamp(30px,3.4vw,44px);letter-spacing:-.035em;line-height:1.05}.lgx h3 span{background:linear-gradient(90deg,#4f8bff,#19e3d0);-webkit-background-clip:text;background-clip:text;color:transparent}
 .lgx .tx>p{color:var(--sub);line-height:1.6;font-size:16px}
@@ -181,13 +183,13 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 .lgx ul.fe li{display:flex;gap:8px;line-height:1.35}.lgx ul.fe li::before{content:"✓";flex:none;width:18px;height:18px;border-radius:50%;background:#22b8e633;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;margin-top:1px}
 .lgx .ac{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
 .lgx .ac .bt[aria-disabled=true]{opacity:.45;cursor:not-allowed;pointer-events:none}.lgx .ac .bt.wa{background:#25d366;color:#04140a}.lgx .ac em{align-self:center;font-size:12.5px;color:var(--sub);font-style:normal}
-.car{position:relative;padding:clamp(16px,2.4vw,28px);display:flex;flex-direction:column;justify-content:center}
-.car .vj{position:relative;border-radius:14px;overflow:hidden;border:1px solid #ffffff2e;background:#0d0f14;box-shadow:0 24px 60px #000a;aspect-ratio:1366/800}
+.car{position:relative;padding:clamp(12px,2vw,22px) clamp(12px,2vw,22px) 0;display:flex;flex-direction:column}
+.car .vj{position:relative;border-radius:18px;overflow:hidden;border:1px solid #ffffff24;background:#0b1426;box-shadow:0 24px 60px #000a;aspect-ratio:16/9}
 .car .vj .bar{position:absolute;inset:0 0 auto 0;height:26px;display:flex;gap:6px;align-items:center;padding:0 12px;background:#1b1d23;z-index:2}.car .vj .bar i{width:9px;height:9px;border-radius:50%;background:#ff5f57}.car .vj .bar i:nth-child(2){background:#febc2e}.car .vj .bar i:nth-child(3){background:#28c840}
 .car .vj .bar span{margin-left:10px;font-size:11.5px;color:#9a9aa3}
-.car .sl{position:absolute;inset:26px 0 0 0;opacity:0;transition:opacity .7s ease,transform 6s ease;transform:scale(1.02)}.car .sl.on{opacity:1;transform:scale(1)}
-.car .sl img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
-.car .leg{margin-top:14px;display:flex;align-items:center;gap:12px;min-height:44px}
+.car .sl{position:absolute;inset:0;opacity:0;transition:opacity .7s ease,transform 6s ease;transform:scale(1.02)}.car .sl.on{opacity:1;transform:scale(1)}
+.car .sl img{width:100%;height:100%;object-fit:cover;display:block}
+.car .leg{margin-top:12px;padding:0 4px;display:flex;align-items:center;gap:12px;min-height:44px}
 .car .leg p{flex:1;color:#d7d7de;font-size:14.5px;line-height:1.45}
 .car .pts{display:flex;gap:6px}.car .pts button{width:9px;height:9px;border-radius:999px;border:0;background:#ffffff38;cursor:pointer;padding:0;transition:width .3s,background .3s}.car .pts button.on{width:26px;background:#19e3d0}
 .car .nv{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;border:1px solid #ffffff33;background:#000a;color:#fff;font-size:18px;cursor:pointer;z-index:3;display:grid;place-items:center}
@@ -263,17 +265,17 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
   <div class="in">
     <div class="cab rev"><div class="tag">Nossos produtos</div><h2>Escolha o seu sistema.</h2><p>Cada sistema já vem pronto para usar no computador e no celular. Veja tudo o que vem em cada um.</p></div>
     <article class="lgx rev" id="p-legislagov">
+      <div class="car" id="car" aria-roledescription="carrossel" aria-label="Apresentação da LegislaGov">
+        <div class="vj"><div class="sl on" data-leg="LegislaGov: a rotina da Câmara num só sistema, com segurança jurídica."><img src="legislagov-flyer-1.webp" alt="LegislaGov: a rotina da Câmara num só sistema, com segurança jurídica." loading="eager" width="1600" height="900"></div><div class="sl" data-leg="Protocolo: todo documento ganha número na hora, com recibo conferível e registro travado."><img src="legislagov-flyer-2.webp" alt="Protocolo: todo documento ganha número na hora, com recibo conferível e registro travado." loading="lazy" width="1600" height="900"></div><div class="sl" data-leg="Tramitação: onde está cada projeto, qual é o prazo e quem precisa agir."><img src="legislagov-flyer-3.webp" alt="Tramitação: onde está cada projeto, qual é o prazo e quem precisa agir." loading="lazy" width="1600" height="900"></div><div class="sl" data-leg="Portal do Vereador: assina pelo gov.br e protocola pelo celular."><img src="legislagov-flyer-4.webp" alt="Portal do Vereador: assina pelo gov.br e protocola pelo celular." loading="lazy" width="1600" height="900"></div><div class="sl" data-leg="Site oficial da Câmara e Portal da Transparência, atualizados pelo próprio sistema."><img src="legislagov-flyer-5.webp" alt="Site oficial da Câmara e Portal da Transparência, atualizados pelo próprio sistema." loading="lazy" width="1600" height="900"></div><div class="sl" data-leg="Tudo integrado: protocolo, tramitação, Presidência, Procuradoria, comissões, vereador, plenário e segurança."><img src="legislagov-flyer-6.webp" alt="Tudo integrado: protocolo, tramitação, Presidência, Procuradoria, comissões, vereador, plenário e segurança." loading="lazy" width="1600" height="900"></div>
+          <button class="nv e" type="button" aria-label="Anterior">‹</button><button class="nv d" type="button" aria-label="Próximo">›</button></div>
+        <div class="leg"><p id="carleg">LegislaGov: a rotina da Câmara num só sistema, com segurança jurídica.</p><div class="pts" role="tablist"><button type="button" class="on" aria-label="Imagem 1"></button><button type="button" class="" aria-label="Imagem 2"></button><button type="button" class="" aria-label="Imagem 3"></button><button type="button" class="" aria-label="Imagem 4"></button><button type="button" class="" aria-label="Imagem 5"></button><button type="button" class="" aria-label="Imagem 6"></button></div></div>
+      </div>
       <div class="tx">
         <span class="sel">🏛️ Destaque · Para Câmaras Municipais</span>
         <h3>LegislaGov <span>Câmara</span></h3>
         <p>O sistema completo da Câmara Municipal: do protocolo à votação em plenário, com site oficial, Transparência e e-mails institucionais. Tudo integrado, seguro e feito para quem trabalha na Câmara.</p>
         <ul class="fe"><li>Protocolo com recibo e código de conferência</li><li>Matérias, tramitação e pareceres</li><li>Sessões, pauta e painel do plenário</li><li>Portal do Vereador e assinatura gov.br</li><li>Site oficial da Câmara</li><li>Portal da Transparência (LAI)</li><li>E-mails institucionais com painel</li><li>Ouvidoria e e-SIC</li></ul>
         <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1!%20Tenho%20interesse%20na%20LegislaGov%20para%20a%20C%C3%A2mara." target="_blank" rel="noopener">Enviar mensagem</a><a class="bt va g" href="aulas/?s=legislagov">🎬 Videoaulas</a></div>
-      </div>
-      <div class="car" id="car" aria-roledescription="carrossel" aria-label="Telas da LegislaGov">
-        <div class="vj"><div class="bar"><i></i><i></i><i></i><span>painel.grsoftware.com.br</span></div><div class="sl on" data-leg="Cada pessoa da Câmara entra no seu painel: Procuradoria, Administrativo, Vereador, Transparência e Publicações."><img src="legislagov-1.webp" alt="Cada pessoa da Câmara entra no seu painel: Procuradoria, Administrativo, Vereador, Transparência e Publicações." loading="eager" width="1708" height="960"></div><div class="sl" data-leg="Painel Administrativo: protocolo, matérias, sessões, expedientes e ouvidoria em um só lugar."><img src="legislagov-2.webp" alt="Painel Administrativo: protocolo, matérias, sessões, expedientes e ouvidoria em um só lugar." loading="lazy" width="1708" height="960"></div><div class="sl" data-leg="Painel do Vereador: escrever propositura, assinar com gov.br e acompanhar sessões e votações."><img src="legislagov-3.webp" alt="Painel do Vereador: escrever propositura, assinar com gov.br e acompanhar sessões e votações." loading="lazy" width="1708" height="960"></div><div class="sl" data-leg="Site oficial da Câmara, pronto e atualizado pelo próprio sistema."><img src="legislagov-4.webp" alt="Site oficial da Câmara, pronto e atualizado pelo próprio sistema." loading="lazy" width="1708" height="960"></div><div class="sl" data-leg="Portal da Transparência completo, conforme a Lei de Acesso à Informação."><img src="legislagov-5.webp" alt="Portal da Transparência completo, conforme a Lei de Acesso à Informação." loading="lazy" width="1708" height="960"></div>
-          <button class="nv e" type="button" aria-label="Tela anterior">‹</button><button class="nv d" type="button" aria-label="Próxima tela">›</button></div>
-        <div class="leg"><p id="carleg">Cada pessoa da Câmara entra no seu painel: Procuradoria, Administrativo, Vereador, Transparência e Publicações.</p><div class="pts" role="tablist"><button type="button" class="on" aria-label="Tela 1"></button><button type="button" class="" aria-label="Tela 2"></button><button type="button" class="" aria-label="Tela 3"></button><button type="button" class="" aria-label="Tela 4"></button><button type="button" class="" aria-label="Tela 5"></button></div></div>
       </div>
     </article>
     <div class="loja-g">
