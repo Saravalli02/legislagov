@@ -20,6 +20,7 @@ a{color:inherit;text-decoration:none}
 img{max-width:100%}
 .in{width:min(var(--w),calc(100% - 40px));margin:0 auto}
 /* ---------- menu (estilo Framer) ---------- */
+html{scroll-padding-top:76px;scroll-behavior:smooth}
 .nav{position:sticky;top:0;z-index:20;height:64px;display:flex;align-items:center;padding:0 clamp(16px,3vw,32px);border-bottom:1px solid var(--lin);background:#000000c4;backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px)}
 .marca{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.01em;white-space:nowrap}
 .marca img{height:26px}
@@ -390,6 +391,14 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 </div></footer>
 
 <script>
+/* clicar no "GR Software" (ou dois cliques na barra de cima) recarrega a página já com a versão nova, sem #topo no endereço */
+(()=>{const limpo=location.pathname;if(/[?&]r=\d/.test(location.search)||location.hash)history.replaceState(null,'',limpo);
+  const recarregar=e=>{if(e)e.preventDefault();location.replace(limpo+'?r='+Date.now())};
+  const m=document.querySelector('.nav .marca');if(m){m.addEventListener('click',recarregar);m.title='Recarregar a página'}
+  document.querySelector('.nav')?.addEventListener('dblclick',e=>{if(!e.target.closest('input,textarea'))recarregar(e)});
+  /* links do menu: rola até a seção sem colocar #produtos, #como… no endereço */
+  document.querySelectorAll('a[href^="#"]').forEach(a=>{if(a.classList.contains('marca'))return;a.addEventListener('click',e=>{const id=a.getAttribute('href');if(id.length<2)return;const alvo=document.querySelector(id);if(!alvo)return;e.preventDefault();alvo.scrollIntoView({behavior:'smooth',block:'start'});history.replaceState(null,'',limpo)})});
+})();
 /* carrossel da LegislaGov: troca sozinho a cada 5 s, pausa com o mouse em cima */
 (()=>{const c=document.getElementById('car');if(!c)return;const ss=[...c.querySelectorAll('.sl')],ps=[...c.querySelectorAll('.pts button')],lg=document.getElementById('carleg');let i=0,t=null,par=false;
   const ir=n=>{i=(n+ss.length)%ss.length;ss.forEach((s,k)=>s.classList.toggle('on',k===i));ps.forEach((p,k)=>p.classList.toggle('on',k===i));lg.textContent=ss[i].dataset.leg};
