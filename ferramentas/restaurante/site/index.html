@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v58">
+<meta name="lg-versao" content="lg-v59">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -2917,7 +2917,7 @@ const saveCarts=()=>{lsSet('lg-carts',JSON.stringify(g.carts));lsSet('lg-cobs',J
 g.cobs={};try{g.cobs=JSON.parse(lsGet('lg-cobs','{}'))||{}}catch(e){}
 /* observação de cada item do pedido (ex.: hot roll — Doritos, cebolinha) */
 const cobs=()=>g.cobs[g.mesa]||(g.cobs[g.mesa]={});
-function gObs(pid){const p=S.produtos[pid];if(!p)return;const atual=cobs()[pid]||'',ops=String(p.obsDica||'').split(/[,;\n]/).map(x=>x.trim()).filter(Boolean);
+function gObs(pid){const p=S.produtos[kP(pid)];if(!p)return;const atual=cobs()[pid]||'',ops=String(p.obsDica||'').split(/[,;\n]/).map(x=>x.trim()).filter(Boolean);
   abrirModal(`<h2>📝 ${esc(p.nome)}</h2><p style="color:var(--mut);margin:0 0 8px">${p.pedeObs?'Escreva o que o cliente escolheu.':'Observação deste item para a cozinha.'}</p>
   ${ops.length?`<div class="gobs-ops">${ops.map(o=>`<button type="button" onclick="gObsAdd(this.textContent)">${esc(o)}</button>`).join('')}</div>`:''}
   <textarea id="gobsi" rows="3" maxlength="160" placeholder="${esc(ops.length?'Toque nas opções acima ou escreva aqui':'Ex.: sem cebola, molho à parte')}" style="width:100%;font-size:1.1rem">${esc(atual)}</textarea>
@@ -2925,7 +2925,12 @@ function gObs(pid){const p=S.produtos[pid];if(!p)return;const atual=cobs()[pid]|
   setTimeout(()=>{const t=$('#gobsi');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}},60)}
 function gObsAdd(t){const el=$('#gobsi');if(!el)return;const v=el.value.trim();el.value=v?(v.replace(/[,\s]+$/,'')+', '+t):t;el.focus()}
 function gObsSalvar(pid){const v=($('#gobsi')||{value:''}).value.trim().slice(0,160),o=cobs();if(v)o[pid]=v;else delete o[pid];saveCarts();fecharModal();render(true)}
-const cartItens=()=>Object.entries(cart()).filter(([pid,q])=>q>0&&S.produtos[pid]).map(([pid,q])=>({p:S.produtos[pid],q}));
+/* cada linha do pedido tem uma chave: o id do produto, ou id~n quando é o mesmo produto com outra escolha */
+const kP=k=>String(k).split('~')[0];
+const cartItens=()=>Object.entries(cart()).filter(([k,q])=>q>0&&S.produtos[kP(k)]).map(([k,q])=>({k,p:S.produtos[kP(k)],q}));
+const qPid=pid=>Object.entries(cart()).reduce((a,[k,q])=>a+(kP(k)===pid?q:0),0);
+function gMenos(pid){const ks=Object.keys(cart()).filter(k=>kP(k)===pid&&cart()[k]>0);if(ks.length)gAdd(ks[ks.length-1],-1)}
+function gVariante(pid){const k=pid+'~'+Date.now().toString(36);cart()[k]=1;saveCarts();render(true);gObs(k)}
 function gGo(t,extra){Object.assign(g,{tela:t},extra||{});render(true);window.scrollTo(0,0)}
 function gRender(){
   document.body.classList.add('gmode');
@@ -2964,22 +2969,22 @@ function gMesa(){
   const cats=CATS.filter(c=>prodList().some(p=>p.cat===c));
   if(!g.cat){h+=`<div class="gpad"><div class="gcats">${cats.map(c=>`<button onclick="g.cat='${c}';render(true)"><i>${CATIC[c]}</i>${c}<small>${prodList().filter(p=>p.cat===c).length} itens</small></button>`).join('')}</div>${!cats.length?'<div class="card vazio">Nenhum produto cadastrado no caixa.</div>':''}</div>`}
   else{h+=`<div class="gchips"><button onclick="g.cat=null;render(true)">☰ Menus</button>${cats.map(c=>`<button class="${g.cat===c?'act':''}" onclick="g.cat='${c}';render(true);window.scrollTo(0,0)">${CATIC[c]} ${c}</button>`).join('')}</div><div class="gpad">`;
-    prodList().filter(p=>p.cat===g.cat).forEach(p=>{const q=cart()[p.id]||0,d=disponivel(p)-q;
-      h+=`<div class="gprod ${disponivel(p)<=0?'esg':''}"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${p.codigo?'cód. '+p.codigo+(p.unidade?' · ':''):''}${esc(p.unidade||'')}</small><span class="pr">${brl(p.preco)}</span>${q&&cobs()[p.id]?`<span class="obs-it" onclick="gObs('${p.id}')">📝 ${esc(cobs()[p.id])}</span>`:p.pedeObs?`<small class="gpede">✏️ pede escolha${p.obsDica?': '+esc(p.obsDica):''}</small>`:''}${disponivel(p)<=0?'<small class="st-esg">⛔ Esgotado</small>':d!==Infinity&&d<=estMin(p)?`<small class="low">⚠️ restam ${Math.max(0,d)}</small>`:''}</div>
-      <div class="gqty">${q?`<button onclick="gAdd('${p.id}',-1)">−</button><span>${q}</span>`:''}<button class="mais" onclick="gAdd('${p.id}',1)">+</button></div></div>`});
+    prodList().filter(p=>p.cat===g.cat).forEach(p=>{const q=qPid(p.id),d=disponivel(p)-q,obsL=Object.keys(cart()).filter(k=>kP(k)===p.id&&cart()[k]>0&&cobs()[k]).map(k=>cobs()[k]);
+      h+=`<div class="gprod ${disponivel(p)<=0?'esg':''}"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${p.codigo?'cód. '+p.codigo+(p.unidade?' · ':''):''}${esc(p.unidade||'')}</small><span class="pr">${brl(p.preco)}</span>${q&&obsL.length?`<span class="obs-it" onclick="gGo('carrinho')">📝 ${esc(obsL.join(' | '))}</span>`:p.pedeObs?`<small class="gpede">✏️ pede escolha${p.obsDica?': '+esc(p.obsDica):''}</small>`:''}${disponivel(p)<=0?'<small class="st-esg">⛔ Esgotado</small>':d!==Infinity&&d<=estMin(p)?`<small class="low">⚠️ restam ${Math.max(0,d)}</small>`:''}</div>
+      <div class="gqty">${q?`<button onclick="gMenos('${p.id}')">−</button><span>${q}</span>`:''}<button class="mais" onclick="gAdd('${p.id}',1)">+</button></div></div>`});
     h+='</div>'}
   const ci=cartItens();
   if(ci.length)h+=`<div class="gcart" onclick="gGo('carrinho')"><span>🛒 <b>${ci.reduce((a,x)=>a+x.q,0)} itens</b> · ${brl(ci.reduce((a,x)=>a+x.q*x.p.preco,0))}</span><b>Ver e enviar ▸</b></div>`;
   return h}
-function gAdd(pid,d){const c=cart(),p=S.produtos[pid];if(!p)return;
-  if(d>0&&disponivel(p)-(c[pid]||0)<=0)return toast(`${p.nome} sem estoque`);
+function gAdd(pid,d){const c=cart(),p=S.produtos[kP(pid)];if(!p)return;
+  if(d>0&&disponivel(p)-qPid(p.id)<=0)return toast(`${p.nome} sem estoque`);
   c[pid]=Math.max(0,(c[pid]||0)+d);if(!c[pid]){delete c[pid];delete cobs()[pid]}saveCarts();render(true);
   if(d>0&&p.pedeObs&&!cobs()[pid])gObs(pid)}
 function gCarrinho(){const ci=cartItens(),t=ci.reduce((a,x)=>a+x.q*x.p.preco,0);
   let h=`<div class="gbar"><button class="gbtn" onclick="gGo('mesa')">← Continuar</button><b style="flex:1;font-size:1.15rem">Pedido — Mesa ${g.mesa}</b></div><div class="gpad">`;
   if(!ci.length)return h+`<div class="card vazio">Nenhum item escolhido.</div></div>`;
-  ci.forEach(({p,q})=>{const ob=cobs()[p.id]||'';h+=`<div class="gprod"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${brl(p.preco)} cada</small><span class="pr">${brl(p.preco*q)}</span>
-    ${ob?`<span class="obs-it" onclick="gObs('${p.id}')">📝 ${esc(ob)} <u>trocar</u></span>`:p.pedeObs?`<button class="gobs-bt falta" onclick="gObs('${p.id}')">⚠️ Falta escrever a escolha</button>`:`<button class="gobs-bt" onclick="gObs('${p.id}')">✏️ Observação</button>`}</div><div class="gqty"><button onclick="gAdd('${p.id}',-1)">−</button><span>${q}</span><button class="mais" onclick="gAdd('${p.id}',1)">+</button></div></div>`});
+  ci.forEach(({k,p,q})=>{const ob=cobs()[k]||'';h+=`<div class="gprod"><div class="thumb">${p.img?`<img src="${p.img}">`:(CATIC[p.cat]||'🍽️')}</div><div class="nm"><b>${esc(p.nome)}</b><small>${brl(p.preco)} cada</small><span class="pr">${brl(p.preco*q)}</span>
+    ${ob?`<span class="obs-it" onclick="gObs('${k}')">📝 ${esc(ob)} <u>trocar</u></span>`:p.pedeObs?`<button class="gobs-bt falta" onclick="gObs('${k}')">⚠️ Falta escrever a escolha</button>`:`<button class="gobs-bt" onclick="gObs('${k}')">✏️ Observação</button>`}${ob||p.pedeObs?`<button class="gobs-bt" onclick="gVariante('${p.id}')">➕ Mais um com outra escolha</button>`:''}</div><div class="gqty"><button onclick="gAdd('${k}',-1)">−</button><span>${q}</span><button class="mais" onclick="gAdd('${k}',1)">+</button></div></div>`});
   h+=`<div class="total"><span>Total do pedido</span><span>${brl(t)}</span></div>
   <label>📝 Observação geral do pedido</label><input id="gobs" value="${esc(g.obs)}" oninput="g.obs=this.value" placeholder="Ex.: servir tudo junto">
   <button class="btn ok big" style="margin-top:14px" onclick="gEnviar()">📤 Enviar pedido para o caixa</button>
@@ -2988,11 +2993,11 @@ function gCarrinho(){const ci=cartItens(),t=ci.reduce((a,x)=>a+x.q*x.p.preco,0);
 async function gEnviar(){
   if(!movAberto())return toast('O caixa ainda não abriu o movimento.');
   const u=gUser(),n=g.mesa,ci=cartItens();if(!ci.length)return;
-  for(const {p,q} of ci)if(disponivel(p)<q)return toast(`⛔ ${p.nome}: só tem ${Math.max(0,disponivel(p))} no estoque`);
-  const ob=cobs(),falta=ci.find(({p})=>p.pedeObs&&!ob[p.id]);if(falta){toast(`✏️ Escreva a escolha do ${falta.p.nome}`);return gObs(falta.p.id)}
+  for(const {p} of ci){const q=qPid(p.id);if(disponivel(p)<q)return toast(`⛔ ${p.nome}: só tem ${Math.max(0,disponivel(p))} no estoque`)}
+  const ob=cobs(),falta=ci.find(({k,p})=>p.pedeObs&&!ob[k]);if(falta){toast(`✏️ Escreva a escolha do ${falta.p.nome}`);return gObs(falta.k)}
   await mutate('estado','atual',e=>({...(e||{}),seq:((e&&e.seq)||0)+1}));const num=(S.estado&&S.estado.seq)||'';
-  const ped={id:uid(),num,por:u.nome,dev:DEV,hora:new Date().toISOString(),itens:ci.map(({p,q})=>({nome:nomeP(p),qtd:q,...(ob[p.id]?{obs:ob[p.id]}:{})})),obs:g.obs.trim()};
-  const ok=await mutate('mesas',n,m=>{for(const {p,q} of ci)m=addNaComanda(m,p.id,q,u.nome,ob[p.id]);m.pedidos=[...(m.pedidos||[]),ped].slice(-40);return m});
+  const ped={id:uid(),num,por:u.nome,dev:DEV,hora:new Date().toISOString(),itens:ci.map(({k,p,q})=>({nome:nomeP(p),qtd:q,...(ob[k]?{obs:ob[k]}:{})})),obs:g.obs.trim()};
+  const ok=await mutate('mesas',n,m=>{for(const {k,p,q} of ci)m=addNaComanda(m,p.id,q,u.nome,ob[k]);m.pedidos=[...(m.pedidos||[]),ped].slice(-40);return m});
   if(!ok)return toast('Não foi possível enviar. Tente de novo.');
   g.carts[n]={};g.cobs[n]={};g.obs='';saveCarts();toast('✅ Pedido nº '+num+' enviado para o caixa!');alertaEstoque(ci.map(x=>x.p.id));gGo('mesa',{aba:'conta',cat:null});
   gPerguntarImpressao(n,ped,u)}
@@ -3008,7 +3013,7 @@ async function gImprimirPedido(){const x=gUltPed;fecharModal();if(!x)return;
 function gConta(){const n=g.mesa,m=mesa(n),its=m.itens||[],tot=totItens(its);
   let h=`<div class="gpad">`;
   if(!its.length)return h+`<div class="card vazio">Mesa sem consumo ainda.</div></div>`;
-  h+=`<div class="card">${its.map(i=>`<div class="it"><div class="nm"><b>${i.qtd}x ${esc(i.nome)}</b><small>${brl(i.preco)} cada</small></div><div class="sub">${brl(vIt(i))}</div></div>`).join('')}
+  h+=`<div class="card">${its.map(i=>`<div class="it"><div class="nm"><b>${i.qtd}x ${esc(i.nome)}</b>${i.obs?`<span class="obs-it">📝 ${esc(i.obs)}</span>`:''}<small>${brl(i.preco)} cada</small></div><div class="sub">${brl(vIt(i))}</div></div>`).join('')}
   <div class="total"><span>Total</span><span>${brl(tot)}</span></div></div>
   ${m.conta?`<div class="aviso" style="margin-top:10px">🧾 Conta pedida por ${esc(m.conta.por)} às ${hr(m.conta.hora)}.</div>`:''}
   <button class="btn pri big" style="margin-top:12px" onclick="gPedirConta()">🖨️ Pedir conta — imprime no caixa</button>
