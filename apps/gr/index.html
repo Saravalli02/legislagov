@@ -141,9 +141,29 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 .cta{position:relative;overflow:hidden;border:1px solid var(--lin);border-radius:24px;padding:clamp(32px,5vw,56px);text-align:center;background:radial-gradient(600px 240px at 50% 0,#2f6bff2e,transparent),#060708}
 .cta h2{font-size:clamp(30px,4vw,46px);letter-spacing:-.035em}
 .cta p{color:var(--sub);font-size:18px;margin-top:12px}
-.rod{padding:36px clamp(16px,3vw,32px);display:flex;align-items:center;gap:14px;color:var(--sub);font-size:13.5px;flex-wrap:wrap}
-.rod img{height:22px}.rod .es2{margin-left:auto;display:flex;gap:18px}
-.rod a:hover{color:#fff}
+.rod{position:relative;overflow:hidden;border-top:1px solid var(--lin);background:#050608;color:var(--sub);font-size:14px}
+.rod .rg{max-width:1280px;margin:0 auto;padding:0 clamp(16px,3vw,32px);display:grid;grid-template-columns:1fr 1.15fr;min-height:420px}
+.rod .re{padding:56px clamp(16px,3vw,40px) 36px 0;border-right:1px solid var(--lin);display:flex;flex-direction:column;gap:28px}
+.rod .rd{padding:56px 0 36px clamp(16px,3vw,40px);display:grid;grid-template-columns:auto auto minmax(230px,1.3fr);gap:32px;align-content:start;position:relative;z-index:1}
+.rod .rmarca{display:flex;align-items:center;gap:12px;color:var(--txt);font-size:30px;font-weight:800;letter-spacing:-.04em}.rod .rmarca img{height:44px}
+.rod .rtx{line-height:1.7;max-width:560px}
+.rod .rinf{display:grid;grid-template-columns:1.3fr 1fr;gap:24px;font-size:12.5px;line-height:1.75}
+.rod .rinf .cp{text-transform:uppercase;letter-spacing:.03em}
+.rod h4{color:var(--txt);font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin:0 0 12px}
+.rod ul{list-style:none;padding:0;margin:0 0 22px;display:grid;gap:10px}.rod ul ul{margin:10px 0 0 14px;gap:9px}
+.rod a{color:inherit;text-decoration:none}.rod a:hover{color:#fff}
+.rod .rcol>ul>li>a{color:var(--txt);font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.03em}
+.rod .rcan{display:grid;gap:8px;line-height:1.5}.rod .rcan b{color:var(--txt);font-weight:600;white-space:nowrap}
+.rod .rsoc{display:flex;gap:10px;margin-top:6px}.rod .rsoc a{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#2f6bff,#19e3d0);color:#fff}
+.rod .rsoc a.wa{background:#25d366}.rod .rsoc a:hover{filter:brightness(1.12)}
+.rod .rig{margin-top:14px;border:1px solid var(--lin);border-radius:14px;padding:14px;background:#0b0d12;line-height:1.55;font-size:13px}
+.rod .rig a{color:#19e3d0;font-weight:700}
+.rod .rselo{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:118px;height:118px;border-radius:14px;background:linear-gradient(160deg,#ff9900,#c56a00);color:#111;text-align:center;font-weight:800;font-size:11px;line-height:1.25;text-transform:uppercase;padding:10px;margin-top:8px}
+.rod .rselo span{font-size:22px}
+.rod .rpe{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;border-top:1px solid var(--lin);padding-top:18px}
+.rod .rwm{position:absolute;right:-30px;bottom:-60px;font-size:clamp(160px,22vw,300px);font-weight:900;letter-spacing:-.06em;color:#ffffff09;line-height:1;pointer-events:none;user-select:none}
+@media(max-width:980px){.rod .rg{grid-template-columns:1fr;padding:0}.rod .re{border-right:0;border-bottom:1px solid var(--lin);padding:44px clamp(16px,4vw,28px) 28px}.rod .rd{padding:32px clamp(16px,4vw,28px);grid-template-columns:1fr 1fr}.rod .rcanal{grid-column:1/-1}}
+@media(max-width:560px){.rod .rinf{grid-template-columns:1fr}.rod .rd{grid-template-columns:1fr}}
 
 /* ---------- loja: perfis dos sistemas (sem preço por enquanto) ---------- */
 .loja-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
@@ -307,8 +327,27 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
     <!-- botão "Pedir uma demonstração": volta quando o WhatsApp/e-mail da GR estiverem definidos --></div></div>
 </section>
 
-<footer class="rod"><img src="gr-emblema.webp" alt=""><span>GR Software · uma marca LegislaGov<br>Razão social: 70.200.706 GERALDO JOSE DE ALMEIDA NETO · CNPJ 70.200.706/0001-82 · Neves Paulista/SP</span>
-  <span class="es2"><a href="https://painel.grsoftware.com.br/">LegislaGov (entrada das Câmaras)</a><a href="https://central.grsoftware.com.br/">Área restrita</a></span></footer>
+<footer class="rod"><span class="rwm" aria-hidden="true">GR</span><div class="rg">
+  <div class="re">
+    <a class="rmarca" href="#topo"><img src="gr-emblema.webp" alt="">GR Software</a>
+    <p class="rtx">A GR Software cria sistemas de gestão para o comércio: caixa, estoque, clientes, cardápio digital e atendimento no WhatsApp, prontos para usar ou feitos sob medida para o seu negócio. Tudo funciona no computador e no celular, com os dados guardados nos servidores da Amazon.</p>
+    <div class="rinf">
+      <div class="cp">Copyright © 2026 · GR Software · Todos os direitos reservados<br>GR Software é uma marca LegislaGov.<br>Razão social: 70.200.706 GERALDO JOSE DE ALMEIDA NETO<br>CNPJ: 70.200.706/0001-82</div>
+      <div><h4>Localização</h4>Neves Paulista/SP<br>Atendimento online para todo o Brasil</div>
+    </div>
+    <div class="rpe"><a href="https://painel.grsoftware.com.br/">LegislaGov (entrada das Câmaras)</a><a href="https://central.grsoftware.com.br/">Área restrita</a><a href="https://legislagov.com.br/cliente/">Área LegislaGov</a></div>
+  </div>
+  <div class="rd">
+    <div class="rcol"><ul><li><a href="#topo">Início</a></li><li><a href="#produtos">Produtos</a><ul><li><a href="#p-restaurante">GR Restaurante</a></li><li><a href="#p-acougue">GR Açougue</a></li><li><a href="#p-mercado">GR Mercado</a></li><li><a href="#p-personalizado">Sistema personalizado</a></li></ul></li></ul></div>
+    <div class="rcol"><ul><li><a href="#como">Como funciona</a></li><li><a href="#modelos">Modelos prontos</a></li><li><a href="#sobre">Sobre nós</a></li><li><a href="#contato">Contato</a><ul><li><a href="https://wa.me/5517981874267?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20GR%20Software." target="_blank" rel="noopener">Fale conosco</a></li><li><a href="https://central.grsoftware.com.br/">Já sou cliente</a></li></ul></li></ul></div>
+    <div class="rcanal"><h4>Canais de atendimento</h4>
+      <div class="rcan"><span>WhatsApp: <a href="https://wa.me/5517981874267?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20GR%20Software." target="_blank" rel="noopener"><b>(17) 98187-4267</b></a></span><span>Instagram: <a href="https://www.instagram.com/grsoftwarebr/" target="_blank" rel="noopener"><b>@grsoftwareBR</b></a></span></div>
+      <div class="rsoc"><a href="https://www.instagram.com/grsoftwarebr/" target="_blank" rel="noopener" aria-label="Instagram @grsoftwareBR"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></a><a class="wa" href="https://wa.me/5517981874267?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20GR%20Software." target="_blank" rel="noopener" aria-label="WhatsApp"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.3-.4.8-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.4-.3Z"/></svg></a></div>
+      <p class="rig">📸 Siga a gente no Instagram <a href="https://www.instagram.com/grsoftwarebr/" target="_blank" rel="noopener">@grsoftwareBR</a>: novidades dos sistemas, dicas para o seu comércio e as videoaulas passo a passo de cada sistema.</p>
+      <div class="rselo" aria-label="Hospedado na Amazon Web Services"><span>☁️</span>Hospedado na<br>Amazon Web<br>Services</div>
+    </div>
+  </div>
+</div></footer>
 
 <script>
 /* menu do celular */
