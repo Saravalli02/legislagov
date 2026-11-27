@@ -465,12 +465,12 @@ function desenharAdmin(){
   const d=ADM.d,vistos=new Set(d.msgsVistas||[]);
   const novas=d.mensagens.filter(m=>!vistos.has(m.id)).length,nAv=d.alertas.length+d.vencimentos.length;
   const voltar='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
-  const abas=[['avisos','Avisos',nAv],['sistemas','Sistemas e clientes',0],['situacao','Situação dos sistemas',0],['gastos','Gastos e vencimentos',0],['mensagens','Mensagens',novas],['historico','Histórico',0]];
+  const abas=[['avisos','Avisos',nAv],['sistemas','Sistemas e clientes',0],['situacao','Situação dos sistemas',0],['gastos','Gastos e vencimentos',0],['mensagens','Mensagens',novas],['aulas','🎬 Videoaulas',0],['historico','Histórico',0]];
   $('main').innerHTML=`<button class="tbtn" id="volta" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:18px">${voltar}Sistemas</button>
     <div class="rcab"><div class="selo" style="background:var(--chip);border-color:var(--linha)">${ICADM.replace('<svg','<svg width="28" height="28"')}</div><div><h1 style="margin:0">Administração</h1>
     <p class="sub">${d.ultima?'Última conferência '+quando(d.ultima)+'.':'O servidor ainda não fez a primeira conferência.'} A próxima é automática em até 10 minutos.</p></div></div>
     <div class="abas" role="tablist">${abas.map(([k,n,c])=>`<button role="tab" data-aba="${k}" aria-selected="${ADM.aba===k}">${n}${c?`<span class="cont">${c}</span>`:''}</button>`).join('')}</div>
-    <div id="admc">${ADM.aba==='sistemas'?'<div class="vazio">Carregando…</div>':({avisos:abaAvisos,situacao:abaSituacao,gastos:abaGastos,mensagens:abaMensagens,historico:abaHistorico}[ADM.aba]||abaAvisos)(d)}</div>`;
+    <div id="admc">${ADM.aba==='sistemas'?'<div class="vazio">Carregando…</div>':({avisos:abaAvisos,situacao:abaSituacao,gastos:abaGastos,mensagens:abaMensagens,aulas:abaAulas,historico:abaHistorico}[ADM.aba]||abaAvisos)(d)}</div>`;
   $('#volta').onclick=()=>tela();
   document.querySelectorAll('[data-aba]').forEach(b=>b.onclick=()=>{ADM.aba=b.dataset.aba;desenharAdmin()});
   ligarAdmin();if(ADM.aba==='sistemas')carregarSistemas();
@@ -585,6 +585,9 @@ const WA_API='https://restaurante.grsoftware.com.br/api/wa-cfg';
 async function waApi(b){const r=await fetch(WA_API,{method:b?'POST':'GET',headers:Object.assign({'x-central':TOKEN},b?{'content-type':'application/json'}:{}),body:b?JSON.stringify(b):undefined,cache:'no-store'});
   const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Não foi possível falar com o servidor do WhatsApp.');return d}
 /* ---------- videoaulas: códigos de acesso e aulas ---------- */
+function abaAulas(){setTimeout(()=>{const g=document.getElementById('admAuG'),c=document.getElementById('admAuC');if(g)g.onclick=()=>telaAulas('codigos');if(c)c.onclick=()=>telaAulas('aulas')},0);
+  return `<div class="horta" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:240px"><b>🎬 Videoaulas — liberação para quem comprou</b><p class="dica" style="margin-top:4px">Gere um código (GR-XXXX-XXXX) para o cliente. Ele digita em <b>grsoftware.com.br/aulas</b> e assiste às aulas do sistema que comprou. O código aparece só uma vez, com a mensagem pronta para o WhatsApp.</p></div>
+  <button type="button" class="btn pri" id="admAuG">🔑 Gerar código de acesso</button><button type="button" class="btn" id="admAuC">🎞️ Cadastrar aulas</button><a class="btn" href="https://grsoftware.com.br/aulas/" target="_blank" rel="noopener">Abrir a página das aulas</a></div>`}
 async function telaAulas(aba){let d;try{d=await api('admin/aulas')}catch(e){return alert(e.message)}aba=aba||'codigos';
   const SN=d.sistemas||{},opc=sel=>Object.entries(SN).map(([k,n])=>`<option value="${k}" ${k===sel?'selected':''}>${esc(n)}</option>`).join('');
   const cods=(d.codigos||[]).map(c=>`<div style="display:flex;gap:8px;align-items:center;border-top:1px solid #0001;padding:8px 0;${c.revogado?'opacity:.5':''}"><div style="flex:1"><b>${esc(SN[c.sistema]||c.sistema)}</b> · ${esc(c.cliente||'sem nome')}${c.email?' · '+esc(c.email):''}<br><small class="dica">…${esc(c.final)} · criado ${quando(c.criado)} por ${esc(c.criado_por||'')} · ${c.usos} acesso(s)${c.revogado?' · <b>revogado</b>':''}</small></div>${c.revogado?'':`<button type="button" class="btn" data-rev="${esc(c.id)}">Revogar</button>`}</div>`).join('')||'<small class="dica">Nenhum código ainda.</small>';
