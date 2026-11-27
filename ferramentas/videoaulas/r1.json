@@ -1,0 +1,12 @@
+{"sistema":"GR Restaurante","titulo":"Aula 1 · Conhecendo o sistema","sub":"Uma volta rápida por todas as telas",
+"fim":"Fim da Aula 1","fim2":"Próxima aula: cadastrar os produtos",
+"cenas":[
+{"img":"caixa","txt":"Em cima ficam os menus do sistema, cada um com a sua cor: Caixa, Produtos, Estoque, Histórico, Relatórios, Movimento, Cardápio e Ajustes."},
+{"img":"abas","zoom":true,"txt":"O Caixa tem três partes: Caixa, para a venda rápida no balcão; Mesas; e Delivery, para entregas e retiradas."},
+{"img":"mesas","zoom":true,"txt":"Em Mesas você vê na hora quais mesas estão ocupadas e quanto cada uma já consumiu. Vermelha é ocupada, branca é livre."},
+{"img":"produtos","txt":"Em Produtos fica o seu cardápio: foto, preço, custo, margem de lucro e estoque de cada item."},
+{"img":"estoque","txt":"O Estoque mostra quanto tem de cada produto e avisa quando alguma coisa está acabando."},
+{"img":"historico","txt":"No Histórico ficam todas as vendas do dia, com a mesa, a forma de pagamento e os itens."},
+{"img":"relatorios","txt":"Em Relatórios, o Painel gerencial mostra o faturamento, os custos, as despesas e o resultado do mês."},
+{"img":"cardapio","txt":"Em Cardápio você liga o cardápio digital: o cliente faz o pedido pelo celular e ele cai direto no caixa."},
+{"img":"config","txt":"E em Ajustes você configura a impressora, o número de mesas, os garçons e as formas de pagamento."}]}

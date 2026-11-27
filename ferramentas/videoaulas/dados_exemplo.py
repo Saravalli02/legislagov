@@ -1,0 +1,18 @@
+from playwright.sync_api import sync_playwright
+import json
+html=open('index.html').read()
+def seed(nome,prods):
+    P=json.dumps(prods,ensure_ascii=False)
+    return """()=>{const L=%s;L.forEach((x,i)=>{S.produtos['p'+i]={id:'p'+i,codigo:i+1,nome:x[0],preco:x[1],custo:x[1]*.45,cat:x[2],unidade:'',porKg:x[3]==='kg',estoque:20+i}});
+ S.config={...(S.config||{}),razao:%s,cardapio:{ids:Object.keys(S.produtos)}};try{abrirMov()}catch(e){}try{fecharModal()}catch(e){}
+ const d=new Date();for(let i=0;i<25;i++)S.vendas['v'+i]={id:'v'+i,data:new Date(d-i*1800e3).toISOString(),total:40+i*3,custo:18,itens:[{pid:'p'+(i%%L.length),nome:L[i%%L.length][0],qtd:1,preco:40+i*3}],pag:[{forma:['Pix','Crédito','Dinheiro'][i%%3],valor:40+i*3}],movId:(S.estado.atual||{}).movId};}"""%(P,json.dumps(nome))
+R=[['Combinado Sushi 20 peças',69.9,'Oriental'],['Porção de Hot Roll',39.9,'Oriental'],['Temaki Salmão',32,'Oriental'],['Parmegiana de Frango',58,'Pratos'],['Macarrão à Bolonhesa',45,'Pratos'],['Filé à Parmegiana',72,'Pratos'],['Batata Frita',28,'Porções'],['Isca de Tilápia',49.9,'Porções'],['X-Burguer',26,'Lanches'],['Coca-Cola Lata',6,'Bebidas'],['Suco de Laranja',9,'Bebidas'],['Heineken Long Neck',12,'Bebidas'],['Petit Gâteau',24,'Sobremesas']]
+A=[['Picanha',89.9,'Bovinos','kg'],['Contrafilé',59.9,'Bovinos','kg'],['Alcatra',54.9,'Bovinos','kg'],['Costela Bovina',32.9,'Bovinos','kg'],['Fraldinha',49.9,'Bovinos','kg'],['Linguiça Toscana',24.9,'Suínos','kg'],['Pernil Suíno',26.9,'Suínos','kg'],['Bisteca Suína',22.9,'Suínos','kg'],['Coxa e Sobrecoxa',15.9,'Aves','kg'],['Filé de Frango',24.9,'Aves','kg'],['Carvão 3kg',22,'Outros'],['Cerveja Lata',4.5,'Bebidas']]
+M=[['Arroz Tipo 1 5kg',27.9,'Outros'],['Feijão Carioca 1kg',8.49,'Outros'],['Óleo de Soja 900ml',7.99,'Outros'],['Açúcar 5kg',21.9,'Outros'],['Café 500g',18.9,'Outros'],['Leite Integral 1L',5.49,'Bebidas'],['Refrigerante 2L',9.99,'Bebidas'],['Banana Prata',6.99,'Outros','kg'],['Tomate',8.99,'Outros','kg'],['Pão Francês',16.9,'Outros','kg'],['Sabão em Pó 1,6kg',19.9,'Outros'],['Papel Higiênico 12un',22.9,'Outros']]
+with sync_playwright() as pw:
+  b=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])
+  for nome,lst,acg,acao,f in [('Restaurante da Praça',R,False,"go('mesas');try{abaCaixa('mesas')}catch(e){};[[2,[0,1,9,9]],[4,[3,10]],[5,[5,6,11,11]],[8,[4,9]],[11,[7,11,11,11]],[12,[2,8,9]]].forEach(([n,l])=>l.forEach(i=>lancarEm(String(n),'p'+i)));render(true)",'tela-restaurante'),('Açougue Boi de Ouro',A,True,"go('pdv');[['p0',1.25],['p5',0.8],['p8',1.5],['p10',1],['p11',6]].forEach(([p,q])=>mutate('mesas',BAL,m=>{m=addNaComanda(m,p,q);m.itens.forEach(i=>{i.un=unP(S.produtos[i.pid]);i.lid=i.lid||i.pid});return m}));render(true)",'tela-acougue'),('Mercado Bom Preço',M,True,"go('pdv');[['p0',1],['p1',2],['p4',1],['p5',6],['p6',2],['p7',1.2],['p9',0.6]].forEach(([p,q])=>mutate('mesas',BAL,m=>{m=addNaComanda(m,p,q);m.itens.forEach(i=>{i.un=unP(S.produtos[i.pid]);i.lid=i.lid||i.pid});return m}));render(true);document.querySelectorAll('body *').forEach(e=>{if(e.children.length===0&&/GR A[CÇ]OUGUE/i.test(e.textContent))e.textContent='GR Mercado'})",'tela-mercado')]:
+    pg=b.new_page(viewport={'width':1366,'height':768},device_scale_factor=1);errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
+    pg.route('**/acougue',lambda r:r.fulfill(status=200,content_type='text/html',body=html))
+    pg.goto('http://localhost:8765/'+('acougue' if acg else 'index.html'));pg.wait_for_timeout(1500);pg.evaluate(seed(nome,lst));pg.wait_for_timeout(300)
+    pg.evaluate("()=>{"+acao+"}");pg.add_style_tag(content='#toast{display:none!important}');pg.wait_for_timeout(700);pg.screenshot(path=f'/tmp/{f}.png');print(f,errs);pg.close()
