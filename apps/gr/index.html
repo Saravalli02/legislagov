@@ -23,9 +23,10 @@ img{max-width:100%}
 .nav{position:sticky;top:0;z-index:20;height:64px;display:flex;align-items:center;padding:0 clamp(16px,3vw,32px);border-bottom:1px solid var(--lin);background:#000000c4;backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px)}
 .marca{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.01em;white-space:nowrap}
 .marca img{height:26px}
-.menu{display:flex;gap:2px;margin-left:clamp(16px,3vw,44px)}
+.menu{display:flex;gap:2px;margin-left:clamp(16px,3vw,44px);padding:4px;border:1px solid #ffffff1f;border-radius:999px;background:linear-gradient(180deg,#ffffff0d,#ffffff05);box-shadow:inset 0 1px 0 #ffffff14,0 6px 24px #0006}
 .menu a{font-size:14.5px;font-weight:500;color:#c9c9d1;padding:8px 12px;border-radius:999px;transition:background .15s,color .15s}
-.menu a:hover{background:#ffffff12;color:#fff}
+.menu a:hover{background:#ffffff14;color:#fff}.menu a.ativo{background:#ffffff1c;color:#fff;box-shadow:inset 0 0 0 1px #ffffff26}
+@media(min-width:901px){.menu a.m-entrar{display:none}}
 .menu a.m-lg{display:inline-flex;align-items:center;gap:7px;color:#bfeeff}.menu a.m-lg::after{content:"";width:7px;height:7px;border-radius:50%;background:#22b8e6;box-shadow:0 0 0 3px #22b8e633}
 .dir{margin-left:auto;display:flex;gap:8px;align-items:center}
 .bt{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:999px;font-weight:600;font-size:14px;border:0;cursor:pointer;font-family:inherit;transition:transform .15s,background .15s}
@@ -165,6 +166,31 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 @media(max-width:980px){.rod .rg{grid-template-columns:1fr;padding:0}.rod .re{border-right:0;border-bottom:1px solid var(--lin);padding:44px clamp(16px,4vw,28px) 28px}.rod .rd{padding:32px clamp(16px,4vw,28px);grid-template-columns:1fr 1fr}.rod .rcanal{grid-column:1/-1}}
 @media(max-width:560px){.rod .rinf{grid-template-columns:1fr}.rod .rd{grid-template-columns:1fr}}
 
+
+/* ---------- LegislaGov em destaque (carrossel) ---------- */
+.lgx{position:relative;border-radius:26px;overflow:hidden;border:1px solid #22b8e655;background:radial-gradient(900px 400px at 0% 0%,#123a8a55,transparent 60%),radial-gradient(700px 360px at 100% 100%,#19e3d026,transparent 60%),#06080d;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr);gap:0;margin-bottom:22px;box-shadow:0 30px 80px #0009,inset 0 1px 0 #ffffff12}
+@media(max-width:980px){.lgx{grid-template-columns:1fr}}
+.lgx .tx{padding:clamp(24px,3.4vw,44px);display:flex;flex-direction:column;gap:16px}
+.lgx .sel{display:inline-flex;align-self:flex-start;gap:8px;align-items:center;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#bfeeff;background:#22b8e61f;border:1px solid #22b8e655;padding:6px 12px;border-radius:999px}
+.lgx h3{font-size:clamp(30px,3.4vw,44px);letter-spacing:-.035em;line-height:1.05}.lgx h3 span{background:linear-gradient(90deg,#4f8bff,#19e3d0);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lgx .tx>p{color:var(--sub);line-height:1.6;font-size:16px}
+.lgx ul.fe{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:14.5px}
+@media(max-width:520px){.lgx ul.fe{grid-template-columns:1fr}}
+.lgx ul.fe li{display:flex;gap:8px;line-height:1.35}.lgx ul.fe li::before{content:"✓";flex:none;width:18px;height:18px;border-radius:50%;background:#22b8e633;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.lgx .ac{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.lgx .ac .bt[aria-disabled=true]{opacity:.45;cursor:not-allowed;pointer-events:none}.lgx .ac .bt.wa{background:#25d366;color:#04140a}.lgx .ac em{align-self:center;font-size:12.5px;color:var(--sub);font-style:normal}
+.car{position:relative;padding:clamp(16px,2.4vw,28px);display:flex;flex-direction:column;justify-content:center}
+.car .vj{position:relative;border-radius:14px;overflow:hidden;border:1px solid #ffffff2e;background:#0d0f14;box-shadow:0 24px 60px #000a;aspect-ratio:1366/800}
+.car .vj .bar{position:absolute;inset:0 0 auto 0;height:26px;display:flex;gap:6px;align-items:center;padding:0 12px;background:#1b1d23;z-index:2}.car .vj .bar i{width:9px;height:9px;border-radius:50%;background:#ff5f57}.car .vj .bar i:nth-child(2){background:#febc2e}.car .vj .bar i:nth-child(3){background:#28c840}
+.car .vj .bar span{margin-left:10px;font-size:11.5px;color:#9a9aa3}
+.car .sl{position:absolute;inset:26px 0 0 0;opacity:0;transition:opacity .7s ease,transform 6s ease;transform:scale(1.02)}.car .sl.on{opacity:1;transform:scale(1)}
+.car .sl img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.car .leg{margin-top:14px;display:flex;align-items:center;gap:12px;min-height:44px}
+.car .leg p{flex:1;color:#d7d7de;font-size:14.5px;line-height:1.45}
+.car .pts{display:flex;gap:6px}.car .pts button{width:9px;height:9px;border-radius:999px;border:0;background:#ffffff38;cursor:pointer;padding:0;transition:width .3s,background .3s}.car .pts button.on{width:26px;background:#19e3d0}
+.car .nv{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;border:1px solid #ffffff33;background:#000a;color:#fff;font-size:18px;cursor:pointer;z-index:3;display:grid;place-items:center}
+.car .nv.e{left:6px}.car .nv.d{right:6px}
+.prd .ac .bt.va,.lgx .ac .bt.va{background:#ffffff14;color:#fff;border:1px solid #ffffff2a}
 /* ---------- loja: perfis dos sistemas (sem preço por enquanto) ---------- */
 .loja-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 @media(max-width:900px){.loja-g{grid-template-columns:1fr}}
@@ -213,7 +239,7 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 <body>
 <nav class="nav">
   <a class="marca" href="#topo" aria-label="GR Software, início"><img src="gr-emblema.webp" alt="">GR Software</a>
-  <div class="menu" id="menu"><a href="#produtos">Produtos</a><a href="#como">Como funciona</a><a href="#modelos">Modelos prontos</a><a href="#sobre">Sobre nós</a><a href="#contato">Contato</a><a class="m-lg" href="https://painel.grsoftware.com.br/" title="Entrar na LegislaGov: escolha a sua Câmara, usuário e senha">LegislaGov</a><a class="m-entrar" href="https://central.grsoftware.com.br/">Entrar no meu painel →</a></div>
+  <div class="menu" id="menu"><a href="#produtos">Produtos</a><a href="aulas/">Videoaulas</a><a href="#como">Como funciona</a><a href="#modelos">Modelos prontos</a><a href="#sobre">Sobre nós</a><a href="#contato">Contato</a><a class="m-lg" href="https://painel.grsoftware.com.br/" title="Entrar na LegislaGov: escolha a sua Câmara, usuário e senha">LegislaGov</a><a class="m-entrar" href="https://central.grsoftware.com.br/">Entrar no meu painel →</a></div>
   <div class="dir"><a class="bt es" href="https://central.grsoftware.com.br/">Entrar</a><a class="bt cl" href="#contato">Fale com a gente</a></div>
   <button class="hamb" id="hamb" aria-label="Abrir o menu" aria-expanded="false">☰</button>
 </nav>
@@ -233,17 +259,31 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 
 <section class="sec" id="produtos">
   <div class="in">
-    <div class="cab rev"><div class="tag">Nossos produtos</div><h2>Escolha o sistema do seu comércio.</h2><p>Cada sistema já vem pronto para usar no computador e no celular. Veja tudo o que vem em cada um.</p></div>
+    <div class="cab rev"><div class="tag">Nossos produtos</div><h2>Escolha o seu sistema.</h2><p>Cada sistema já vem pronto para usar no computador e no celular. Veja tudo o que vem em cada um.</p></div>
+    <article class="lgx rev" id="p-legislagov">
+      <div class="tx">
+        <span class="sel">🏛️ Destaque · Para Câmaras Municipais</span>
+        <h3>LegislaGov <span>Câmara</span></h3>
+        <p>O sistema completo da Câmara Municipal: do protocolo à votação em plenário, com site oficial, Transparência e e-mails institucionais. Tudo integrado, seguro e feito para quem trabalha na Câmara.</p>
+        <ul class="fe"><li>Protocolo com recibo e código de conferência</li><li>Matérias, tramitação e pareceres</li><li>Sessões, pauta e painel do plenário</li><li>Portal do Vereador e assinatura gov.br</li><li>Site oficial da Câmara</li><li>Portal da Transparência (LAI)</li><li>E-mails institucionais com painel</li><li>Ouvidoria e e-SIC</li></ul>
+        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1!%20Tenho%20interesse%20na%20LegislaGov%20para%20a%20C%C3%A2mara." target="_blank" rel="noopener">Enviar mensagem</a><a class="bt va g" href="aulas/?s=legislagov">🎬 Videoaulas</a></div>
+      </div>
+      <div class="car" id="car" aria-roledescription="carrossel" aria-label="Telas da LegislaGov">
+        <div class="vj"><div class="bar"><i></i><i></i><i></i><span>painel.grsoftware.com.br</span></div><div class="sl on" data-leg="Cada pessoa da Câmara entra no seu painel: Procuradoria, Administrativo, Vereador, Transparência e Publicações."><img src="legislagov-1.webp" alt="Cada pessoa da Câmara entra no seu painel: Procuradoria, Administrativo, Vereador, Transparência e Publicações." loading="eager" width="1708" height="960"></div><div class="sl" data-leg="Painel Administrativo: protocolo, matérias, sessões, expedientes e ouvidoria em um só lugar."><img src="legislagov-2.webp" alt="Painel Administrativo: protocolo, matérias, sessões, expedientes e ouvidoria em um só lugar." loading="lazy" width="1708" height="960"></div><div class="sl" data-leg="Painel do Vereador: escrever propositura, assinar com gov.br e acompanhar sessões e votações."><img src="legislagov-3.webp" alt="Painel do Vereador: escrever propositura, assinar com gov.br e acompanhar sessões e votações." loading="lazy" width="1708" height="960"></div><div class="sl" data-leg="Site oficial da Câmara, pronto e atualizado pelo próprio sistema."><img src="legislagov-4.webp" alt="Site oficial da Câmara, pronto e atualizado pelo próprio sistema." loading="lazy" width="1708" height="960"></div><div class="sl" data-leg="Portal da Transparência completo, conforme a Lei de Acesso à Informação."><img src="legislagov-5.webp" alt="Portal da Transparência completo, conforme a Lei de Acesso à Informação." loading="lazy" width="1708" height="960"></div>
+          <button class="nv e" type="button" aria-label="Tela anterior">‹</button><button class="nv d" type="button" aria-label="Próxima tela">›</button></div>
+        <div class="leg"><p id="carleg">Cada pessoa da Câmara entra no seu painel: Procuradoria, Administrativo, Vereador, Transparência e Publicações.</p><div class="pts" role="tablist"><button type="button" class="on" aria-label="Tela 1"></button><button type="button" class="" aria-label="Tela 2"></button><button type="button" class="" aria-label="Tela 3"></button><button type="button" class="" aria-label="Tela 4"></button><button type="button" class="" aria-label="Tela 5"></button></div></div>
+      </div>
+    </article>
     <div class="loja-g">
       <article class="prd rev" id="p-restaurante" style="--c:#e53935;--c2:#ff8a65"><div class="capa shot"><span class="big" aria-hidden="true">🍽️</span><div class="tt"><small>Pronto para usar</small><h3>GR Restaurante</h3></div><a class="pjan" href="tela-restaurante.webp" target="_blank" rel="noopener" aria-label="Ver a tela em tamanho grande"><span class="bar"><i></i><i></i><i></i></span><img src="tela-restaurante.webp" alt="Tela inicial do GR Restaurante: caixa com mesas ocupadas" loading="lazy" width="1366" height="768"></a></div>
         <div class="cp"><p>Do salão à cozinha: caixa, mesas, garçom no celular, delivery e cardápio digital, tudo em tempo real.</p><ul class="fe"><li>Caixa rápido com atalhos de teclado</li><li>Mesas e comandas</li><li>App do garçom com PIN</li><li>Retirada, comer no local e delivery</li><li>Cardápio digital com pedido online</li><li>Robô de atendimento no WhatsApp</li><li>Pedido impresso na cozinha</li><li>Produtos com foto e estoque</li><li>Clientes com conta e cobrança por Pix</li><li>Painel gerencial e controle de despesas</li><li>Histórico e relatórios de vendas</li><li>Funciona no computador e no celular</li></ul>
-        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20GR%20Restaurante.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><em>Compra pelo site em breve</em></div></div></article>
+        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20GR%20Restaurante.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><a class="bt va g" href="aulas/?s=restaurante">🎬 Videoaulas</a><em>Compra pelo site em breve</em></div></div></article>
       <article class="prd rev" id="p-acougue" style="--c:#f0b000;--c2:#ff7043"><div class="capa shot"><span class="big" aria-hidden="true">🥩</span><div class="tt"><small>Pronto para usar</small><h3>GR Açougue</h3></div><a class="pjan" href="tela-acougue.webp" target="_blank" rel="noopener" aria-label="Ver a tela em tamanho grande"><span class="bar"><i></i><i></i><i></i></span><img src="tela-acougue.webp" alt="Tela do caixa do GR Açougue com venda por quilo" loading="lazy" width="1366" height="768"></a></div>
         <div class="cp"><p>Caixa grande e rápido para o balcão, venda por quilo e grama e clientes com conta.</p><ul class="fe"><li>Caixa grande, feito para o balcão</li><li>Venda por quilo e por grama</li><li>Lê a etiqueta da balança</li><li>Clientes com crédito (fiado) e cobrança</li><li>Reserva de assados pelo link</li><li>Pedido digital</li><li>Estoque e movimentação</li><li>Comprovante impresso</li><li>Painel gerencial e despesas</li><li>Relatórios por dia e por período</li></ul>
-        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20GR%20A%C3%A7ougue.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><em>Compra pelo site em breve</em></div></div></article>
+        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20GR%20A%C3%A7ougue.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><a class="bt va g" href="aulas/?s=acougue">🎬 Videoaulas</a><em>Compra pelo site em breve</em></div></div></article>
       <article class="prd rev" id="p-mercado" style="--c:#1e88e5;--c2:#26c6da"><div class="capa shot"><span class="big" aria-hidden="true">🛒</span><div class="tt"><small>Base do GR Açougue</small><h3>GR Mercado</h3></div><a class="pjan" href="tela-mercado.webp" target="_blank" rel="noopener" aria-label="Ver a tela em tamanho grande"><span class="bar"><i></i><i></i><i></i></span><img src="tela-mercado.webp" alt="Tela do caixa do GR Mercado" loading="lazy" width="1366" height="768"></a></div>
         <div class="cp"><p>O caixa só passa, recebe e emite. Cadastro, estoque e movimentação ficam com quem administra.</p><ul class="fe"><li>Caixa simples para o operador</li><li>Venda por unidade e por peso</li><li>Lê a etiqueta da balança</li><li>Cadastro de produtos e categorias</li><li>Estoque e movimentação</li><li>Clientes com conta</li><li>Acesso separado: caixa e gerência</li><li>Relatórios e painel gerencial</li></ul>
-        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20GR%20Mercado.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><em>Compra pelo site em breve</em></div></div></article>
+        <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20GR%20Mercado.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><a class="bt va g" href="aulas/?s=mercado">🎬 Videoaulas</a><em>Compra pelo site em breve</em></div></div></article>
       <article class="prd rev" id="p-personalizado" style="--c:#3fae4f;--c2:#a5d6a7"><div class="capa"><div class="tela" aria-hidden="true"><i></i><i></i><b><u></u><u></u><u></u><u></u><u></u><u></u><u></u><u></u></b><i></i><i></i></div><span class="big" aria-hidden="true">🧩</span><div><small>Feito sob medida</small><h3>Sistema personalizado</h3></div></div>
         <div class="cp"><p>Seu negócio não é restaurante nem mercado? A gente cria um sistema exclusivo, do jeito que você trabalha.</p><ul class="fe"><li>Você conta como trabalha, a gente monta</li><li>Telas e relatórios do seu jeito</li><li>App no celular que funciona sem internet</li><li>Vendedores, rotas e prestação de contas</li><li>Ajustes depois de pronto</li><li>Exemplo real: GR Rural (horta com vendedores na rua)</li></ul>
         <div class="ac"><a class="bt cl g" aria-disabled="true" tabindex="-1" role="link">Comprar agora</a><a class="bt wa g" href="https://wa.me/5517981874267?text=Ol%C3%A1%21%20Tenho%20interesse%20no%20Sistema%20personalizado.%20Pode%20me%20explicar%20como%20funciona%3F" target="_blank" rel="noopener">Enviar mensagem</a><em>Compra pelo site em breve</em></div></div></article>
@@ -350,6 +390,17 @@ h1{position:relative;font-size:clamp(46px,7.4vw,88px);line-height:1;letter-spaci
 </div></footer>
 
 <script>
+/* carrossel da LegislaGov: troca sozinho a cada 5 s, pausa com o mouse em cima */
+(()=>{const c=document.getElementById('car');if(!c)return;const ss=[...c.querySelectorAll('.sl')],ps=[...c.querySelectorAll('.pts button')],lg=document.getElementById('carleg');let i=0,t=null,par=false;
+  const ir=n=>{i=(n+ss.length)%ss.length;ss.forEach((s,k)=>s.classList.toggle('on',k===i));ps.forEach((p,k)=>p.classList.toggle('on',k===i));lg.textContent=ss[i].dataset.leg};
+  const auto=()=>{clearInterval(t);t=setInterval(()=>{if(!par&&!document.hidden)ir(i+1)},5000)};
+  ps.forEach((p,k)=>p.onclick=()=>{ir(k);auto()});c.querySelector('.nv.e').onclick=()=>{ir(i-1);auto()};c.querySelector('.nv.d').onclick=()=>{ir(i+1);auto()};
+  c.onmouseenter=()=>par=true;c.onmouseleave=()=>par=false;
+  let x0=null;c.addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});c.addEventListener('touchend',e=>{if(x0===null)return;const dx=e.changedTouches[0].clientX-x0;if(Math.abs(dx)>40){ir(i+(dx<0?1:-1));auto()}x0=null});
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches)auto()})();
+/* menu: marca a seção que está na tela */
+(()=>{const ls=[...document.querySelectorAll('#menu a[href^="#"]')];const io2=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)ls.forEach(a=>a.classList.toggle('ativo',a.getAttribute('href')==='#'+e.target.id))}),{rootMargin:'-45% 0px -50% 0px'});
+  ls.forEach(a=>{const sec=document.querySelector(a.getAttribute('href'));if(sec)io2.observe(sec)})})();
 /* menu do celular */
 const hamb=document.getElementById('hamb'),menu=document.getElementById('menu');
 hamb.onclick=()=>{const a=menu.classList.toggle('aberto');hamb.setAttribute('aria-expanded',a)};

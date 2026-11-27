@@ -43,7 +43,7 @@ SISTEMAS = [
      "desc": "Matérias, protocolo, sessões, Portal do Vereador e Transparência.",
      "abrir": ["Abrir o painel de Neves Paulista", "https://neves.legislagov.com.br/painel/"],
      "acessos": [{"nome": "Site da Câmara", "tipo": "site", "url": "https://neves.legislagov.com.br/"},
-                 {"nome": "Ambiente de teste", "tipo": "teste", "url": "https://teste.legislagov.com.br/painel/"}], "demo": False},
+                 {"nome": "Ambiente de teste", "tipo": "teste", "url": "https://teste.legislagov.com.br/painel/"}], "acoes": ["aulas"], "demo": False},
     {"id": "email", "grupo": "camaras", "nome": "Painel de e-mails", "icone": "em-email.png", "cor": "#7a4fd6",
      "desc": "Caixas de e-mail institucionais: criar, trocar senha e mandar avisos.",
      "abrir": ["Abrir o painel de e-mails", "https://email.legislagov.com.br/"],
@@ -57,12 +57,12 @@ SISTEMAS = [
      "abrir": ["Abrir o caixa do restaurante", "https://restaurante.grsoftware.com.br/"],
      "acessos": [{"nome": "App do garçom", "tipo": "celular", "url": "https://restaurante.grsoftware.com.br/garcom", "qr": True},
                  {"nome": "Cardápio digital", "tipo": "cardapio", "url": "https://casasaravalli.grsoftware.com.br/", "qr": True}],
-     "acoes": ["clientes-comercio"], "demo": False},
+     "acoes": ["clientes-comercio", "aulas"], "demo": False},
     {"id": "acougue", "grupo": "comercio", "nome": "GR Açougue", "icone": "em-acougue.png", "cor": "#e0a21b",
      "desc": "Caixa por quilo e grama, balança, clientes com crédito e pedido digital.",
      "abrir": ["Abrir o caixa do açougue", "https://acougue.grsoftware.com.br/"],
      "acessos": [{"nome": "Instalar o app", "tipo": "celular", "url": "https://acougue.grsoftware.com.br/", "qr": True}],
-     "acoes": ["clientes-comercio"], "demo": False},
+     "acoes": ["clientes-comercio", "aulas"], "demo": False},
     {"id": "rural", "grupo": "comercio", "nome": "GR Rural", "icone": "em-rural.png", "cor": "#3fae4f",
      "desc": "Rotas, vendedores, troco, trocas, fiado, despesas e rastreio da horta.",
      "abrir": ["Abrir o Rural", "https://rural.grsoftware.com.br/"],
@@ -444,6 +444,19 @@ def rota(h, metodo):
             if sis not in lgacesso.SISTEMAS or not re.fullmatch(r"[a-z0-9-]{1,60}", cli):
                 return _resp(h, 400, {"ok": False})
             return _resp(h, 200, {"ok": True, "ativo": not lgacesso.bloqueado(sis, cli)})
+        if acao.startswith("aulas/"):
+            # videoaulas: página pública grsoftware.com.br/aulas/ (código de acesso de quem comprou)
+            import lgaulas
+            with lgapi._trava:
+                c = _db()
+                if acao == "aulas/vitrine" and metodo == "GET":
+                    return _resp(h, *lgaulas.vitrine(c))
+                if acao == "aulas/entrar" and metodo == "POST":
+                    return _resp(h, *lgaulas.entrar(c, corpo.get("codigo"), ip))
+                if acao == "aulas/lista" and metodo == "GET":
+                    auth = h.headers.get("Authorization", "")
+                    return _resp(h, *lgaulas.lista(c, auth[7:].strip() if auth.lower().startswith("bearer ") else ""))
+            return _resp(h, 404, {"ok": False})
         with lgapi._trava:
             c = _db()
             if acao == "entrar" and metodo == "POST":
@@ -463,6 +476,23 @@ def rota(h, metodo):
                 return _resp(h, *minha_senha(c, s, corpo.get("atual"), corpo.get("nova")))
             if acao == "demos" and metodo == "POST":
                 return _resp(h, *criar_demo(c, s, corpo, ip))
+            # ---- videoaulas: códigos de acesso e aulas
+            if acao.startswith("admin/aulas"):
+                import lgaulas
+                if acao == "admin/aulas" and metodo == "GET":
+                    return _resp(h, *lgaulas.admin(c))
+                if acao == "admin/aulas/codigo" and metodo == "POST":
+                    cod, r = lgaulas.novo_codigo(c, s["usuario"], corpo)
+                    if cod == 200:
+                        _log(c, s["usuario"], "Código de videoaulas criado", f"{r['nome']} · {corpo.get('cliente') or ''} · final {r['codigo'][-4:]}", ip)
+                    return _resp(h, cod, r)
+                if acao == "admin/aulas/revogar" and metodo == "POST":
+                    _log(c, s["usuario"], "Código de videoaulas revogado", str(corpo.get("id")), ip)
+                    return _resp(h, *lgaulas.revogar(c, corpo.get("id")))
+                if acao == "admin/aulas/aula" and metodo == "POST":
+                    return _resp(h, *lgaulas.salvar_aula(c, corpo))
+                if acao == "admin/aulas/aula/excluir" and metodo == "POST":
+                    return _resp(h, *lgaulas.excluir_aula(c, corpo.get("id")))
             if acao == "demos/encerrar" and metodo == "POST":
                 return _resp(h, *encerrar_demo(c, s, corpo.get("id"), ip))
             # ---- aparelhos autorizados por usuário (até 3) e registro de acessos com IP
