@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v63">
+<meta name="lg-versao" content="lg-v64">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -2636,8 +2636,66 @@ function fecharMov(){
   if(ocup.length)return abrirModal(`<h2>⚠️ Ainda há comandas abertas</h2><p>Feche ou cancele antes de fechar o movimento: <b>${ocup.map(esc).join(', ')}</b></p><button class="btn pri big" onclick="fecharModal();go('mesas')">Ir para as mesas</button>`);
   confirmar('Fechar o movimento do dia agora?',()=>{const m=clone(movAtual());const f=new Date().toISOString();
     mutate('movimentos',m.id,x=>x?{...x,fechamento:f}:ABORT);st.relMov=m.id;st.relAba='dia';go('relatorios');toast('🔒 Movimento fechado. Confira o relatório do dia.');
-    setTimeout(()=>imprimir(relEstoqueHtml(m.id),'estoque-'+dt(m.abertura).slice(0,10).replace(/\//g,'-')),400)});
+    setTimeout(()=>perguntarA4(m.id),400)});
 }
+function estoqueAposFechar(id){const m=S.movimentos[id];if(!m)return;imprimir(relEstoqueHtml(id),'estoque-'+dt(m.abertura).slice(0,10).replace(/\//g,'-'))}
+function perguntarA4(id){abrirModal(`<h2>📄 Salvar o relatório diário?</h2><p>Gera o relatório do dia em folha A4: tudo o que foi vendido, quantos de cada produto, como cada um foi pago e o total recebido em Pix, débito e crédito.</p><p style="color:var(--mut);font-size:.9rem">Na janela que abrir, escolha <b>“Salvar como PDF”</b> para guardar, ou a impressora para imprimir em A4.</p>
+  <div class="row"><button class="btn" style="flex:1" onclick="fecharModal();estoqueAposFechar('${id}')">Agora não</button><button class="btn pri" style="flex:1" onclick="fecharModal();salvarA4('${id}',()=>estoqueAposFechar('${id}'))">📄 Salvar relatório</button></div>`)}
+function relA4Html(id){const m=S.movimentos[id];if(!m)return '';const c=S.config||{};
+  const vs=Object.values(S.vendas).filter(v=>v.movId===id).sort((a,b)=>a.data.localeCompare(b.data));
+  const vnd=vs.filter(v=>!v.devolucao),dvs=vs.filter(v=>v.devolucao);
+  const tot=vs.reduce((s,v)=>s+v.total,0),tvd=vnd.reduce((s,v)=>s+v.total,0),tdv=dvs.reduce((s,v)=>s+v.total,0);
+  const fq=q=>Number.isInteger(q)?String(q):q.toLocaleString('pt-BR',{maximumFractionDigits:3});
+  const ordemP=PAGS.map(x=>x[0]),ordP=(a,b)=>{const ia=ordemP.indexOf(a),ib=ordemP.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b)};
+  const pr={};vs.forEach(v=>(v.itens||[]).forEach(i=>{const o=pr[i.nome]||(pr[i.nome]={q:0,v:0,pg:{}});const val=vIt(i);o.q+=i.qtd;o.v+=val;
+    const g=o.pg[v.pagamento||'Sem forma']||(o.pg[v.pagamento||'Sem forma']={q:0,v:0});g.q+=i.qtd;g.v+=val}));
+  const prs=Object.entries(pr).sort((a,b)=>b[1].q-a[1].q||a[0].localeCompare(b[0],'pt-BR'));
+  const pag={};vs.forEach(v=>{const k=v.pagamento||'Sem forma';const o=pag[k]||(pag[k]={n:0,v:0});o.n++;o.v+=v.total});
+  PAGS.forEach(([k])=>{if(!pag[k])pag[k]={n:0,v:0}});
+  const pgs=Object.entries(pag).sort((a,b)=>ordP(a[0],b[0]));
+  const cartao=(pag['Débito']||{v:0}).v+(pag['Crédito']||{v:0}).v;
+  const rcb=ACG?Object.values(S.clientes||{}).flatMap(cl=>(cl.pagamentos||[]).filter(x=>x.movId===id).map(x=>({...x,nome:cl.nome}))):[];
+  const cns=m.cancelamentos||[];
+  const dia=dt(m.abertura).slice(0,10);
+  const linhasP=prs.map(([n,o])=>`<tr class="p"><td>${esc(n)}</td><td class="n">${fq(o.q)}</td><td class="n">${brl(o.v)}</td></tr>`+
+    Object.entries(o.pg).sort((a,b)=>ordP(a[0],b[0])).map(([k,g])=>`<tr class="sub"><td>↳ ${esc(k)}</td><td class="n">${fq(g.q)}</td><td class="n">${brl(g.v)}</td></tr>`).join('')).join('');
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório diário ${dia.replace(/\//g,'-')}</title><style>
+@page{size:A4;margin:14mm 14mm 16mm}
+*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:11pt}
+.cab{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #111;padding-bottom:8px;margin-bottom:14px}
+.cab h1{font-size:18pt;margin:0}.cab .e{font-size:9.5pt;color:#444;margin-top:3px}.cab .d{text-align:right;font-size:10pt}.cab .d b{font-size:15pt;display:block}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}.cards div{border:1px solid #bbb;border-radius:6px;padding:8px 10px}.cards small{display:block;color:#555;font-size:8.5pt;text-transform:uppercase;letter-spacing:.04em}.cards b{font-size:14pt}
+h2{font-size:12.5pt;margin:18px 0 6px;padding-bottom:3px;border-bottom:1px solid #999}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-size:9pt;color:#444;text-transform:uppercase;border-bottom:1.5px solid #111;padding:4px 6px}
+td{padding:4px 6px}.n{text-align:right;white-space:nowrap}th.n{text-align:right}
+tr.p td{border-top:1px solid #ccc;font-weight:700}tr.sub td{font-size:9.5pt;color:#333;padding-top:1px;padding-bottom:1px}tr.sub td:first-child{padding-left:26px}
+tr{page-break-inside:avoid}
+.tot td{border-top:2px solid #111;font-weight:700;font-size:12pt}
+.pg td{border-bottom:1px solid #ddd}
+.rod{margin-top:22px;font-size:8.5pt;color:#666;border-top:1px solid #ccc;padding-top:6px;display:flex;justify-content:space-between}
+</style></head><body>
+<div class="cab"><div><h1>Relatório diário do movimento</h1><div class="e"><b>${esc(c.razao||(ACG?'GR Açougue':'GR Restaurante'))}</b>${c.cnpj?' · CNPJ '+esc(c.cnpj):''}${c.endereco?'<br>'+esc(c.endereco):''}</div></div>
+<div class="d"><b>${dia}</b>Abertura ${dt(m.abertura).slice(11)} · Fechamento ${m.fechamento?dt(m.fechamento).slice(11):'em aberto'}</div></div>
+<div class="cards"><div><small>Total vendido</small><b>${brl(tot)}</b></div><div><small>Vendas</small><b>${vnd.length}</b></div><div><small>Ticket médio</small><b>${brl(vnd.length?tvd/vnd.length:0)}</b></div><div><small>Itens vendidos</small><b>${fq(prs.reduce((s,[,o])=>s+o.q,0))}</b></div></div>
+<h2>O que foi consumido e como foi pago</h2>
+${prs.length?`<table><tr><th>Produto / forma de pagamento</th><th class="n">Qtd</th><th class="n">Valor</th></tr>${linhasP}<tr class="tot"><td>Total</td><td class="n">${fq(prs.reduce((s,[,o])=>s+o.q,0))}</td><td class="n">${brl(tot)}</td></tr></table>`:'<p>Nenhum produto vendido neste movimento.</p>'}
+<h2>Total recebido por forma de pagamento</h2>
+<table class="pg"><tr><th>Forma de pagamento</th><th class="n">Vendas</th><th class="n">Valor recebido</th></tr>
+${pgs.map(([k,o])=>`<tr><td>${esc(k)}</td><td class="n">${o.n}</td><td class="n">${brl(o.v)}</td></tr>`).join('')}
+${pag['Débito']&&pag['Crédito']?`<tr><td><i>Cartão (débito + crédito)</i></td><td class="n">${pag['Débito'].n+pag['Crédito'].n}</td><td class="n"><i>${brl(cartao)}</i></td></tr>`:''}
+<tr class="tot"><td>Total recebido</td><td class="n">${vs.length}</td><td class="n">${brl(tot)}</td></tr></table>
+${dvs.length?`<p style="font-size:9.5pt">Inclui ${dvs.length} devolução(ões) no valor de ${brl(tdv)} (vendas brutas: ${brl(tvd)}).</p>`:''}
+${rcb.length?`<h2>Contas de clientes recebidas</h2><table><tr><th>Cliente</th><th>Forma</th><th class="n">Valor</th></tr>${rcb.map(x=>`<tr><td>${esc(x.nome)}</td><td>${esc(x.forma)}</td><td class="n">${brl(x.valor)}</td></tr>`).join('')}<tr class="tot"><td colspan="2">Total recebido de contas</td><td class="n">${brl(rcb.reduce((s,x)=>s+x.valor,0))}</td></tr></table>`:''}
+${cns.length?`<h2>${ACG?'Cancelamentos':'Mesas canceladas'} (${cns.length})</h2><table><tr><th>Hora</th><th>${ACG?'O que foi':'Mesa'}</th><th>Motivo</th><th class="n">Valor</th></tr>${cns.map(x=>`<tr><td>${hr(x.hora)}</td><td>${esc(x.rotulo)}</td><td>${esc(x.motivo||'')}</td><td class="n">${brl(x.total)}</td></tr>`).join('')}</table>`:''}
+<div class="rod"><span>Gerado em ${dt(new Date().toISOString())}</span><span>GR Software · grsoftware.com.br</span></div>
+</body></html>`}
+function salvarA4(id,depois){const html=relA4Html(id);if(!html)return;
+  const fr=document.createElement('iframe');fr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(fr);
+  const d=fr.contentWindow.document;d.open();d.write(html);d.close();
+  const tit=document.title,m=S.movimentos[id];document.title='relatorio-diario-'+dt(m.abertura).slice(0,10).replace(/\//g,'-');
+  let feito=false;const fim=()=>{if(feito)return;feito=true;document.title=tit;setTimeout(()=>fr.remove(),1000);depois&&depois()};
+  fr.contentWindow.onafterprint=fim;
+  setTimeout(()=>{try{fr.contentWindow.focus();fr.contentWindow.print()}catch(e){toast('Não consegui abrir a impressão: '+e.message)}setTimeout(fim,1500)},300)}
 
 /* ---------- RELATÓRIOS ---------- */
 function movDoRel(id){const movs=Object.values(S.movimentos).sort((a,b)=>b.abertura.localeCompare(a.abertura));return (id&&S.movimentos[id])||movAtual()||movs[0]||null}
@@ -2667,6 +2725,7 @@ function vRelatorios(){const ab=st.relAba||'gerencial';if(ab==='gerencial')retur
   return `${relAbas()}<div class="row" style="margin-bottom:12px"><h2 style="margin:0;flex:1">📊 Relatório do dia</h2>
   <select style="width:auto" onchange="st.relMov=this.value;render(true)">${movs.map(x=>`<option value="${x.id}" ${x.id===id?'selected':''}>${dt(x.abertura).slice(0,10)} ${x.fechamento?'':'(aberto)'}</option>`).join('')}</select>
   <button class="btn" onclick="imprimirEstoqueDia('${id}')">📦 Estoque do dia</button>
+  <button class="btn" onclick="salvarA4('${id}')">📄 Relatório A4 (PDF)</button>
   <button class="btn pri" onclick="imprimir(relHtml('${id}'),'relatorio-${dt(m.abertura).slice(0,10).replace(/\//g,'-')}')">🖨️ Imprimir</button></div>${relHtml(id,true)}`;
 }
 function relHtml(id,tela){
