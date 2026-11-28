@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v66">
+<meta name="lg-versao" content="lg-v67">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -104,6 +104,11 @@ td.n,th.n{text-align:right}
 .cupom{font-family:"Courier New",monospace;background:#fffef8;border:1px dashed #bbb;padding:14px;font-size:.85rem;white-space:normal}
 .cupom h4{text-align:center;margin:0 0 4px}.cupom .c{text-align:center}
 .cupom table td,.cupom table th{padding:3px 2px;border:0;font-size:.82rem}
+.pagos{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:#eef7f1;border:1px dashed #9fd3b2}.pg-t{font-weight:700;color:#1f7a45;margin-bottom:4px}
+.pg-i{display:flex;justify-content:space-between;gap:8px;color:#6b7a70;font-size:.92rem;padding:2px 0}.pg-i small{color:#1f7a45}
+.ppl{display:grid;gap:6px;max-height:42vh;overflow:auto;margin:8px 0}.ppi{display:flex;align-items:center;gap:8px;border:1.5px solid #e4e0d8;border-radius:12px;padding:6px 8px;background:#fff}
+.ppi.on{border-color:var(--acc,#d32f2f);background:#fff6f4}.ppn{flex:1;text-align:left;background:none;border:0;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.ppn small{color:var(--mut)}.ppq{font-size:.85rem;color:var(--mut);padding:0 6px}
 .cupom hr{border:0;border-top:1px dashed #999}
 .imgprev{width:110px;height:110px;border-radius:12px;background:#f0ece4;display:grid;place-items:center;font-size:2.6rem;overflow:hidden;border:2px dashed var(--line);cursor:pointer}
 .imgprev img{width:100%;height:100%;object-fit:cover}
@@ -962,7 +967,7 @@ nav#nav{padding:12px 16px 14px!important;gap:10px!important;overflow-x:auto;over
   <button data-v="config"><i><svg class="nico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></i>Ajustes</button>
 </nav>
 <main id="view"></main>
-<div id="atalhos"><b>Atalhos:</b> <kbd>F1</kbd> Ajuda · <kbd>F2</kbd> Caixa · <kbd>F4</kbd> Estoque · <kbd>F8</kbd> Fechar/Finalizar venda · <kbd>P</kbd>/<kbd>D</kbd>/<kbd>C</kbd> Pix/Débito/Crédito · <kbd>F9</kbd> Reimprimir último recibo · <kbd>F10</kbd> Imprimir consumo · <kbd>Esc</kbd> Voltar</div>
+<div id="atalhos"><b>Atalhos:</b> <kbd>F1</kbd> Ajuda · <kbd>F2</kbd> Caixa · <kbd>F4</kbd> Estoque · <kbd>F8</kbd> Fechar/Finalizar venda · <kbd>M</kbd>/<kbd>P</kbd>/<kbd>D</kbd>/<kbd>C</kbd> Dinheiro/Pix/Débito/Crédito · <kbd>F9</kbd> Reimprimir último recibo · <kbd>F10</kbd> Imprimir consumo · <kbd>Esc</kbd> Voltar</div>
 <div id="alerta" class="hidden" onclick="this.classList.add('hidden')"></div>
 <div id="modalBg" class="hidden"><div id="modal"></div></div>
 <div id="toast"></div>
@@ -994,8 +999,8 @@ function catsEscolhidas(){const c=(S.config||{}).categorias;return Array.isArray
 function atualizarCats(){const e=catsEscolhidas(),usadas=new Set(Object.values(S.produtos||{}).map(p=>p.cat));CATS=TODAS_CATS.filter(x=>e.includes(x)||usadas.has(x))}
 function trocarCat(c,on){const l=catsEscolhidas().filter(x=>x!==c);if(on)l.push(c);if(!l.length)return toast('Deixe pelo menos um menu');
   mutate('config','geral',x=>({...(x||{}),categorias:TODAS_CATS.filter(y=>l.includes(y))}))}
-const PAGS=ACG?[['Dinheiro','💵'],['Pix','💠'],['Débito','💳'],['Crédito','💳'],['Ticket','🎫'],['Conta do cliente','📒']]:[['Pix','💠'],['Débito','💳'],['Crédito','💳']];
-const PAGK=ACG?{Dinheiro:'1',Pix:'2','Débito':'3','Crédito':'4',Ticket:'5','Conta do cliente':'6'}:{Pix:'P','Débito':'D','Crédito':'C'};
+const PAGS=ACG?[['Dinheiro','💵'],['Pix','💠'],['Débito','💳'],['Crédito','💳'],['Ticket','🎫'],['Conta do cliente','📒']]:[['Dinheiro','💵'],['Pix','💠'],['Débito','💳'],['Crédito','💳']];
+const PAGK=ACG?{Dinheiro:'1',Pix:'2','Débito':'3','Crédito':'4',Ticket:'5','Conta do cliente':'6'}:{Dinheiro:'M',Pix:'P','Débito':'D','Crédito':'C'};
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600)}
 function erro(e){console.error(e);const c=e&&e.code;
   if(c==='quota_exceeded')toast('⚠️ Espaço de armazenamento cheio. Apague registros antigos.');
@@ -1422,9 +1427,12 @@ function vMesa(){
     <div class="nm"><b>${esc(i.nome)}</b>${i.obs?`<span class="obs-it">📝 ${esc(i.obs)}</span>`:''}<small>${brl(i.preco)} cada</small></div>
     <div class="qty"><button onclick="qtdI(${k},-1)">−</button><span>${i.qtd}</span><button onclick="qtdI(${k},1)">+</button></div>
     <div class="sub">${brl(vIt(i))}</div></div>`});
-  h+=`<div class="total"><span>Total</span><span>${brl(tot)}</span></div>
+  const pg=m.pagos||[];
+  if(pg.length)h+=`<div class="pagos"><div class="pg-t">✅ Já pago (${brl(totItens(pg))})</div>${pg.map(i=>`<div class="pg-i"><s>${fq(i)} ${esc(i.nome)}${i.obs?' · '+esc(i.obs):''}</s><span><s>${brl(vIt(i))}</s> <small>${esc(i.pag||'')} ${i.hora?hr(i.hora):''}</small></span></div>`).join('')}</div>`;
+  h+=`<div class="total"><span>${pg.length?'Falta pagar':'Total'}</span><span>${brl(tot)}</span></div>
   <div class="row"><button class="btn" style="flex:1" ${its.length?'':'disabled'} onclick="imprimirConta()">🖨️ Imprimir consumo <kbd class="k">F10</kbd></button>
-  <button class="btn acc" style="flex:1.4" ${its.length?'':'disabled'} onclick="fecharVenda()">💰 Fechar venda <kbd class="k">F8</kbd></button></div>
+  ${dl?'':`<button class="btn" style="flex:1" ${its.length?'':'disabled'} onclick="pagarParte()">✂️ Dividir / pagar parte</button>`}
+  <button class="btn acc" style="flex:1.4" ${its.length?'':'disabled'} onclick="fecharVenda()">💰 ${pg.length?'Fechar o restante':'Fechar venda'} <kbd class="k">F8</kbd></button></div>
   ${(m.pedidos||[]).length?`<h3 style="margin-top:16px">🧑‍🍳 Pedidos enviados pelos garçons</h3>${m.pedidos.slice().reverse().map(p=>`<div class="pedlog"><b>${hr(p.hora)} · ${esc(p.por)}</b> — ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)+(i.obs?` <span class="obs-it">📝 ${esc(i.obs)}</span>`:'')).join(', ')}${p.obs?`<br><i>📝 ${esc(p.obs)}</i>`:''}</div>`).join('')}`:''}</section>
   <section class="card"><h3>➕ Lançar produto</h3>
   <input data-focus placeholder="🔎 Código, nome ou código de barras (Enter lança)" value="${esc(st.busca)}" oninput="st.busca=this.value;filtrarProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(lancarTexto(curMesa,this.value)){st.busca='';this._restore=1;render(true);const f=$('#view [data-focus]');if(f)f.focus()}}">
@@ -1528,6 +1536,49 @@ function modalVenda(){
   <button class="btn ok big" ${st.pag&&!(usaCli()&&contaBloqueada(tot))?'':'disabled'} onclick="finalizar()">✅ Pagamento aprovado — Finalizar <kbd class="k">F8</kbd></button>
   <div class="row" style="margin-top:10px"><button class="btn" style="flex:1" onclick="fecharModal()">Voltar <kbd class="k">Esc</kbd></button></div>`,'venda');
 }
+/* ---------- DIVIDIR A CONTA: cada pessoa paga os itens que consumiu ---------- */
+function pagarParte(){st.pp={};st.ppPag=null;st.receb=0;st.ppDiv=st.ppDiv||2;modalParte()}
+const ppInteiro=i=>i.tot!=null||!Number.isInteger(+i.qtd);   // item por peso: paga inteiro ou nada
+function ppItens(){const its=mesa(curMesa).itens||[];return Object.entries(st.pp||{}).filter(([k,q])=>q>0&&its[k]).map(([k,q])=>{const i=its[k];return ppInteiro(i)?{...i}:{...i,qtd:q}})}
+function ppQtd(k,d){const i=(mesa(curMesa).itens||[])[k];if(!i)return;const max=ppInteiro(i)?1:i.qtd;st.pp[k]=Math.max(0,Math.min(max,(st.pp[k]||0)+d));modalParte()}
+function ppTudo(k){const i=(mesa(curMesa).itens||[])[k];if(!i)return;st.pp[k]=(st.pp[k]||0)>0?0:(ppInteiro(i)?1:i.qtd);modalParte()}
+function modalParte(){const n=curMesa,m=mesa(n),its=m.itens||[],sel=ppItens(),tsel=totItens(sel),tot=totItens(its),N=st.ppDiv||2;
+  abrirModal(`<h2>✂️ Dividir a conta — ${esc(rotulo(n))}</h2>
+  <p style="color:var(--mut);margin-top:-6px">Marque o que <b>esta pessoa</b> vai pagar. O resto continua na mesa.</p>
+  <div class="ppl">${its.map((i,k)=>{const q=st.pp[k]||0,int=ppInteiro(i);return `<div class="ppi ${q?'on':''}"><button class="ppn" onclick="ppTudo(${k})"><b>${fq(i)} ${esc(i.nome)}</b>${i.obs?`<small>📝 ${esc(i.obs)}</small>`:''}<small>${brl(vIt(i))}</small></button>
+    ${int?`<span class="ppq">${q?'pagar tudo':'—'}</span>`:`<div class="qty"><button onclick="ppQtd(${k},-1)">−</button><span>${q}</span><button onclick="ppQtd(${k},1)">+</button></div>`}</div>`}).join('')}</div>
+  <div class="row" style="margin:8px 0;color:var(--mut);font-size:.9rem;align-items:center">Dividir o restante igualmente: ${[2,3,4,5].map(x=>`<button class="chip ${N===x?'act':''}" onclick="st.ppDiv=${x};modalParte()">${x}</button>`).join('')}<b style="color:var(--txt)">${brl(tot/N)} cada</b></div>
+  <div class="totalBig">${brl(tsel)}</div>
+  <b>Forma de pagamento</b>
+  <div class="pags">${PAGS.filter(([p])=>p!=='Conta do cliente').map(([p,i])=>`<button class="${st.ppPag===p?'act':''}" onclick="st.ppPag='${p}';modalParte()"><i>${i}</i>${p}</button>`).join('')}</div>
+  ${st.ppPag==='Dinheiro'?blocoTroco(tsel):''}
+  <button class="btn ok big" ${sel.length&&st.ppPag?'':'disabled'} onclick="receberParte()">✅ Receber esta parte (${brl(tsel)})</button>
+  <div class="row" style="margin-top:10px"><button class="btn" style="flex:1" onclick="fecharModal()">Voltar</button></div>`,'parte')}
+async function receberParte(){const n=curMesa,pag=st.ppPag,sel=ppItens();if(!sel.length||!pag)return;
+  if(pag==='Dinheiro'&&st.receb>0&&st.receb+0.001<totItens(sel))return toast('O valor recebido é menor que o total desta parte.');
+  const receb=pag==='Dinheiro'&&st.receb>0?st.receb:0;
+  if(!movAberto())return toast('O movimento do dia está fechado no caixa.');
+  const pp={...st.pp},its0=mesa(n).itens||[],hora=new Date().toISOString(),rot=rotulo(n);
+  const ok=await mutate('mesas',n,cur=>{if(!cur)return ABORT;const its=(cur.itens||[]).map(i=>({...i}));
+    for(const [k,q] of Object.entries(pp)){if(!q)continue;const a=its0[k],b=its[k];
+      if(!a||!b||b.pid!==a.pid||(b.obs||'')!==(a.obs||'')||+b.preco!==+a.preco)return ABORT;
+      if(ppInteiro(b)){b.qtd=0}else{if(b.qtd<q)return ABORT;b.qtd-=q;if(b.tot!=null)delete b.tot}}
+    const resta=its.filter(i=>i.qtd>0);
+    const pagos=[...(cur.pagos||[]),...sel.map(i=>({...i,pag,hora}))];
+    return resta.length?{...cur,itens:resta,pagos}:null});
+  if(!ok){toast('⚠️ A mesa acabou de mudar (pedido novo). Confira e marque de novo.');modalParte();return}
+  const total=totItens(sel),custo=custoItens(sel),m=mesa(n)||{};
+  const v={id:uid(),mesa:n,rotulo:rot+' · parte paga',itens:sel,total,custo,lucro:total-custo,pagamento:pag,parcial:true,abertura:m.aberta||null,data:hora,movId:S.estado.movId,
+    cpf:'',nota:null,garcom:m.garcom||'',fechadoPor:'Caixa',...(receb?{recebido:receb,troco:Math.max(0,Math.round((receb-total)*100)/100)}:{})};
+  put('vendas',v.id,v);
+  const baixa={};sel.forEach(i=>baixa[i.pid]=(baixa[i.pid]||0)+i.qtd);
+  for(const pid in baixa)if(S.produtos[pid]&&controla(S.produtos[pid]))
+    mutate('produtos',pid,p=>{if(!p||!controla(p))return ABORT;const q=baixa[pid];p.hist=histEst(p,'venda',-q,v.rotulo);p.estoque=rq(p,Math.max(0,(+p.estoque||0)-q));return p});
+  const fim=!S.mesas[n];if(fim)go('mesas');else render(true);
+  abrirModal(`<div style="text-align:center"><div style="font-size:3rem">✅</div><h2>Parte paga!</h2><p>${v.troco?`<span style="font-size:1.5rem">Troco: <b>${brl(v.troco)}</b></span><br>`:''}${esc(pag)} · <b>${brl(total)}</b><br>${fim?'Tudo pago. Mesa liberada.':'Falta pagar na mesa: <b>'+brl(totItens((S.mesas[n]||{}).itens||[]))+'</b>'}</p></div>
+  <div class="row" style="margin-top:12px"><button class="btn" style="flex:1" onclick="imprimir(cupomVenda(S.vendas['${v.id}']),'parcial-${v.id}')">🖨️ Imprimir comprovante</button>
+  ${fim?'':`<button class="btn acc" style="flex:1" onclick="fecharModal();pagarParte()">✂️ Próxima pessoa</button>`}<button class="btn pri" style="flex:1" onclick="fecharModal()">OK</button></div>`);
+  alertaEstoque(Object.keys(baixa),'Estoque baixo após a venda!')}
 /* fecha a comanda: usado pelo caixa e pelo app do garçom */
 async function fecharComanda(n,{pag,cpf,nota,por}){
   if(!movAberto()){toast('O movimento do dia está fechado no caixa.');return null}
@@ -1587,7 +1638,7 @@ function marcarNota(id){const numero=$('#nnum').value.trim();mutate('vendas',id,
 /* ---------- impressão ---------- */
 function tabelaItens(its){return `<table><tr><th>Qtd</th><th>Item</th><th class="n">Valor</th></tr>${(its||[]).map(i=>`<tr><td>${fq(i)}</td><td>${esc(i.nome)}<br><small>${brl(i.preco)} ${i.un==='kg'?'o kg':'un.'}</small></td><td class="n">${brl(vIt(i))}</td></tr>`).join('')}</table>`}
 function cupomCab(){const c=S.config||{};return `<h4>${esc(c.razao||(ACG?'GR AÇOUGUE':'GR RESTAURANTE')).toUpperCase()}</h4>${c.cnpj||c.endereco||c.fone?`<div class="c" style="font-size:.75rem">${c.cnpj?'CNPJ '+esc(c.cnpj)+'<br>':''}${esc(c.endereco||'')}${c.fone?'<br>Tel. '+esc(c.fone):''}</div>`:''}`}
-function cupomVenda(v){return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">RECIBO DE VENDA</div><div class="c">${esc(rotV(v))} · ${dt(v.data)}${v.garcom?'<br>Garçom: '+esc(v.garcom):''}</div><hr>${tabelaItens(v.itens)}<hr>
+function cupomVenda(v){return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">RECIBO DE VENDA</div>${v.parcial?'<div class="c"><b>PAGAMENTO PARCIAL DA MESA</b></div>':''}<div class="c">${esc(rotV(v))} · ${dt(v.data)}${v.garcom?'<br>Garçom: '+esc(v.garcom):''}</div><hr>${tabelaItens(v.itens)}<hr>
 <table><tr><td><b>TOTAL</b></td><td class="n"><b>${brl(v.total)}</b></td></tr><tr><td>Pagamento</td><td class="n">${esc(v.pagamento)}</td></tr>${v.recebido?`<tr><td>Recebido</td><td class="n">${brl(v.recebido)}</td></tr><tr><td>Troco</td><td class="n">${brl(v.troco)}</td></tr>`:''}
 ${v.cpf?`<tr><td>${tipoDoc(v.cpf)} consumidor</td><td class="n">${v.cpf}</td></tr>`:''}
 ${v.nota?`<tr><td>Nota fiscal</td><td class="n">${v.nota.status==='emitida'?'NFC-e '+(v.nota.numero?'nº '+esc(v.nota.numero):'emitida'):'a emitir'}</td></tr>`:''}</table><hr>
@@ -2555,7 +2606,7 @@ if(!ACG){const nav=$('#nav'),ms=nav&&nav.querySelector('[data-v=mesas]');if(nav&
 /* ---------- ATALHOS ---------- */
 let numBuf='';
 function ajuda(){abrirModal(`<h2>⌨️ Teclas de atalho</h2><table>
-${[['F1','Esta ajuda'],['F2','Caixa (Caixa · Mesas · Delivery)'],['F3','Produtos'],['F4','Estoque'],['F6','Histórico'],['F7','Relatórios'],['nº + Enter','Na tela de mesas: abre a mesa (ex.: 1 2 Enter = mesa 12)'],['Código + Enter','Na venda do balcão ou dentro da mesa: lança o produto (ex.: 40 Enter)'],['Leitor','Passe o código de barras: o produto entra na venda aberta'],['F8','Na mesa: fechar venda · no pagamento: finalizar'],['P / D / C','Pagamento: Pix / Débito / Crédito'],['F9','Reimprimir o último recibo'],['F10','Imprimir o consumo da mesa'],['Esc','Fechar janela / voltar']].map(([k,t])=>`<tr><td><kbd class="k" style="font-size:.9rem">${k}</kbd></td><td>${t}</td></tr>`).join('')}</table>
+${[['F1','Esta ajuda'],['F2','Caixa (Caixa · Mesas · Delivery)'],['F3','Produtos'],['F4','Estoque'],['F6','Histórico'],['F7','Relatórios'],['nº + Enter','Na tela de mesas: abre a mesa (ex.: 1 2 Enter = mesa 12)'],['Código + Enter','Na venda do balcão ou dentro da mesa: lança o produto (ex.: 40 Enter)'],['Leitor','Passe o código de barras: o produto entra na venda aberta'],['F8','Na mesa: fechar venda · no pagamento: finalizar'],['M / P / D / C','Pagamento: Dinheiro / Pix / Débito / Crédito'],['F9','Reimprimir o último recibo'],['F10','Imprimir o consumo da mesa'],['Esc','Fechar janela / voltar']].map(([k,t])=>`<tr><td><kbd class="k" style="font-size:.9rem">${k}</kbd></td><td>${t}</td></tr>`).join('')}</table>
 <button class="btn pri big" style="margin-top:14px" onclick="fecharModal()">Entendi</button>`)}
 function f8(){
   if(modalTipo==='venda'){if(st.pag)finalizar();else toast('Escolha o pagamento: '+Object.entries(PAGK).map(([p,k])=>k+' = '+p).join(' · '));return}
@@ -3109,8 +3160,8 @@ function gConta(){const n=g.mesa,m=mesa(n),its=m.itens||[],tot=totItens(its);
   <button class="btn acc big" style="margin-top:8px" onclick="st.pag=null;st.cpf='';st.nota=false;gGo('fechar')">💳 Fechar pelo app (maquininha)</button>
   ${(m.pedidos||[]).length?`<h3 style="margin-top:18px">Pedidos enviados</h3>${m.pedidos.slice().reverse().map(p=>`<div class="pedlog"><b>${hr(p.hora)} · ${esc(p.por)}</b> — ${p.itens.map(i=>i.qtd+'x '+esc(i.nome)+(i.obs?` <span class="obs-it">📝 ${esc(i.obs)}</span>`:'')).join(', ')}${p.obs?`<br><i>📝 ${esc(p.obs)}</i>`:''}</div>`).join('')}`:''}</div>`;
   return h}
-function resumoHtml(n,titulo){const its=mesa(n).itens||[];return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">${titulo||'FECHAMENTO DE CONTA'}</div>${isDel(n)&&mesa(n).tipo!=='local'?'<div class="c tk-v">PARA VIAGEM</div>':''}<div class="c">${esc(rotulo(n))} · ${dt(new Date().toISOString())}${mesa(n).garcom?'<br>Garçom: '+esc(mesa(n).garcom):''}</div><hr>${tabelaItens(its)}<hr>
-  <table><tr><td>Itens</td><td class="n">${its.reduce((s,i)=>s+i.qtd,0)}</td></tr><tr><td><b>TOTAL</b></td><td class="n"><b>${brl(totItens(its))}</b></td></tr></table><hr><div class="c">NÃO É DOCUMENTO FISCAL<br>Confira antes de pagar</div></div>`}
+function resumoHtml(n,titulo){const its=mesa(n).itens||[],pg=mesa(n).pagos||[];return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">${titulo||'FECHAMENTO DE CONTA'}</div>${isDel(n)&&mesa(n).tipo!=='local'?'<div class="c tk-v">PARA VIAGEM</div>':''}<div class="c">${esc(rotulo(n))} · ${dt(new Date().toISOString())}${mesa(n).garcom?'<br>Garçom: '+esc(mesa(n).garcom):''}</div><hr>${tabelaItens(its)}${pg.length?`<hr><div class="c">JÁ PAGO</div><table>${pg.map(i=>`<tr><td><s>${fq(i)} ${esc(i.nome)}</s></td><td class="n"><s>${brl(vIt(i))}</s></td></tr>`).join('')}<tr><td>Total já pago</td><td class="n">${brl(totItens(pg))}</td></tr></table>`:''}<hr>
+  <table><tr><td>Itens</td><td class="n">${its.reduce((s,i)=>s+i.qtd,0)}</td></tr><tr><td><b>${pg.length?'FALTA PAGAR':'TOTAL'}</b></td><td class="n"><b>${brl(totItens(its))}</b></td></tr></table><hr><div class="c">NÃO É DOCUMENTO FISCAL<br>Confira antes de pagar</div></div>`}
 async function gPedirConta(){const u=gUser(),n=g.mesa;
   await mutate('mesas',n,m=>m?{...m,conta:{por:u.nome,dev:DEV,hora:new Date().toISOString()}}:ABORT);
   await put('fila',uid(),{tipo:'conta',rotulo:rotulo(n),por:u.nome,html:resumoHtml(n),ts:Date.now()});
@@ -3119,7 +3170,7 @@ function gFechar(){const n=g.mesa,its=mesa(n).itens||[],tot=totItens(its);
   return `<div class="gbar"><button class="gbtn" onclick="gGo('mesa',{aba:'conta'})">← Voltar</button><b style="flex:1;font-size:1.15rem">Fechar Mesa ${n}</b></div><div class="gpad">
   <div class="totalBig">${brl(tot)}</div><b>Forma de pagamento</b>
   <div class="pags">${PAGS.map(([p,i])=>`<button class="${st.pag===p?'act':''}" onclick="st.pag='${p}';render(true)"><i>${i}</i>${p}</button>`).join('')}</div>
-  ${blocoCPF()}
+  ${st.pag==='Dinheiro'?blocoTroco(tot):''}${blocoCPF()}
   <label class="chk"><input type="checkbox" ${g.imprimirCaixa?'checked':''} onchange="g.imprimirCaixa=this.checked"><span>Imprimir o recibo no caixa</span></label>
   <button class="btn ok big" style="margin-top:12px" ${st.pag?'':'disabled'} onclick="gFinalizar()">✅ Pagamento aprovado — Finalizar</button></div>`}
 async function gFinalizar(){const u=gUser(),n=g.mesa;
