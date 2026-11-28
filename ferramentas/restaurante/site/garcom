@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v67">
+<meta name="lg-versao" content="lg-v68">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -2695,11 +2695,34 @@ function fecharMov(){
   if(ocup.length)return abrirModal(`<h2>⚠️ Ainda há comandas abertas</h2><p>Feche ou cancele antes de fechar o movimento: <b>${ocup.map(esc).join(', ')}</b></p><button class="btn pri big" onclick="fecharModal();go('mesas')">Ir para as mesas</button>`);
   confirmar('Fechar o movimento do dia agora?',()=>{const m=clone(movAtual());const f=new Date().toISOString();
     mutate('movimentos',m.id,x=>x?{...x,fechamento:f}:ABORT);st.relMov=m.id;st.relAba='dia';go('relatorios');toast('🔒 Movimento fechado. Confira o relatório do dia.');
-    setTimeout(()=>perguntarA4(m.id),400)});
+    setTimeout(()=>aposFechar(m.id),400)});
 }
 function estoqueAposFechar(id){const m=S.movimentos[id];if(!m)return;imprimir(relEstoqueHtml(id),'estoque-'+dt(m.abertura).slice(0,10).replace(/\//g,'-'))}
+function relResumoHtml(id){const m=S.movimentos[id];if(!m)return '';
+  const vs=Object.values(S.vendas).filter(v=>v.movId===id),tot=vs.reduce((x,v)=>x+v.total,0),nv=vs.filter(v=>!v.devolucao).length;
+  const pag={};vs.forEach(v=>{const k=v.pagamento||'Sem forma';pag[k]=(pag[k]||0)+v.total});
+  const linha=(n,v,b)=>`<tr><td>${b?'<b>':''}${esc(n)}${b?'</b>':''}</td><td class="n">${b?'<b>':''}${brl(v)}${b?'</b>':''}</td></tr>`;
+  const ord=PAGS.map(x=>x[0]),cart=(pag['Débito']||0)+(pag['Crédito']||0);
+  const outros=Object.keys(pag).filter(k=>!ord.includes(k));
+  const rcb=ACG?Object.values(S.clientes||{}).flatMap(cl=>(cl.pagamentos||[]).filter(x=>x.movId===id)):[];
+  return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">RESUMO DO DIA</div><div class="c">${dt(m.abertura).slice(0,10)}<br>Abertura ${dt(m.abertura).slice(11)} · Fechamento ${m.fechamento?dt(m.fechamento).slice(11):'aberto'}</div><hr>
+  <table>${PAGS.map(([k])=>linha(k,pag[k]||0)).join('')}${outros.map(k=>linha(k,pag[k])).join('')}</table>
+  ${pag['Débito']!=null||pag['Crédito']!=null?`<hr><table>${linha('Cartão (débito + crédito)',cart)}</table>`:''}<hr>
+  <table>${linha('RECEITA TOTAL DO DIA',tot,true)}<tr><td>Vendas</td><td class="n">${nv}</td></tr>${nv?`<tr><td>Ticket médio</td><td class="n">${brl(tot/nv)}</td></tr>`:''}
+  ${rcb.length?linha('Contas de clientes recebidas',rcb.reduce((x,r)=>x+r.valor,0)):''}${(m.cancelamentos||[]).length?`<tr><td>Cancelamentos</td><td class="n">${m.cancelamentos.length}</td></tr>`:''}</table>
+  <hr><div class="c" style="font-size:.78rem">Relatório detalhado (A4): Ajustes › Relatório detalhado A4</div></div>`}
+function imprimirResumo(id){const m=S.movimentos[id];if(!m)return;imprimir(relResumoHtml(id),'resumo-'+dt(m.abertura).slice(0,10).replace(/\//g,'-'))}
+function aposFechar(id){imprimirResumo(id);
+  abrirModal(`<div style="text-align:center"><div style="font-size:3rem">✅</div><h2>Movimento fechado com sucesso!</h2>
+  <p>O <b>resumo do dia</b> (Dinheiro, Pix, cartão e receita total) foi para a impressora.</p></div>
+  <p style="color:var(--mut);font-size:.9rem">Para o relatório completo em folha A4 (o que vendeu de cada produto, como foi pago e o estoque do dia), vá em <b>⚙️ Ajustes › 📄 Relatório detalhado A4</b> e escolha o dia. Dá para tirar de qualquer computador, até de casa.</p>
+  <div class="row" style="margin-top:12px"><button class="btn" style="flex:1" onclick="imprimirResumo('${id}')">🖨️ Imprimir o resumo de novo</button><button class="btn" style="flex:1" onclick="fecharModal();salvarA4('${id}')">📄 Relatório A4 agora</button><button class="btn pri" style="flex:1" onclick="fecharModal()">OK</button></div>`)}
 function perguntarA4(id){abrirModal(`<h2>✅ Movimento fechado com sucesso!</h2><p style="font-size:1.05rem"><b>Deseja imprimir o relatório diário?</b></p><p>Relatório em folha A4: tudo o que foi vendido, quantos de cada produto, como cada um foi pago e o total recebido em Pix, débito e crédito. Na janela que abrir, escolha <b>“Salvar como PDF”</b> ou a impressora A4.</p><p style="color:var(--mut);font-size:.9rem">Se preferir imprimir depois (até em casa), é só entrar no sistema e ir em <b>⚙️ Ajustes → 🧾 Segunda via do relatório diário</b> e escolher o dia.</p>
   <div class="row"><button class="btn" style="flex:1" onclick="fecharModal();estoqueAposFechar('${id}')">Imprimir depois</button><button class="btn pri" style="flex:1" onclick="fecharModal();salvarA4('${id}',()=>estoqueAposFechar('${id}'))">📄 Imprimir agora</button></div>`)}
+function estoqueDoMov(m){const ini=m.abertura,fim=m.fechamento||new Date().toISOString(),vend={},vendApos={},r={};
+  Object.values(S.vendas||{}).forEach(v=>{const alvo=v.movId===m.id?vend:(v.data>fim?vendApos:null);if(!alvo)return;(v.itens||[]).forEach(i=>alvo[i.pid]=(alvo[i.pid]||0)+i.qtd)});
+  prodList().forEach(p=>{if(!controla(p))return;let ent=0,depois=0;(p.hist||[]).forEach(h=>{if(h.t==='venda')return;if(h.d>fim)depois+=+h.q||0;else if(h.d>=ini)ent+=+h.q||0});
+    const restou=(+p.estoque||0)-depois+(vendApos[p.id]||0);r[p.id]={inicio:restou-ent+(vend[p.id]||0),ent,restou,atual:+p.estoque||0}});return r}
 function estoqueNoFim(m){const fim=m.fechamento||new Date().toISOString(),vendApos={},r={};
   Object.values(S.vendas||{}).forEach(v=>{if(v.movId!==m.id&&v.data>fim)(v.itens||[]).forEach(i=>vendApos[i.pid]=(vendApos[i.pid]||0)+i.qtd)});
   prodList().forEach(p=>{if(!controla(p))return;let depois=0;(p.hist||[]).forEach(h=>{if(h.t!=='venda'&&h.d>fim)depois+=+h.q||0});r[p.id]=(+p.estoque||0)-depois+(vendApos[p.id]||0)});return r}
@@ -2709,7 +2732,7 @@ function relA4Html(id){const m=S.movimentos[id];if(!m)return '';const c=S.config
   const tot=vs.reduce((s,v)=>s+v.total,0),tvd=vnd.reduce((s,v)=>s+v.total,0),tdv=dvs.reduce((s,v)=>s+v.total,0);
   const fq=q=>Number.isInteger(q)?String(q):q.toLocaleString('pt-BR',{maximumFractionDigits:3});
   const ordemP=PAGS.map(x=>x[0]),ordP=(a,b)=>{const ia=ordemP.indexOf(a),ib=ordemP.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b)};
-  const est=estoqueNoFim(m);const pr={};vs.forEach(v=>(v.itens||[]).forEach(i=>{const o=pr[i.nome]||(pr[i.nome]={q:0,v:0,pg:{},pid:i.pid});const val=vIt(i);o.q+=i.qtd;o.v+=val;
+  const est=estoqueDoMov(m);const pr={};vs.forEach(v=>(v.itens||[]).forEach(i=>{const o=pr[i.nome]||(pr[i.nome]={q:0,v:0,pg:{},pid:i.pid});const val=vIt(i);o.q+=i.qtd;o.v+=val;
     const g=o.pg[v.pagamento||'Sem forma']||(o.pg[v.pagamento||'Sem forma']={q:0,v:0});g.q+=i.qtd;g.v+=val}));
   const prs=Object.entries(pr).sort((a,b)=>b[1].q-a[1].q||a[0].localeCompare(b[0],'pt-BR'));
   const pag={};vs.forEach(v=>{const k=v.pagamento||'Sem forma';const o=pag[k]||(pag[k]={n:0,v:0});o.n++;o.v+=v.total});
@@ -2719,8 +2742,8 @@ function relA4Html(id){const m=S.movimentos[id];if(!m)return '';const c=S.config
   const rcb=ACG?Object.values(S.clientes||{}).flatMap(cl=>(cl.pagamentos||[]).filter(x=>x.movId===id).map(x=>({...x,nome:cl.nome}))):[];
   const cns=m.cancelamentos||[];
   const dia=dt(m.abertura).slice(0,10);
-  const linhasP=prs.map(([n,o])=>`<tr class="p"><td>${esc(n)}</td><td class="n">${fq(o.q)}</td><td class="n e">${o.pid in est?fq(est[o.pid])+(est[o.pid]<=0?' <small>esgotado</small>':''):'—'}</td><td class="n">${brl(o.v)}</td></tr>`+
-    Object.entries(o.pg).sort((a,b)=>ordP(a[0],b[0])).map(([k,g])=>`<tr class="sub"><td>↳ ${esc(k)}</td><td class="n">${fq(g.q)}</td><td></td><td class="n">${brl(g.v)}</td></tr>`).join('')).join('');
+  const linhasP=prs.map(([n,o])=>(()=>{const e=est[o.pid];return `<tr class="p"><td>${esc(n)}</td><td class="n e">${e?fq(e.inicio)+(e.ent?` <small class="en">+${fq(e.ent)}</small>`:''):'—'}</td><td class="n">${fq(o.q)}</td><td class="n e">${e?fq(e.restou)+(e.restou<=0?' <small>esgotado</small>':''):'—'}</td><td class="n e">${e?fq(e.atual):'—'}</td><td class="n">${brl(o.v)}</td></tr>`})()+
+    Object.entries(o.pg).sort((a,b)=>ordP(a[0],b[0])).map(([k,g])=>`<tr class="sub"><td>↳ ${esc(k)}</td><td></td><td class="n">${fq(g.q)}</td><td></td><td></td><td class="n">${brl(g.v)}</td></tr>`).join('')).join('');
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório diário ${dia.replace(/\//g,'-')}</title><style>
 @page{size:A4;margin:14mm 14mm 16mm}
 *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:11pt}
@@ -2731,7 +2754,7 @@ h2{font-size:12.5pt;margin:18px 0 6px;padding-bottom:3px;border-bottom:1px solid
 table{width:100%;border-collapse:collapse}th{text-align:left;font-size:9pt;color:#444;text-transform:uppercase;border-bottom:1.5px solid #111;padding:4px 6px}
 td{padding:4px 6px}.n{text-align:right;white-space:nowrap}th.n{text-align:right}
 tr.p td{border-top:1px solid #ccc;font-weight:700}tr.sub td{font-size:9.5pt;color:#333;padding-top:1px;padding-bottom:1px}tr.sub td:first-child{padding-left:26px}
-tr{page-break-inside:avoid}td.e{color:#1f5fa8}td.e small{color:#c0392b;font-weight:700}
+tr{page-break-inside:avoid}td.e{color:#1f5fa8}td.e small{color:#c0392b;font-weight:700}td.e small.en{color:#1f7a45}th{font-size:8pt}
 .tot td{border-top:2px solid #111;font-weight:700;font-size:12pt}
 .pg td{border-bottom:1px solid #ddd}
 .rod{margin-top:22px;font-size:8.5pt;color:#666;border-top:1px solid #ccc;padding-top:6px;display:flex;justify-content:space-between}
@@ -2740,7 +2763,7 @@ tr{page-break-inside:avoid}td.e{color:#1f5fa8}td.e small{color:#c0392b;font-weig
 <div class="d"><b>${dia}</b>Abertura ${dt(m.abertura).slice(11)} · Fechamento ${m.fechamento?dt(m.fechamento).slice(11):'em aberto'}</div></div>
 <div class="cards"><div><small>Total vendido</small><b>${brl(tot)}</b></div><div><small>Vendas</small><b>${vnd.length}</b></div><div><small>Ticket médio</small><b>${brl(vnd.length?tvd/vnd.length:0)}</b></div><div><small>Itens vendidos</small><b>${fq(prs.reduce((s,[,o])=>s+o.q,0))}</b></div></div>
 <h2>O que foi consumido e como foi pago</h2>
-${prs.length?`<table><tr><th>Produto / forma de pagamento</th><th class="n">Qtd vendida</th><th class="n">Em estoque</th><th class="n">Valor</th></tr>${linhasP}<tr class="tot"><td>Total</td><td class="n">${fq(prs.reduce((s,[,o])=>s+o.q,0))}</td><td></td><td class="n">${brl(tot)}</td></tr></table><p style="font-size:8.5pt;color:#555;margin:4px 0 0">“Em estoque”: quanto sobrou no fechamento do movimento (— = produto sem controle de estoque).</p>`:'<p>Nenhum produto vendido neste movimento.</p>'}
+${prs.length?`<table><tr><th>Produto / forma de pagamento</th><th class="n">Tinha no início</th><th class="n">Vendeu</th><th class="n">Ficou no fim do dia</th><th class="n">Estoque hoje</th><th class="n">Valor</th></tr>${linhasP}<tr class="tot"><td>Total</td><td></td><td class="n">${fq(prs.reduce((s,[,o])=>s+o.q,0))}</td><td></td><td></td><td class="n">${brl(tot)}</td></tr></table><p style="font-size:8.5pt;color:#555;margin:4px 0 0">Estoque: “Tinha no início” = na abertura do movimento (+ entradas do dia em verde) · “Ficou” = no fechamento · “Estoque hoje” = agora, quando o relatório foi tirado · — = produto sem controle de estoque.</p>`:'<p>Nenhum produto vendido neste movimento.</p>'}
 <h2>Total recebido por forma de pagamento</h2>
 <table class="pg"><tr><th>Forma de pagamento</th><th class="n">Vendas</th><th class="n">Valor recebido</th></tr>
 ${pgs.map(([k,o])=>`<tr><td>${esc(k)}</td><td class="n">${o.n}</td><td class="n">${brl(o.v)}</td></tr>`).join('')}
@@ -2754,10 +2777,10 @@ ${cns.length?`<h2>${ACG?'Cancelamentos':'Mesas canceladas'} (${cns.length})</h2>
 function isoLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function cartaoSegundaVia(){const hoje=new Date(),min=new Date(hoje.getTime()-365*864e5),d=st.svDia||isoLocal(hoje);
   const movs=Object.values(S.movimentos||{}).filter(m=>isoLocal(new Date(m.abertura))===d).sort((a,b)=>a.abertura.localeCompare(b.abertura));
-  return `<div class="card"><h3>🧾 Segunda via do relatório diário</h3><p style="color:var(--mut);margin:0 0 8px">Escolha o dia e tire o relatório em A4 (salvar em PDF ou imprimir). Fica disponível pelos últimos 12 meses.</p>
+  return `<div class="card"><h3>📄 Relatório detalhado A4</h3><p style="color:var(--mut);margin:0 0 8px">Escolha o dia do movimento e imprima em folha A4 (ou salve em PDF): o que vendeu de cada produto, como foi pago (dinheiro, Pix, débito, crédito), o estoque do início, o que ficou e o estoque de hoje. Disponível pelos últimos 12 meses.</p>
   <div class="row" style="align-items:center"><input type="date" style="width:auto" value="${d}" min="${isoLocal(min)}" max="${isoLocal(hoje)}" onchange="st.svDia=this.value;render(true)"></div>
   <div style="margin-top:10px">${movs.length?movs.map(m=>{const vs=Object.values(S.vendas||{}).filter(v=>v.movId===m.id),t=vs.reduce((x,v)=>x+v.total,0);
-    return `<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1">Movimento ${dt(m.abertura).slice(11)}${m.fechamento?' às '+dt(m.fechamento).slice(11):' (ainda aberto)'} · ${vs.filter(v=>!v.devolucao).length} vendas · <b>${brl(t)}</b></span><button class="btn pri" onclick="salvarA4('${m.id}')">📄 Relatório A4</button></div>`}).join(''):'<span style="color:var(--mut)">Nenhum movimento aberto neste dia.</span>'}</div></div>`}
+    return `<div class="row" style="align-items:center;margin-top:6px"><span style="flex:1">Movimento ${dt(m.abertura).slice(11)}${m.fechamento?' às '+dt(m.fechamento).slice(11):' (ainda aberto)'} · ${vs.filter(v=>!v.devolucao).length} vendas · <b>${brl(t)}</b></span><button class="btn" onclick="imprimirResumo('${m.id}')">🧾 Resumo</button><button class="btn pri" onclick="salvarA4('${m.id}')">📄 Imprimir A4</button></div>`}).join(''):'<span style="color:var(--mut)">Nenhum movimento aberto neste dia.</span>'}</div></div>`}
 function salvarA4(id,depois){const html=relA4Html(id);if(!html)return;
   const fr=document.createElement('iframe');fr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(fr);
   const d=fr.contentWindow.document;d.open();d.write(html);d.close();
@@ -2794,6 +2817,7 @@ function vRelatorios(){const ab=st.relAba||'gerencial';if(ab==='gerencial')retur
   return `${relAbas()}<div class="row" style="margin-bottom:12px"><h2 style="margin:0;flex:1">📊 Relatório do dia</h2>
   <select style="width:auto" onchange="st.relMov=this.value;render(true)">${movs.map(x=>`<option value="${x.id}" ${x.id===id?'selected':''}>${dt(x.abertura).slice(0,10)} ${x.fechamento?'':'(aberto)'}</option>`).join('')}</select>
   <button class="btn" onclick="imprimirEstoqueDia('${id}')">📦 Estoque do dia</button>
+  <button class="btn" onclick="imprimirResumo('${id}')">🧾 Resumo do dia</button>
   <button class="btn" onclick="salvarA4('${id}')">📄 Relatório A4 (PDF)</button>
   <button class="btn pri" onclick="imprimir(relHtml('${id}'),'relatorio-${dt(m.abertura).slice(0,10).replace(/\//g,'-')}')">🖨️ Imprimir</button></div>${relHtml(id,true)}`;
 }
