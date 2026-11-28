@@ -201,7 +201,8 @@ def salvar_cliente(c, d):
     tipo = d.get("tipo") if d.get("tipo") in TIPOS else "restaurante"
     resp, obs = str(d.get("responsavel") or "").strip()[:80], str(d.get("obs") or "")[:200]
     if not d.get("id"):
-        base = re.sub(r"[^a-z0-9]+", "-", nome.lower().encode("ascii", "ignore").decode()).strip("-")[:30] or "cliente"
+        import unicodedata
+        base = re.sub(r"[^a-z0-9]+", "-", unicodedata.normalize("NFKD", nome.lower()).encode("ascii", "ignore").decode()).strip("-")[:30] or "cliente"
         cid, n = base, 2
         while c.execute("SELECT 1 FROM ct_clientes WHERE sistema='restaurante' AND id=?", (cid,)).fetchone():
             cid, n = f"{base}-{n}", n + 1
@@ -443,7 +444,7 @@ def porta(c, sistema, conta, rotulo, dev, ip, ua):
                     "Peça para a GR Software liberar este aparelho e tente de novo.")
     c.execute("INSERT INTO ct_acessos(sistema, conta, rotulo, dev, nome, ip, quando, resultado) VALUES(?,?,?,?,?,?,?,?)",
               (sistema, conta, rotulo, dev, nome, ip, agora, res))
-    c.execute("DELETE FROM ct_acessos WHERE quando < ?", (agora - 120 * 86400,))
+    c.execute("DELETE FROM ct_acessos WHERE quando < ?", (agora - 190 * 86400,))   # Marco Civil, art. 15: guardar 6 meses
     if bloq:
         return 403, {"ok": False, "aparelho": True, "erro": bloq}
     return None

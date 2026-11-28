@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v65">
+<meta name="lg-versao" content="lg-v66">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -1134,6 +1134,14 @@ async function entrarRest(){const b=$('#lgb'),u=$('#lgu').value.trim(),sn=$('#lg
     $('#lge').textContent=d.erro||'Não foi possível entrar.';$('#lgs').value='';$('#lgs').focus()}catch(e){$('#lge').textContent='Sem internet. Tente de novo quando conectar.'}
   b.disabled=false}
 function pedirSair(){abrirModal(`<h2>Sair do sistema?</h2><p>Você volta para a tela de entrada. Para entrar de novo, use seu usuário e senha.</p><div class="row" style="margin-top:14px"><button class="btn" style="flex:1" onclick="fecharModal()">Cancelar</button><button class="btn" style="flex:1;background:#c4261d;border-color:#c4261d;color:#fff" onclick="fecharModal();sairRest()">Sair</button></div>`)}
+/* aviso de vencimento da assinatura (consulta pública só com os dias que faltam) */
+async function avisoPlano(){try{if(GARCOM||!apiKey)return;const cli=lsGet('lg-cli','')||'restaurante-1';
+  const r=await fetch('https://central.grsoftware.com.br/api/central/licenca?s=restaurante&c='+encodeURIComponent(cli),{cache:'no-store'});if(!r.ok)return;const d=await r.json();
+  let b=document.getElementById('avPlano');if(d.dias==null||!d.ativo){if(b)b.remove();return}
+  if(!b){b=document.createElement('div');b.id='avPlano';b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:9000;max-width:92vw;background:#17181c;color:#fff;padding:10px 16px;border-radius:14px;box-shadow:0 10px 30px #0006;font-size:.92rem;display:flex;gap:12px;align-items:center';document.body.appendChild(b)}
+  const q=d.dias<0?`venceu em ${d.vence}. O sistema será travado em breve`:d.dias===0?'vence hoje':`vence em ${d.dias} dia${d.dias>1?'s':''} (${d.vence})`;
+  b.innerHTML=`<span>⏰ ${d.teste?'Seu período de teste':'Sua assinatura'} ${q}. Para renovar, fale com a GR Software: <a style="color:#7fe3f5" target="_blank" rel="noopener" href="https://wa.me/5517981874267?text=${encodeURIComponent('Olá! Quero renovar meu sistema GR.')}">WhatsApp</a></span><button style="background:none;border:0;color:#aaa;font-size:1.2rem;cursor:pointer" onclick="this.parentNode.remove()" aria-label="Fechar">×</button>`}catch(e){}}
+setTimeout(avisoPlano,8000);setInterval(avisoPlano,4*3600e3);
 function sairRest(){fetch('/api/sair',{method:'POST',headers:{'x-lg-token':apiKey}}).catch(()=>{});apiKey='';lsSet('lg-tok','');lsSet('lg-tipo','');lsSet('lg-cli','');lsSet('lg-perfil','');lsSet('lg-garcom','');lsSet('lg-gusr','');location.reload()}
 /* --- gravação única para os 3 modos --- */
 function mutate(col,id,fn){

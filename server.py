@@ -923,6 +923,8 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     iniciar_youtube()
     lgmonitor.iniciar()          # monitoramento dos sistemas (Central > Administração)
+    import lgassin
+    lgassin.iniciar()            # assinaturas do Restaurante/Açougue: avisos e corte no vencimento
     ThreadingHTTPServer.request_queue_size = 128   # muitos abrindo ao mesmo tempo (o padrão é 5)
     ThreadingHTTPServer.daemon_threads = True
     servidor = ThreadingHTTPServer(("0.0.0.0", PORTA), partial(Handler, directory=PASTA))

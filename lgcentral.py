@@ -310,9 +310,11 @@ def _ap_pend():
 
 
 # ---------------------------------------------------------------- HTTP
-def _resp(h, cod, d):
+def _resp(h, cod, d, cors=False):
     corpo = json.dumps(d, ensure_ascii=False).encode("utf-8")
     h.send_response(cod)
+    if cors:
+        h.send_header("Access-Control-Allow-Origin", "*")
     h.send_header("Content-Type", "application/json; charset=utf-8")
     h.send_header("Content-Length", str(len(corpo)))
     h.send_header("Cache-Control", "no-store")
@@ -443,7 +445,14 @@ def rota(h, metodo):
             sis, cli = str(q.get("s", "")), str(q.get("c", ""))
             if sis not in lgacesso.SISTEMAS or not re.fullmatch(r"[a-z0-9-]{1,60}", cli):
                 return _resp(h, 400, {"ok": False})
-            return _resp(h, 200, {"ok": True, "ativo": not lgacesso.bloqueado(sis, cli)})
+            r = {"ok": True, "ativo": not lgacesso.bloqueado(sis, cli)}
+            if sis == "restaurante":   # aviso de vencimento dentro do caixa (só os dias que faltam, nada pessoal)
+                import lgassin
+                with lgapi._trava:
+                    a = lgassin.info(lgacesso._db(), cli)
+                if a["dias"] is not None and a["dias"] <= 7:
+                    r.update({"dias": a["dias"], "vence": a["venceTxt"], "teste": a["plano"] == "teste"})
+            return _resp(h, 200, r, cors=True)
         if acao.startswith("aulas/"):
             # videoaulas: página pública grsoftware.com.br/aulas/ (código de acesso de quem comprou)
             import lgaulas
@@ -541,7 +550,11 @@ def rota(h, metodo):
                 import lgacesso
                 ac = lgacesso._db()
                 if acao == "admin/sistemas" and metodo == "GET":
-                    return _resp(h, 200, lgacesso.painel(ac))
+                    out = lgacesso.painel(ac)
+                    import lgassin
+                    for x in out.get("restaurante", []):
+                        x["assin"] = lgassin.info(ac, x["id"])
+                    return _resp(h, 200, out)
                 if acao == "admin/acesso" and metodo == "POST":
                     bloq = bool(corpo.get("bloquear"))
                     cod, r = lgacesso.definir(str(corpo.get("sistema", "")), str(corpo.get("cliente", "")), str(corpo.get("usuario", "")),
@@ -556,6 +569,19 @@ def rota(h, metodo):
                         _log(c, s["usuario"], "Comércio: cliente " + ("alterado" if corpo.get("id") else "criado"),
                              f"{corpo.get('nome')} ({lgacesso.TIPOS.get(corpo.get('tipo'), 'Restaurante')})", ip)
                     return _resp(h, cod, r)
+            if acao in ("admin/assin/venda", "admin/assin/renovar") and metodo == "POST":
+                import lgacesso
+                import lgassin
+                ac = lgacesso._db()
+                if acao == "admin/assin/venda":
+                    cod, r = lgassin.provisionar(ac, corpo, s["usuario"])
+                    if cod == 200:
+                        _log(c, s["usuario"], "Venda rápida: comércio criado", f"{corpo.get('nome')} · {r['plano']} · vence {r['venceTxt']}", ip)
+                    return _resp(h, cod, r)
+                cod, r = lgassin.renovar(ac, corpo.get("cliente"), corpo.get("plano"), corpo.get("dias"), corpo.get("ate"))
+                if cod == 200:
+                    _log(c, s["usuario"], "Assinatura renovada", f"{corpo.get('cliente')} · {corpo.get('plano')} · vence {r['venceTxt']}", ip)
+                return _resp(h, cod, r)
             if acao == "admin/email" and metodo == "POST":
                 import lgacesso
                 cod, r = lgacesso.email_admin(lgacesso._db(), corpo)
