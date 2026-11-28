@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2433">
-<meta name="lg-versao" content="lg-v70">
+<meta name="lg-versao" content="lg-v71">
 <script>(function(){var t="";try{t=localStorage.getItem("lg-tema")||""}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";document.documentElement.dataset.tema=t})();</script>
 <link rel="icon" href="https://central.legislagov.com.br/restaurante/icon-192.png">
 <link rel="apple-touch-icon" href="https://central.legislagov.com.br/restaurante/apple-touch-icon.png">
@@ -1317,10 +1317,17 @@ function ajustarTela(){try{
     if(n!==st.pPor){st.pPor=n;render(true)}}
 }catch(e){}}
 addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>{if(view==='produtos')st.pPor=0;ajustarTela()},150)});
+const diaLocal=t=>{const d=new Date(t);return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate()};
+/* movimento aberto ontem ou antes (passou das 6h do dia seguinte: restaurante que fecha de madrugada não é avisado) */
+function movVelho(m){if(!m||!m.abertura)return false;const ag=new Date(Date.now()-6*36e5);return diaLocal(m.abertura)<diaLocal(ag)&&Date.now()-new Date(m.abertura).getTime()>12*36e5}
+function periodoMov(m){const a=dt(m.abertura).slice(0,10),f=m.fechamento?dt(m.fechamento).slice(0,10):a;return a===f?a:a.slice(0,5)+' a '+f}
 function cabecalho(){
   const m=movAtual(),s=$('#status');
   const sv=mode==='api'?(online?'☁️ servidor online':'⚠️ SEM CONEXÃO'):mode==='db'?'☁️ salvo na nuvem':'💾 salvo neste aparelho';
-  if(movAberto()){s.className='pill on';s.innerHTML=`🟢 Movimento aberto desde ${dt(m.abertura)} <span class="save">· ${sv}</span>`}
+  if(movAberto()){const velho=movVelho(m);s.className='pill '+(velho?'off':'on');s.innerHTML=`${velho?'⚠️':'🟢'} Movimento aberto desde ${dt(m.abertura)} <span class="save">· ${sv}</span>`;
+    if(velho&&!GARCOM&&!window.__avMov){window.__avMov=1;setTimeout(()=>{if(!$('#modalBg').classList.contains('hidden'))return;abrirModal(`<div style="text-align:center"><div style="font-size:3rem">⚠️</div><h2>O movimento aberto é do dia ${dt(m.abertura).slice(0,10)}</h2></div>
+      <p>Parece que o movimento de um dia anterior ficou aberto. Se as vendas de hoje entrarem nele, o relatório sai com a data errada.</p><p style="color:var(--mut);font-size:.92rem">O certo é: <b>fechar este movimento</b> (sai o resumo daquele dia) e <b>abrir o de hoje</b> antes de vender.</p>
+      <div class="row" style="margin-top:12px"><button class="btn" style="flex:1" onclick="fecharModal()">Continuar assim</button><button class="btn pri" style="flex:1.3" onclick="fecharModal();go('movimento')">🔒 Ir para o Movimento</button></div>`)},1500)}}
   else{s.className='pill off';s.innerHTML=`🔴 Movimento fechado <span class="save">· ${sv}</span>`}
   const na=avisos().length+notasPend().length,bd=$('#badge');bd.textContent=na;bd.classList.toggle('hidden',!na);$('#sino').classList.toggle('tem',na>0);
   $('#sino').title=na?`${na} aviso(s)`:'Sem avisos';
@@ -2718,7 +2725,7 @@ function relResumoHtml(id){const m=S.movimentos[id];if(!m)return '';
   const ord=PAGS.map(x=>x[0]),cart=(pag['Débito']||0)+(pag['Crédito']||0);
   const outros=Object.keys(pag).filter(k=>!ord.includes(k));
   const rcb=ACG?Object.values(S.clientes||{}).flatMap(cl=>(cl.pagamentos||[]).filter(x=>x.movId===id)):[];
-  return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">RESUMO DO DIA</div><div class="c">${dt(m.abertura).slice(0,10)}<br>Abertura ${dt(m.abertura).slice(11)} · Fechamento ${m.fechamento?dt(m.fechamento).slice(11):'aberto'}</div><hr>
+  return `<div class="cupom">${cupomCab()}<hr><div class="c tk-n">RESUMO DO DIA</div><div class="c">${periodoMov(m)}<br>Abertura ${dt(m.abertura).replace(',','')}<br>Fechamento ${m.fechamento?dt(m.fechamento).replace(',',''):'aberto'}</div><hr>
   <table>${PAGS.map(([k])=>linha(k,pag[k]||0)).join('')}${outros.map(k=>linha(k,pag[k])).join('')}</table>
   ${pag['Débito']!=null||pag['Crédito']!=null?`<hr><table>${linha('Cartão (débito + crédito)',cart)}</table>`:''}<hr>
   <table>${linha('RECEITA TOTAL DO DIA',tot,true)}<tr><td>Vendas</td><td class="n">${nv}</td></tr>${nv?`<tr><td>Ticket médio</td><td class="n">${brl(tot/nv)}</td></tr>`:''}
@@ -2773,7 +2780,7 @@ tr{page-break-inside:avoid}td.e{color:#1f5fa8}td.e small{color:#c0392b;font-weig
 .rod{margin-top:22px;font-size:8.5pt;color:#666;border-top:1px solid #ccc;padding-top:6px;display:flex;justify-content:space-between}
 </style></head><body>
 <div class="cab"><div><h1>Relatório diário do movimento</h1><div class="e"><b>${esc(c.razao||(ACG?'GR Açougue':'GR Restaurante'))}</b>${c.cnpj?' · CNPJ '+esc(c.cnpj):''}${c.endereco?'<br>'+esc(c.endereco):''}</div></div>
-<div class="d"><b>${dia}</b>Abertura ${dt(m.abertura).slice(11)} · Fechamento ${m.fechamento?dt(m.fechamento).slice(11):'em aberto'}</div></div>
+<div class="d"><b>${periodoMov(m)}</b>Abertura ${dt(m.abertura).replace(',','')} · Fechamento ${m.fechamento?dt(m.fechamento).replace(',',''):'em aberto'}</div></div>
 <div class="cards"><div><small>Total vendido</small><b>${brl(tot)}</b></div><div><small>Vendas</small><b>${vnd.length}</b></div><div><small>Ticket médio</small><b>${brl(vnd.length?tvd/vnd.length:0)}</b></div><div><small>Itens vendidos</small><b>${fq(prs.reduce((s,[,o])=>s+o.q,0))}</b></div></div>
 <h2>O que foi consumido e como foi pago</h2>
 ${prs.length?`<table><tr><th>Produto / forma de pagamento</th><th class="n">Tinha no início</th><th class="n">Vendeu</th><th class="n">Ficou no fim do dia</th><th class="n">Estoque hoje</th><th class="n">Valor</th></tr>${linhasP}<tr class="tot"><td>Total</td><td></td><td class="n">${fq(prs.reduce((s,[,o])=>s+o.q,0))}</td><td></td><td></td><td class="n">${brl(tot)}</td></tr></table><p style="font-size:8.5pt;color:#555;margin:4px 0 0">Estoque: “Tinha no início” = na abertura do movimento (+ entradas do dia em verde) · “Ficou” = no fechamento · “Estoque hoje” = agora, quando o relatório foi tirado · — = produto sem controle de estoque.</p>`:'<p>Nenhum produto vendido neste movimento.</p>'}
